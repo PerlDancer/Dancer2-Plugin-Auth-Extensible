@@ -1,7 +1,7 @@
-package Dancer::Plugin::Auth::Extensible::Provider::Example;
+package Dancer2::Plugin::Auth::Extensible::Provider::Example;
 
 use strict;
-use base "Dancer::Plugin::Auth::Extensible::Provider::Base";
+use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
 # A more sensible provider would be likely to get this information from e.g. a
 # database (or LDAP, or...) rather than hardcoding it.  This, however, is an
@@ -23,7 +23,7 @@ sub users {
 
 =head1 NAME 
 
-Dancer::Plugin::Auth::Extensible::Example - example authentication provider
+Dancer2::Plugin::Auth::Extensible::Example - example authentication provider
 
 
 =head1 DESCRIPTION
@@ -31,7 +31,7 @@ Dancer::Plugin::Auth::Extensible::Example - example authentication provider
 This class is intended as an example of what an authentication provider class
 should do.  It is not intended for serious use (clearly).
 
-See L<Dancer::Plugin::Auth::Extensible> for details on how to use the
+See L<Dancer2::Plugin::Auth::Extensible> for details on how to use the
 authentication framework, including how to pick a more useful authentication
 provider.
 

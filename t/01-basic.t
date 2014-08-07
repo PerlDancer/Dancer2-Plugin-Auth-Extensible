@@ -3,22 +3,22 @@ use warnings;
 
 use Test::More import => ['!pass'];
 use t::lib::TestApp;
-use Dancer ':syntax';
+use Dancer2 ':syntax';
 
 my $dancer_version;
 BEGIN {
     $dancer_version = (exists &dancer_version) ? int(dancer_version()) : 1;
-    require Dancer::Test;
+    require Dancer2::Test;
     if ($dancer_version == 1) {
-        Dancer::Test->import();
+        Dancer2::Test->import();
     } else {
-        Dancer::Test->import('t::lib::TestApp');
+        Dancer2::Test->import('t::lib::TestApp');
     }
 }
 
-diag sprintf "Testing DPAE version %s under Dancer %s",
-    $Dancer::Plugin::Auth::Extensible::VERSION,
-    $Dancer::VERSION;
+diag sprintf "Testing DPAE version %s under Dancer2 %s",
+    $Dancer2::Plugin::Auth::Extensible::VERSION,
+    $Dancer2::VERSION;
 
 # First, without being logged in, check we can access the index page, but not
 # stuff we need to be logged in for:

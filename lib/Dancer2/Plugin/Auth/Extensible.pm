@@ -1,11 +1,11 @@
-package Dancer::Plugin::Auth::Extensible;
+package Dancer2::Plugin::Auth::Extensible;
 
 use warnings;
 use strict;
 
 use Carp;
-use Dancer::Plugin;
-use Dancer qw(:syntax);
+use Dancer2::Plugin;
+use Dancer2 qw(:syntax);
 
 our $VERSION = '0.30';
 
@@ -20,11 +20,11 @@ my $exitpage = $settings->{exit_page};
 
 =head1 NAME
 
-Dancer::Plugin::Auth::Extensible - extensible authentication framework for Dancer apps
+Dancer2::Plugin::Auth::Extensible - extensible authentication framework for Dancer2 apps
 
 =head1 DESCRIPTION
 
-A user authentication and authorisation framework plugin for Dancer apps.
+A user authentication and authorisation framework plugin for Dancer2 apps.
 
 Makes it easy to require a user to be logged in to access certain routes,
 provides role-based access control, and supports various authentication
@@ -49,7 +49,7 @@ Configure the plugin to use the authentication provider class you wish to use:
 
 The configuration you provide will depend on the authentication provider module
 in use.  For a simple example, see
-L<Dancer::Plugin::Auth::Extensible::Provider::Config>.
+L<Dancer2::Plugin::Auth::Extensible::Provider::Config>.
 
 Define that a user must be logged in and have the proper permissions to 
 access a route:
@@ -72,28 +72,28 @@ to authenticate a user against the chosen source of authentication.
 
 For an example of how simple provider classes are, so you can build your own if
 required or just try out this authentication framework plugin easily, 
-see L<Dancer::Plugin::Auth::Extensible::Provider::Example>.
+see L<Dancer2::Plugin::Auth::Extensible::Provider::Example>.
 
 This framework supplies the following providers out-of-the-box:
 
 =over 4
 
-=item L<Dancer::Plugin::Auth::Extensible::Provider::Unix>
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Unix>
 
 Authenticates users using system accounts on Linux/Unix type boxes
 
-=item L<Dancer::Plugin::Auth::Extensible::Provider::Database>
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Database>
 
 Authenticates users stored in a database table
 
-=item L<Dancer::Plugin::Auth::Extensible::Provider::Config>
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Config>
 
 Authenticates users stored in the app's config
 
 =back
 
 Need to write your own?  Just subclass
-L<Dancer::Plugin::Auth::Extensible::Provider::Base> and implement the required
+L<Dancer2::Plugin::Auth::Extensible::Provider::Base> and implement the required
 methods, and you're good to go!
 
 =head1 CONTROLLING ACCESS TO ROUTES
@@ -486,7 +486,7 @@ In your application's configuation file:
 B<Please note> that you B<must> have a session provider configured.  The 
 authentication framework requires sessions in order to track information about 
 the currently logged in user.
-Please see L<Dancer::Session> for information on how to configure session 
+Please see L<Dancer2::Session> for information on how to configure session 
 management within your application.
 
 =cut
@@ -517,7 +517,7 @@ sub auth_provider {
     if ($provider_class !~ /::/) {
         $provider_class = __PACKAGE__ . "::Provider::$provider_class";
     }
-    my ($ok, $error) = Dancer::ModuleLoader->load($provider_class);
+    my ($ok, $error) = Dancer2::ModuleLoader->load($provider_class);
 
     if (! $ok) {
         die "Cannot load provider $provider_class: $error";
@@ -697,7 +697,7 @@ This is an early version; there may still be bugs present or features missing.
 
 This is developed on GitHub - please feel free to raise issues or pull requests
 against the repo at:
-L<https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible>
+L<https://github.com/bigpresh/Dancer2-Plugin-Auth-Extensible>
 
 
 
@@ -731,4 +731,4 @@ See http://dev.perl.org/licenses/ for more information.
 
 =cut
 
-1; # End of Dancer::Plugin::Auth::Extensible
+1; # End of Dancer2::Plugin::Auth::Extensible

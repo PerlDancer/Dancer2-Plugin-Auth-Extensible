@@ -3,8 +3,8 @@
 use Test::More tests => 1;
 
 BEGIN {
-    use_ok( 'Dancer::Plugin::Auth::Extensible' ) || print "Bail out!
+    use_ok( 'Dancer2::Plugin::Auth::Extensible' ) || print "Bail out!
 ";
 }
 
-diag( "Testing Dancer::Plugin::Auth::Extensible $Dancer::Plugin::Auth::Extensible::VERSION, Perl $], $^X" );
+diag( "Testing Dancer2::Plugin::Auth::Extensible $Dancer2::Plugin::Auth::Extensible::VERSION, Perl $], $^X" );

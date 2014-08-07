@@ -1,11 +1,11 @@
-package Dancer::Plugin::Auth::Extensible::Provider::Config;
+package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
 use strict;
-use base "Dancer::Plugin::Auth::Extensible::Provider::Base";
+use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
 =head1 NAME 
 
-Dancer::Plugin::Auth::Extensible::Config - example auth provider using app config
+Dancer2::Plugin::Auth::Extensible::Config - example auth provider using app config
 
 
 =head1 DESCRIPTION
@@ -18,7 +18,7 @@ This class is primarily intended as an example of what an authentication
 provider class should do; however, if you just want simple user authentication
 with user details stored in your app's config file, it may well suit your needs.
 
-See L<Dancer::Plugin::Auth::Extensible> for details on how to use the
+See L<Dancer2::Plugin::Auth::Extensible> for details on how to use the
 authentication framework.
 
 =head1 SYNOPSIS

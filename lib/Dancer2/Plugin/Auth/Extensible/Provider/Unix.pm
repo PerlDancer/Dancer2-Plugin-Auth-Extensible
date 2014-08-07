@@ -1,17 +1,17 @@
-package Dancer::Plugin::Auth::Extensible::Provider::Unix;
+package Dancer2::Plugin::Auth::Extensible::Provider::Unix;
 
 use strict;
-use base 'Dancer::Plugin::Auth::Extensible::Provider::Base';
+use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
 use Unix::Passwd::File;
 
 =head1 NAME
 
-Dancer::Plugin::Auth::Extensible::Unix - authenticate *nix system accounts
+Dancer2::Plugin::Auth::Extensible::Unix - authenticate *nix system accounts
 
 =head1 DESCRIPTION
 
-An authentication provider for L<Dancer::Plugin::Auth::Extensible> which
+An authentication provider for L<Dancer2::Plugin::Auth::Extensible> which
 authenticates Linux/Unix system accounts.
 
 Uses L<Unix::Passwd::File> to read user details, and L<Authen::Simple::PAM> to

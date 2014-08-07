@@ -48,7 +48,7 @@ TODO: {
     "placeholder date/time"       => qr(Date/time)
   );
 
-  module_boilerplate_ok('lib/Dancer/Plugin/Auth/Extensible.pm');
+  module_boilerplate_ok('lib/Dancer2/Plugin/Auth/Extensible.pm');
 
 
 }

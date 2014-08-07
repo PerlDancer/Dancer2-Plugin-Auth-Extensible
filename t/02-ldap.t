@@ -78,16 +78,16 @@ my $mod = qclass(
 
 use t::ldap::LDAPTestApp;
 
-use Dancer ':syntax';
+use Dancer2 ':syntax';
 
 my $dancer_version;
 BEGIN {
     $dancer_version = (exists &dancer_version) ? int(dancer_version()) : 1;
-    require Dancer::Test;
+    require Dancer2::Test;
     if ($dancer_version == 1) {
-        Dancer::Test->import();
+        Dancer2::Test->import();
     } else {
-        Dancer::Test->import('t::ldap::LDAPTestApp');
+        Dancer2::Test->import('t::ldap::LDAPTestApp');
     }
 }
 

@@ -1,31 +1,31 @@
-package Dancer::Plugin::Auth::Extensible::Provider::Database;
+package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 
 use strict;
-use base 'Dancer::Plugin::Auth::Extensible::Provider::Base';
-use Dancer::Plugin::Database;
-use Dancer qw(:syntax);
+use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
+use Dancer2::Plugin::Database;
+use Dancer2 qw(:syntax);
 
 
 =head1 NAME 
 
-Dancer::Plugin::Auth::Extensible::Database - authenticate via a database
+Dancer2::Plugin::Auth::Extensible::Database - authenticate via a database
 
 
 =head1 DESCRIPTION
 
 This class is an authentication provider designed to authenticate users against
-a database, using L<Dancer::Plugin::Database> to access a database.
+a database, using L<Dancer2::Plugin::Database> to access a database.
 
 L<Crypt::SaltedHash> is used to handle hashed passwords securely; you wouldn't
 want to store plain text passwords now, would you?  (If your answer to that is
 yes, please reconsider; you really don't want to do that, when it's so easy to
 do things right!)
 
-See L<Dancer::Plugin::Database> for how to configure a database connection
+See L<Dancer2::Plugin::Database> for how to configure a database connection
 appropriately; see the L</CONFIGURATION> section below for how to configure this
 authentication provider with database details.
 
-See L<Dancer::Plugin::Auth::Extensible> for details on how to use the
+See L<Dancer2::Plugin::Auth::Extensible> for details on how to use the
 authentication framework, including how to pick a more useful authentication
 provider.
 
@@ -46,7 +46,7 @@ single authentication realm named 'users':
                     provider: 'Database'
 
 You would still need to have provided suitable database connection details to
-L<Dancer::Plugin::Database>, of course;  see the docs for that plugin for full
+L<Dancer2::Plugin::Database>, of course;  see the docs for that plugin for full
 details, but it could be as simple as, e.g.:
 
     plugins:
@@ -67,7 +67,7 @@ A full example showing all options:
                 users:
                     provider: 'Database'
                     # optionally set DB connection name to use (see named 
-                    # connections in Dancer::Plugin::Database docs)
+                    # connections in Dancer2::Plugin::Database docs)
                     db_connection_name: 'foo'
 
                     # Optionally disable roles support, if you only want to check
@@ -91,7 +91,7 @@ A full example showing all options:
                     user_roles_user_id_column: 'user_id'
                     user_roles_role_id_column: 'roles_id'
 
-See the main L<Dancer::Plugin::Auth::Extensible> documentation for how to
+See the main L<Dancer2::Plugin::Auth::Extensible> documentation for how to
 configure multiple authentication realms.
 
 =head1 SUGGESTED SCHEMA
@@ -213,7 +213,7 @@ sub get_user_roles {
         or return;
 
     # Right, fetch the roles they have.  There's currently no support for
-    # JOINs in Dancer::Plugin::Database, so we'll need to do this query
+    # JOINs in Dancer2::Plugin::Database, so we'll need to do this query
     # ourselves - so we'd better take care to quote the table & column names, as
     # we're going to have to interpolate them.  (They're coming from our config,
     # so should be pretty trustable, but they might conflict with reserved

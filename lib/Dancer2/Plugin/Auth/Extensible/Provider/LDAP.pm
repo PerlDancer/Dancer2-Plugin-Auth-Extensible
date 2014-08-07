@@ -1,20 +1,20 @@
-package Dancer::Plugin::Auth::Extensible::Provider::LDAP;
+package Dancer2::Plugin::Auth::Extensible::Provider::LDAP;
 
 use strict;
-use base "Dancer::Plugin::Auth::Extensible::Provider::Base";
+use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
-use Dancer qw(warning);
+use Dancer2 qw(warning);
 
 =head1 NAME 
 
-Dancer::Plugin::Auth::Extensible::LDAP - LDAP authentication provider
+Dancer2::Plugin::Auth::Extensible::LDAP - LDAP authentication provider
 
 
 =head1 DESCRIPTION
 
 This class is a generic LDAP authentication provider.
 
-See L<Dancer::Plugin::Auth::Extensible> for details on how to use the
+See L<Dancer2::Plugin::Auth::Extensible> for details on how to use the
 authentication framework.
 
 This provider requires the following parameters in it's config file:

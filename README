@@ -1,9 +1,9 @@
 NAME
-    Dancer::Plugin::Auth::Extensible - extensible authentication framework
-    for Dancer apps
+    Dancer2::Plugin::Auth::Extensible - extensible authentication framework
+    for Dancer2 apps
 
 DESCRIPTION
-    A user authentication and authorisation framework plugin for Dancer
+    A user authentication and authorisation framework plugin for Dancer2
     apps.
 
     Makes it easy to require a user to be logged in to access certain
@@ -30,7 +30,7 @@ SYNOPSIS
 
     The configuration you provide will depend on the authentication provider
     module in use. For a simple example, see
-    Dancer::Plugin::Auth::Extensible::Provider::Config.
+    Dancer2::Plugin::Auth::Extensible::Provider::Config.
 
     Define that a user must be logged in and have the proper permissions to
     access a route:
@@ -53,21 +53,21 @@ AUTHENTICATION PROVIDERS
 
     For an example of how simple provider classes are, so you can build your
     own if required or just try out this authentication framework plugin
-    easily, see Dancer::Plugin::Auth::Extensible::Provider::Example.
+    easily, see Dancer2::Plugin::Auth::Extensible::Provider::Example.
 
     This framework supplies the following providers out-of-the-box:
 
-    Dancer::Plugin::Auth::Extensible::Provider::Unix
+    Dancer2::Plugin::Auth::Extensible::Provider::Unix
         Authenticates users using system accounts on Linux/Unix type boxes
 
-    Dancer::Plugin::Auth::Extensible::Provider::Database
+    Dancer2::Plugin::Auth::Extensible::Provider::Database
         Authenticates users stored in a database table
 
-    Dancer::Plugin::Auth::Extensible::Provider::Config
+    Dancer2::Plugin::Auth::Extensible::Provider::Config
         Authenticates users stored in the app's config
 
     Need to write your own? Just subclass
-    Dancer::Plugin::Auth::Extensible::Provider::Base and implement the
+    Dancer2::Plugin::Auth::Extensible::Provider::Base and implement the
     required methods, and you're good to go!
 
 CONTROLLING ACCESS TO ROUTES
@@ -251,7 +251,7 @@ CONTROLLING ACCESS TO ROUTES
 
     Please note that you must have a session provider configured. The
     authentication framework requires sessions in order to track information
-    about the currently logged in user. Please see Dancer::Session for
+    about the currently logged in user. Please see Dancer2::Session for
     information on how to configure session management within your
     application.
 
@@ -261,7 +261,7 @@ BUGS / FEATURE REQUESTS
 
     This is developed on GitHub - please feel free to raise issues or pull
     requests against the repo at:
-    https://github.com/bigpresh/Dancer-Plugin-Auth-Extensible
+    https://github.com/bigpresh/Dancer2-Plugin-Auth-Extensible
 
 ACKNOWLEDGEMENTS
     Valuable feedback on the early design of this module came from many
