@@ -5,7 +5,6 @@ use strict;
 
 use Carp;
 use Dancer2::Plugin;
-use Dancer2 qw(:syntax);
 
 our $VERSION = '0.30';
 
@@ -341,8 +340,11 @@ The details you get back will depend upon the authentication provider in use.
 =cut
 
 sub logged_in_user {
-    if (my $user = session 'logged_in_user') {
-        my $realm    = session 'logged_in_user_realm';
+    my $dsl = shift;
+    my $session = $dsl->app->session;
+
+    if (my $user = $session->read('logged_in_user')) {
+        my $realm    = $session->read('logged_in_user_realm');
         my $provider = auth_provider($realm);
         return $provider->get_user_details($user, $realm);
     } else {
@@ -367,11 +369,14 @@ You can also provide the username to check;
 =cut
 
 sub user_has_role {
+    my $dsl = shift;
+    my $session = $dsl->app->session;
+
     my ($username, $want_role);
     if (@_ == 2) {
         ($username, $want_role) = @_;
     } else {
-        $username  = session 'logged_in_user';
+        $username  = $session->read('logged_in_user');
         $want_role = shift;
     }
 
@@ -399,8 +404,10 @@ Returns a list or arrayref depending on context.
 =cut
 
 sub user_roles {
-    my ($username, $realm) = @_;
-    $username = session 'logged_in_user' unless defined $username;
+    my ($dsl, $username, $realm) = @_;
+    my $session = $dsl->app->session;
+
+    $username = $session->read('logged_in_user') unless defined $username;
 
     my $search_realm = ($realm ? $realm : '');
 
@@ -435,15 +442,14 @@ C<($success, $realm)>.
 =cut
 
 sub authenticate_user {
-    my ($username, $password, $realm) = @_;
-
+    my ($dsl, $username, $password, $realm) = @_;
     my @realms_to_check = $realm? ($realm) : (keys %{ $settings->{realms} });
 
     for my $realm (@realms_to_check) {
-        debug "Attempting to authenticate $username against realm $realm";
+        $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
         my $provider = auth_provider($realm);
         if ($provider->authenticate_user($username, $password)) {
-            debug "$realm accepted user $username";
+            $dsl->app->log ( debug => "$realm accepted user $username");
             return wantarray ? (1, $realm) : 1;
         }
     }
@@ -496,11 +502,12 @@ management within your application.
 {
 my %realm_provider;
 sub auth_provider {
-    my $realm = shift;
+    my ($dsl, $realm) = @_;
+    my $session = $dsl->app->session;
 
     # If no realm was provided, but we have a logged in user, use their realm:
-    if (!$realm && session->{logged_in_user}) {
-        $realm = session->{logged_in_user_realm};
+    if (!$realm && $session->read('logged_in_user')) {
+        $realm = $session->read('logged_in_user_realm');
     }
 
     # First, if we already have a provider for this realm, go ahead and use it:
