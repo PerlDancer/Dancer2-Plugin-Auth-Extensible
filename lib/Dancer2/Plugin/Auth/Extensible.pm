@@ -235,7 +235,7 @@ sub require_login {
             return $dsl->redirect
                 ($dsl->uri_for($loginpage, { return_url => $dsl->request->request_uri }));
         }
-        return $coderef->();
+        return $coderef->($dsl);
     };
 }
 
@@ -337,7 +337,7 @@ sub _build_wrapper {
         if ($role_match) {
             # We're happy with their roles, so go head and execute the route
             # handler coderef.
-            return $coderef->();
+            return $coderef->($dsl);
         }
 
         $dsl->execute_hook('permission_denied', $coderef);
