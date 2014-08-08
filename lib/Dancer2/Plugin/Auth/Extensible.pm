@@ -5,17 +5,27 @@ use strict;
 
 use Carp;
 use Dancer2::Plugin;
+use Class::Load qw(try_load_class);
 
 our $VERSION = '0.30';
 
-my $settings = plugin_setting;
+my $settings;
 
-my $loginpage = $settings->{login_page} || '/login';
-my $userhomepage = $settings->{user_home_page} || '/';
-my $logoutpage = $settings->{logout_page} || '/logout';
-my $deniedpage = $settings->{denied_page} || '/login/denied';
-my $exitpage = $settings->{exit_page};
+my $loginpage;
+my $userhomepage;
+my $logoutpage;
+my $deniedpage;
+my $exitpage;
 
+my $load_settings = sub {
+    $settings = plugin_setting;
+
+    $loginpage = $settings->{login_page} || '/login';
+    $userhomepage = $settings->{user_home_page} || '/';
+    $logoutpage = $settings->{logout_page} || '/logout';
+    $deniedpage = $settings->{denied_page} || '/login/denied';
+    $exitpage = $settings->{exit_page};
+};
 
 =head1 NAME
 
@@ -210,17 +220,20 @@ it.
 =cut
 
 sub require_login {
+    my $dsl = shift;
     my $coderef = shift;
+
     return sub {
         if (!$coderef || ref $coderef ne 'CODE') {
-            croak "Invalid require_login usage, please see docs";
+            warn "Invalid require_login usage, please see docs";
         }
 
-        my $user = logged_in_user();
+        my $user = logged_in_user($dsl);
         if (!$user) {
-            execute_hook('login_required', $coderef);
+            $dsl->execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect uri_for($loginpage, { return_url => request->request_uri });
+            return $dsl->redirect
+                ($dsl->uri_for($loginpage, { return_url => $dsl->request->request_uri }));
         }
         return $coderef->();
     };
@@ -283,6 +296,7 @@ register requires_all_roles => \&require_all_roles;
 
 
 sub _build_wrapper {
+    my $dsl = shift;
     my $require_role = shift;
     my $coderef = shift;
     my $mode = shift;
@@ -291,27 +305,29 @@ sub _build_wrapper {
         ? @$require_role
         : $require_role;
     return sub {
-        my $user = logged_in_user();
+        my $user = logged_in_user($dsl);
         if (!$user) {
-            execute_hook('login_required', $coderef);
+            $dsl->execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return redirect uri_for($loginpage, { return_url => request->request_uri });
+            return $dsl->redirect($dsl->uri_for(
+                $loginpage,
+                { return_url => $dsl->request->request_uri }));
         }
 
         my $role_match;
         if ($mode eq 'single') {
-            for (user_roles()) {
+            for (user_roles($dsl)) {
                 $role_match++ and last if _smart_match($_, $require_role);
             }
         } elsif ($mode eq 'any') {
             my %role_ok = map { $_ => 1 } @role_list;
-            for (user_roles()) {
+            for (user_roles($dsl)) {
                 $role_match++ and last if $role_ok{$_};
             }
         } elsif ($mode eq 'all') {
             $role_match++;
             for my $role (@role_list) {
-                if (!user_has_role($role)) {
+                if (!user_has_role($dsl, $role)) {
                     $role_match = 0;
                     last;
                 }
@@ -324,9 +340,10 @@ sub _build_wrapper {
             return $coderef->();
         }
 
-        execute_hook('permission_denied', $coderef);
+        $dsl->execute_hook('permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
-        return redirect uri_for($deniedpage, { return_url => request->request_uri });
+        return $dsl->redirect(
+            $dsl->uri_for($deniedpage, { return_url => $dsl->request->request_uri }));
     };
 }
 
@@ -345,7 +362,7 @@ sub logged_in_user {
 
     if (my $user = $session->read('logged_in_user')) {
         my $realm    = $session->read('logged_in_user_realm');
-        my $provider = auth_provider($realm);
+        my $provider = auth_provider($dsl, $realm);
         return $provider->get_user_details($user, $realm);
     } else {
         return;
@@ -382,7 +399,7 @@ sub user_has_role {
 
     return unless defined $username;
 
-    my $roles = user_roles($username);
+    my $roles = user_roles($dsl, $username);
 
     for my $has_role (@$roles) {
         return 1 if $has_role eq $want_role;
@@ -411,7 +428,7 @@ sub user_roles {
 
     my $search_realm = ($realm ? $realm : '');
 
-    my $roles = auth_provider($search_realm)->get_user_roles($username);
+    my $roles = auth_provider($dsl, $search_realm)->get_user_roles($username);
     return unless defined $roles;
     return wantarray ? @$roles : $roles;
 }
@@ -447,7 +464,7 @@ sub authenticate_user {
 
     for my $realm (@realms_to_check) {
         $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
-        my $provider = auth_provider($realm);
+        my $provider = auth_provider($dsl, $realm);
         if ($provider->authenticate_user($username, $password)) {
             $dsl->app->log ( debug => "$realm accepted user $username");
             return wantarray ? (1, $realm) : 1;
@@ -524,7 +541,7 @@ sub auth_provider {
     if ($provider_class !~ /::/) {
         $provider_class = __PACKAGE__ . "::Provider::$provider_class";
     }
-    my ($ok, $error) = Dancer2::ModuleLoader->load($provider_class);
+    my ($ok, $error) = try_load_class($provider_class);
 
     if (! $ok) {
         die "Cannot load provider $provider_class: $error";
@@ -558,35 +575,51 @@ sub _try_realms {
     return;
 }
 
-# Set up routes to serve default pages, if desired
-if ( !$settings->{no_default_pages} ) {
-    get $loginpage => sub {
-        if(logged_in_user()) {
-            redirect params->{return_url} || $userhomepage;
+on_plugin_import {
+    my $dsl = shift;
+    my $app = $dsl->app;
+
+    # get settings
+    $load_settings->();
+
+    if ( !$settings->{no_default_pages} ) {
+        $app->add_route(
+            method => 'get',
+            regexp => $loginpage,
+            code => sub {
+                my $dsl = shift;
+
+                if(logged_in_user($dsl)) {
+                    $dsl->redirect($dsl->params->{return_url} || $userhomepage);
+                }
+
+                $dsl->response->status(401);
+                my $_default_login_page =
+                    $settings->{login_page_handler} || '_default_login_page';
+                no strict 'refs';
+                return &{$_default_login_page}($dsl);
+            });
+
+        $app->add_route(
+            method => 'post',
+            regexp => $loginpage,
+            code => \&_post_login_route,
+        );
+
+        for my $method (qw/get post/) {
+            $app->add_route(
+                method => $method,
+                regexp => $logoutpage,
+                code => \&_logout_route,
+            );
         }
+    }
+};
 
-        status 401;
-        my $_default_login_page =
-          $settings->{login_page_handler} || '_default_login_page';
-        no strict 'refs';
-        return &{$_default_login_page}();
-    };
-    get $deniedpage => sub {
-        status 403;
-        my $_default_permission_denied_page =
-          $settings->{permission_denied_page_handler}
-          || '_default_permission_denied_page';
-        no strict 'refs';
-        return &{$_default_permission_denied_page}();
-    };
-}
+# implementation of post login route
+sub _post_login_route {
+    my $app = shift;
 
-
-# If no_login_handler is set, let the user do the login/logout herself
-if (!$settings->{no_login_handler}) {
-
-# Handle logging in...
-post $loginpage => sub {
     # For security, ensure the username and password are straight scalars; if
     # the app is using a serializer and we were sent a blob of JSON, they could
     # have come from that JSON, and thus could be hashrefs (JSON SQL injection)
@@ -597,7 +630,7 @@ post $loginpage => sub {
     # with paremeterisation) - but if params->{password} was something
     # different, e.g. { 'like' => '%' }, we might end up with some SQL like
     # WHERE password LIKE '%' instead - which would not be a Good Thing.
-    my ($username, $password) = @{ params() }{qw(username password)};
+    my ($username, $password) = @{ $app->app->request->params() }{qw(username password)};
     for ($username, $password) {
         if (ref $_) {
             # TODO: handle more cleanly
@@ -605,39 +638,41 @@ post $loginpage => sub {
         }
     }
 
-    if(logged_in_user()) {
-        redirect params->{return_url} || $userhomepage;
+    if(logged_in_user($app)) {
+        $app->redirect($app->params->{return_url} || $userhomepage);
     }
 
     my ($success, $realm) = authenticate_user(
-        $username, $password
+        $app, $username, $password
     );
     if ($success) {
-        session logged_in_user => $username;
-        session logged_in_user_realm => $realm;
-        redirect params->{return_url} || $userhomepage;
+        $app->app->session->write(logged_in_user => $username);
+        $app->app->session->write(logged_in_user_realm => $realm);
+        $app->log(core => "Realm is $realm");
+        $app->redirect($app->request->params->{return_url} || $userhomepage);
     } else {
-        vars->{login_failed}++;
-        forward $loginpage, { login_failed => 1 }, { method => 'GET' };
+        $app->request->vars->{login_failed}++;
+        $app->forward($loginpage, { login_failed => 1 }, { method => 'GET' });
     }
-};
+}
 
-# ... and logging out.
-any ['get','post'] => $logoutpage => sub {
-    session->destroy;
-    if (params->{return_url}) {
-        redirect params->{return_url};
+# implementation of logout route
+sub _logout_route {
+    my $app = shift;
+    my $req = $app->request;
+
+    $app->destroy_session;
+
+    if ($req->params->{return_url}) {
+        $app->redirect($req->params->{return_url});
     } elsif ($exitpage) {
-        redirect $exitpage;
+        $app->redirect($exitpage);
     } else {
         # TODO: perhaps make this more configurable, perhaps by attempting to
         # render a template first.
         return "OK, logged out successfully.";
     }
-};
-
 }
-
 
 sub _default_permission_denied_page {
     return <<PAGE
@@ -650,11 +685,12 @@ PAGE
 }
 
 sub _default_login_page {
-    my $login_fail_message = vars->{login_failed}
-        ? "<p>LOGIN FAILED</p>"
-        : "";
-    my $return_url = params->{return_url} || '';
-    return <<PAGE;
+    my $dsl = shift;
+    my $login_fail_message = $dsl->request->vars->{login_failed}
+         ? "<p>LOGIN FAILED</p>"
+         : "";
+     my $return_url = $dsl->request->params->{return_url} || '';
+     return <<PAGE;
 <h1>Login Required</h1>
 
 <p>
