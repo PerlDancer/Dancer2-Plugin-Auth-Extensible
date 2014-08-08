@@ -14,11 +14,11 @@ use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
 my $app = Dancer2->runner->psgi_app;
 is( ref $app, 'CODE', 'Got app' );
 
-# First, without being logged in, check we can access the index page, but not
-# stuff we need to be logged in for:
-
 test_psgi $app, sub {
     my $cb = shift;
+
+    # First, without being logged in, check we can access the index page, but not
+    # stuff we need to be logged in for:
 
     is (
         $cb->( GET '/' )->content,
