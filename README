@@ -113,7 +113,22 @@ CONTROLLING ACCESS TO ROUTES
     By default, the plugin adds a route to present a simple login form at
     that URL. If you would rather add your own, set the `no_default_pages'
     setting to a true value, and define your own route which responds to
-    `/login' with a login page.
+    `/login' with a login page. Alternatively you can let DPAE add the
+    routes and handle the status codes, etc. and simply define the setting
+    `login_page_handler' and/or `permission_denied_page_handler' with the
+    name of a subroutine to be called to handle the route. Note that it must
+    be a fully qualified sub. E.g.
+
+        plugins:
+          Auth::Extensible:
+            login_page_handler: 'My::App:login_page_handler'
+            permission_denied_page_handler: 'My::App:permission_denied_page_handler'
+
+    Then in your code you might simply use a template:
+
+        sub permission_denied_page_handler {
+            template 'account/login';
+        }
 
     If the user is logged in, but tries to access a route which requires a
     specific role they don't have, they will be redirected to the
@@ -255,13 +270,20 @@ CONTROLLING ACCESS TO ROUTES
     information on how to configure session management within your
     application.
 
+AUTHOR
+    David Precious, `<davidp at preshweb.co.uk>'
+
+    Dancer2 port of Dancer::Plugin::Auth::Extensible by:
+
+    Stefan Hornburg (Racke), `<racke at linuxia.de>'
+
 BUGS / FEATURE REQUESTS
     This is an early version; there may still be bugs present or features
     missing.
 
     This is developed on GitHub - please feel free to raise issues or pull
     requests against the repo at:
-    https://github.com/bigpresh/Dancer2-Plugin-Auth-Extensible
+    https://github.com/racke/Dancer2-Plugin-Auth-Extensible
 
 ACKNOWLEDGEMENTS
     Valuable feedback on the early design of this module came from many

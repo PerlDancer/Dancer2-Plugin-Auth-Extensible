@@ -1,44 +1,5 @@
-Revision history for Dancer-Plugin-Auth-Extensible
+Revision history for Dancer2-Plugin-Auth-Extensible
 
-0.20    2013-01-30
-        [ ENHANCEMENTS ]
-        - Use return_url to redirect back to requested page after logging in
-          (GH #14, thanks to @dagolden)
-        - require_role can now take a regex to match (GH #16, thanks to
-          @chenryn)
+0.301 Sat Oct 25 21:26:39 2014 CEST
 
-        [ BUG FIXES ]
-        - authenticate_user is now exported (thanks to melmothX on IRC)
-
-0.10    2012-12-19
-        [ ENHANCEMENTS ]
-        - WARNING: backwards incompatible change!
-          The original approach using subroutine attributes was pretty, but not
-          always reliable (particularly with regards to thread safety, or
-          running under the debugger or Devel::Cover etc).
-          Since this module is still in it's early life and not widely used,
-          I've refactored entirely, to use new requires_login / requires_role 
-          etc keywords, which wrap the provided coderef in a coderef which 
-          checks if the user is logged in / has the required role(s), before
-          running the route handler provided.
-        - Configurable /login, /logout URLs - Rene (hertell)
-
-0.04    2012-12-15
-        [ BUG FIXES ]
-        - Throw an error properly if not configured correctly - safer to refuse
-          for anything to be served than to potentially serve stuff the user
-          expected to be protected if their config is wrong.
-
-0.03    2012-12-07
-        [ BUG FIXES ]
-        - import Dancer DSL keywords, so call to debug() if user record is not
-          found doesn't cause horrific fiery explosions (reported by rwb)
-
-0.02    2012-12-07
-        [ BUG FIXES ]
-        - Various bug fixes and improvements, including POD fix from cebjyre,
-          fixing broken register_plugin call by racke
-
-0.01    Date/time
-        First version, released on an unsuspecting world.
-
+    Initial port from Dancer1 (Stefan Hornburg).
