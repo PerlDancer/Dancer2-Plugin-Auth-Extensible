@@ -733,6 +733,9 @@ sub _smart_match {
 
 David Precious, C<< <davidp at preshweb.co.uk> >>
 
+Dancer2 port of Dancer::Plugin::Auth::Extensible by:
+
+Stefan Hornburg (Racke), C<< <racke at linuxia.de> >>
 
 =head1 BUGS / FEATURE REQUESTS
 
@@ -740,7 +743,7 @@ This is an early version; there may still be bugs present or features missing.
 
 This is developed on GitHub - please feel free to raise issues or pull requests
 against the repo at:
-L<https://github.com/bigpresh/Dancer2-Plugin-Auth-Extensible>
+L<https://github.com/racke/Dancer2-Plugin-Auth-Extensible>
 
 
 
