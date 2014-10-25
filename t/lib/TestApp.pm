@@ -39,7 +39,7 @@ get '/roles/:user/:realm' => require_login sub {
 };
 
 get '/realm' => require_login sub {
-    return session->{logged_in_user_realm};
+    return session->read('logged_in_user_realm');
 };
 
 get '/beer' => require_role BeerDrinker => sub {
