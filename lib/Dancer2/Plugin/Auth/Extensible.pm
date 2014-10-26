@@ -7,7 +7,7 @@ use Carp;
 use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
 
-our $VERSION = '0.301';
+our $VERSION = '0.302';
 
 my $settings;
 
