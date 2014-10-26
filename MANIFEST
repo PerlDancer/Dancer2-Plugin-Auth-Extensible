@@ -3,6 +3,7 @@ t/00-load.t
 t/01-basic.t
 t/pod.t
 t/lib/TestApp.pm
+t/lib/TestSub.pm
 t/lib/views/.placeholder
 t/lib/public/.placeholder
 t/lib/lib/.placeholder
@@ -15,6 +16,7 @@ lib/Dancer2/Plugin/Auth/Extensible/Provider/Unix.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Base.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
 MANIFEST
+MANIFEST.SKIP
 example/authextest.pl
 example/config.yml
 ignore.txt
