@@ -14,7 +14,7 @@ WriteMakefile(
     PREREQ_PM => {
         'Test::More' => 0,
         'Mock::Quick' => 0,
-        'Dancer2'     => 0,
+        'Dancer2'     => 0.15,
         'Crypt::SaltedHash' => 0,
         'YAML'       => 0, # for config files (TODO: make optional?)
         
