@@ -1,5 +1,16 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.303 Tue Oct 28 09:13:46 2014 CET
+
+    [BUG FIXES]
+
+    * Add version to Dancer2 prerequisite (GH #2, Stefan Hornburg).
+      Prevents test failure in case psgi_app method isn't present.
+
+    [TESTS]
+
+    * Suppress core and debug logging for tests.
+
 0.302 Sun Oct 26 17:09:57 2014 CET
 
     [BUG FIXES]
