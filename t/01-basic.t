@@ -5,9 +5,11 @@ use Test::More;
 use Plack::Test;
 use t::lib::TestSub;
 
-{
-    $ENV{DANCER_CONFDIR} = 'lib';
+BEGIN {
+    $ENV{DANCER_CONFDIR} = 't/lib';
+}
 
+{
     package MyApp;
     use Dancer2;
     use t::lib::TestApp;
