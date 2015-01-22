@@ -8,7 +8,7 @@ use Dancer2 qw(:syntax);
 
 =head1 NAME 
 
-Dancer2::Plugin::Auth::Extensible::Database - authenticate via a database
+Dancer2::Plugin::Auth::Extensible::Provider::Database - authenticate via a database
 
 
 =head1 DESCRIPTION
