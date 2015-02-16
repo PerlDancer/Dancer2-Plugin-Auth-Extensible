@@ -582,6 +582,9 @@ on_plugin_import {
     # get settings
     $load_settings->();
 
+    warn "No Auth::Extensible realms configured with which to authenticate user"
+        unless keys %{ $settings->{realms} };
+
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
             method => 'get',
