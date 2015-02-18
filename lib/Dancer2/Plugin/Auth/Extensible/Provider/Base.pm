@@ -3,6 +3,8 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Base;
 use strict;
 use Crypt::SaltedHash;
 
+our $VERSION = '0.303';
+
 =head1 NAME
 
 Dancer2::Plugin::Auth::Extensible::Provider::Base - base class for authentication providers

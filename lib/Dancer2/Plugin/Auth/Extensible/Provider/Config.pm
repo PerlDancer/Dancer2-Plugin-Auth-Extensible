@@ -3,6 +3,8 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
+our $VERSION = '0.303';
+
 =head1 NAME 
 
 Dancer2::Plugin::Auth::Extensible::Config - example auth provider using app config
