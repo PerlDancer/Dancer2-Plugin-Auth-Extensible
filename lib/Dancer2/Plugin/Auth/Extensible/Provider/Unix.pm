@@ -5,6 +5,8 @@ use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
 use Unix::Passwd::File;
 
+our $VERSION = '0.303';
+
 =head1 NAME
 
 Dancer2::Plugin::Auth::Extensible::Unix - authenticate *nix system accounts

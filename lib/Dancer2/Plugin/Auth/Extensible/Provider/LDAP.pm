@@ -5,6 +5,8 @@ use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
 use Dancer2 qw(warning);
 
+our $VERSION = '0.303';
+
 =head1 NAME 
 
 Dancer2::Plugin::Auth::Extensible::LDAP - LDAP authentication provider

@@ -95,6 +95,10 @@ Authenticates users using system accounts on Linux/Unix type boxes
 
 Authenticates users stored in a database table
 
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::DBIC>
+
+Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
+
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::Config>
 
 Authenticates users stored in the app's config
@@ -520,11 +524,12 @@ management within your application.
 my %realm_provider;
 sub auth_provider {
     my ($dsl, $realm) = @_;
-    my $session = $dsl->app->session;
 
-    # If no realm was provided, but we have a logged in user, use their realm:
-    if (!$realm && $session->read('logged_in_user')) {
-        $realm = $session->read('logged_in_user_realm');
+    # If no realm was provided, but we have a logged in user, use their realm.
+    # Don't try and read the session any earlier though, as it won't be
+    # available on plugin load
+    if (!$realm && $dsl->app->session->read('logged_in_user')) {
+        $realm = $dsl->app->session->read('logged_in_user_realm');
     }
 
     # First, if we already have a provider for this realm, go ahead and use it:
@@ -547,7 +552,7 @@ sub auth_provider {
         die "Cannot load provider $provider_class: $error";
     }
 
-    return $realm_provider{$realm} = $provider_class->new($realm_settings);
+    return $realm_provider{$realm} = $provider_class->new($realm_settings, $dsl);
 }
 }
 
@@ -582,8 +587,15 @@ on_plugin_import {
     # get settings
     $load_settings->();
 
-    warn "No Auth::Extensible realms configured with which to authenticate user"
-        unless keys %{ $settings->{realms} };
+    my @realms = keys %{ $settings->{realms} }
+        or warn "No Auth::Extensible realms configured with which to authenticate user";
+
+    # Force all providers to load whilst we have access to the full dsl.
+    # If we try and load later, then if the provider is using other
+    # keywords (such as schema) they will not be available from the dsl.
+    for my $realm (@realms) {
+        auth_provider($dsl, $realm);
+    }
 
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
