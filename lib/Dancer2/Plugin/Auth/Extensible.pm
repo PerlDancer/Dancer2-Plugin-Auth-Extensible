@@ -758,7 +758,7 @@ This is an early version; there may still be bugs present or features missing.
 
 This is developed on GitHub - please feel free to raise issues or pull requests
 against the repo at:
-L<https://github.com/racke/Dancer2-Plugin-Auth-Extensible>
+L<https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible>
 
 
 

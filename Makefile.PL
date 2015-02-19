@@ -23,9 +23,9 @@ WriteMakefile(
     clean               => { FILES => 'Dancer2-Plugin-Auth-Extensible-*' },
     META_MERGE => {
         resources => {
-            repository => 'https://github.com/racke/Dancer2-Plugin-Auth-Extensible',
-            bugtracker => 'https://github.com/racke/Dancer2-Plugin-Auth-Extensible/issues',
-            homepage   => 'https://github.com/racke/Dancer2-Plugin-Auth-Extensible/',
+            repository => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible',
+            bugtracker => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible/issues',
+            homepage   => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible/',
         },
     },
 
