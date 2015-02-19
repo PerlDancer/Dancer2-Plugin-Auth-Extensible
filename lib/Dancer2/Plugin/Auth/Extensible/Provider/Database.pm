@@ -9,7 +9,7 @@ our $VERSION = '0.303';
 
 =head1 NAME 
 
-Dancer2::Plugin::Auth::Extensible::Database - authenticate via a database
+Dancer2::Plugin::Auth::Extensible::Provider::Database - authenticate via a database
 
 
 =head1 DESCRIPTION
