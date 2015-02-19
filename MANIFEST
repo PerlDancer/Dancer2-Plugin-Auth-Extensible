@@ -17,6 +17,7 @@ lib/Dancer2/Plugin/Auth/Extensible/Provider/Base.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
 MANIFEST
 MANIFEST.SKIP
+bin/generate-crypted-password
 example/authextest.pl
 example/config.yml
 ignore.txt
