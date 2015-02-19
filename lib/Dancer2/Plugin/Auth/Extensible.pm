@@ -778,6 +778,10 @@ LDAP provider added by Mark Meyer (ofosos)
 
 Config options for default login/logout handlers by Henk van Oers (hvoers)
 
+Documentation fix by Vince Willems.
+
+Support for DBIC provider and warning on missing realms by Andrew Beverley.
+
 =head1 LICENSE AND COPYRIGHT
 
 
