@@ -1,5 +1,18 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.304 Fri Feb 20 09:12:18 2015 CET
+
+    [ENHANCEMENTS]
+
+    * Add support for DBI provider (Andrew Beverley, GH #7).
+    * Add warning if no realms are configured (Andrew Beverley, GH #6).
+    * Add simple script to generate crypted passwords (David Precious).
+
+    [DOCUMENTATION]
+
+    * Fix module name in POD of Database provider (Vince Willems, GH #5).
+    * Fix mix-up of login_page and login_url (David Precious).
+
 0.303 Tue Oct 28 09:13:46 2014 CET
 
     [BUG FIXES]

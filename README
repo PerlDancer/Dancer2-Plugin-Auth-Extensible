@@ -12,10 +12,12 @@ DESCRIPTION
     users, etc).
 
     Designed to support multiple authentication realms and to be as
-    extensible as possible, and to make secure password handling easy (the
+    extensible as possible, and to make secure password handling easy. The
     base class for auth providers makes handling `RFC2307'-style hashed
     passwords really simple, so you have no excuse for storing plain-text
-    passwords).
+    passwords. A simple script to generate RFC2307-style hashed passwords is
+    included, or you can use Crypt::SaltedHash yourself to do so, or use the
+    `slappasswd' utility if you have it installed.
 
 SYNOPSIS
     Configure the plugin to use the authentication provider class you wish
@@ -63,6 +65,10 @@ AUTHENTICATION PROVIDERS
     Dancer2::Plugin::Auth::Extensible::Provider::Database
         Authenticates users stored in a database table
 
+    Dancer2::Plugin::Auth::Extensible::Provider::DBIC
+        Authenticates users stored in a database table using
+        Dancer2::Plugin::DBIC
+
     Dancer2::Plugin::Auth::Extensible::Provider::Config
         Authenticates users stored in the app's config
 
@@ -79,7 +85,7 @@ CONTROLLING ACCESS TO ROUTES
 
         If the user is not logged in, they will be redirected to the login
         page URL to log in. The default URL is `/login' - this may be
-        changed with the `login_url' option.
+        changed with the `login_page' option.
 
     require_role - require the user to have a specified role
             get '/beer' => require_role BeerDrinker => sub { ... };
@@ -283,7 +289,7 @@ BUGS / FEATURE REQUESTS
 
     This is developed on GitHub - please feel free to raise issues or pull
     requests against the repo at:
-    https://github.com/racke/Dancer2-Plugin-Auth-Extensible
+    https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible
 
 ACKNOWLEDGEMENTS
     Valuable feedback on the early design of this module came from many
@@ -300,6 +306,11 @@ ACKNOWLEDGEMENTS
 
     Config options for default login/logout handlers by Henk van Oers
     (hvoers)
+
+    Documentation fix by Vince Willems.
+
+    Support for DBIC provider and warning on missing realms by Andrew
+    Beverley.
 
 LICENSE AND COPYRIGHT
     Copyright 2012-13 David Precious.
