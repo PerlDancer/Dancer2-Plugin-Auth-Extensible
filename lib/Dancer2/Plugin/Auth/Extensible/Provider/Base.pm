@@ -67,6 +67,7 @@ sub match_password {
     for my $method (qw(
         authenticate_user
         get_user_details
+        set_user_details
         get_user_roles
         ))
     {

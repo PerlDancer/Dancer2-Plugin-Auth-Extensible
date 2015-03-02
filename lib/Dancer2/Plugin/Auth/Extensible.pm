@@ -489,6 +489,57 @@ sub authenticate_user {
 register authenticate_user => \&authenticate_user;
 
 
+=item update_user
+
+Updates a user's details. If the authentication provider supports it, this
+keyword allows a user's details to be updated within the backend data store.
+
+In order to update the user's details, the keyword should be called with a
+hash of the values to be updated. 
+
+By default the current logged in user is updated. However, if a different
+user is to be updated, then specify a username key and value as the first
+parameter. In that case, the realm also needs to be specified using the key
+C<realm>. To update the username, specify its new value as a second username
+key.
+
+    # Update current user
+    update_user surname => "Smith"
+
+    # Update specific user, not necessarily logged in
+    update_user username => "jsmith", realm => "dbic", surname => "Smith"
+
+    # Update a specific user's username
+    update_user username => "jsmith", realm => "dbic", username => "jjones"
+
+The updated user's details are returned, as per L<logged_in_user>.
+
+=cut
+
+sub update_user {
+    my $dsl     = shift;
+
+    # Is a different user specified for the update?
+    my $username; my $realm; my %update;
+    if ($_[0] eq 'username') {
+        $username = shift && shift;
+        %update   = @_;
+        $realm    = delete $update{realm}
+            or die "User's realm needs to be specified when using username for update";
+    } else {
+        %update     = @_;
+        my $session = $dsl->app->session;
+        $username   = $session->read('logged_in_user')
+            or die "No user currently logged in to update";
+        $realm      = $session->read('logged_in_user_realm');
+    }
+
+    my $provider = auth_provider($dsl, $realm);
+    $provider->set_user_details($username, %update);
+}
+register update_user => \&update_user;
+
+
 =back
 
 =head2 SAMPLE CONFIGURATION
