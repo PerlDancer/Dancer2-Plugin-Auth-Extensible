@@ -548,6 +548,95 @@ sub update_user {
 register update_user => \&update_user;
 
 
+=item create_user - create a new user
+
+Creates a new user, if the authentication provider supports it. Optionally
+sends a welcome message with a password reset request, in which case an
+email key must be provided.
+
+This function works in the same manner as L<update_user>, except that
+the username key is mandatory. As with L<update_user>, it is recommended
+not to set a password directly using this method, otherwise it will be
+stored in plain text.
+
+The realm to use must be specified with the key C<realm> if there is more
+than one realm configured.
+
+    # Create new user
+    create_user username => "jsmith", realm => "dbic", surname => "Smith"
+
+    # Create new user and send welcome email
+    create_user username => "jsmith", email => "john@you.com", email_welcome => 1
+
+On success, the created user's details are returned, as per L<logged_in_user>.
+
+The text sent in the welcome email can be customised in 2 ways, in the same way
+as L<password_reset_send>:
+
+=over
+
+=item welcome_send
+
+This can be used to specify a subroutine that will be called to perform the
+entire message construction and email sending. Note that it must be a
+fully-qualified sub such as C<My::App:email_welcome_send>. The subroutine will
+be passed the dsl as the first parameter, followed by a hash with the keys
+C<code>, C<email> and C<user>, which contain the generated reset code, user
+email address, and user hashref respectively.  For example:
+
+    sub reset_send_handler {
+        my ($dsl, %params) = @_;
+        my $user_email = $params{email};
+        my $reset_code = $params{code};
+        # Send email
+        return $result;
+    }
+
+=item welcome_text
+
+This can be used to generate the text for the welcome email, with this module
+sending the actual email itself. It must be a fully-qualified sub, as per the
+previous option. It will be passed the same parameters as
+L<welcome_send>, and should return a hash with the same keys as
+L<password_reset_send_email>.
+
+=back
+
+=cut
+
+sub create_user {
+    my $dsl     = shift;
+    my %options = @_;
+
+    my @all_realms = keys %{ $settings->{realms} };
+    die "Realm must be specified when more than one realm configured"
+        if !$options{realm} && @all_realms > 1;
+
+    my $realm = delete $options{realm} || $all_realms[0];
+    my $email_welcome = delete $options{email_welcome};
+
+    my $provider = auth_provider($dsl, $realm);
+    # Prevent duplicate users. Would be nice to make this an exception,
+    # but that's not in keeping with other functions of this module
+    return if $provider->get_user_details($options{username});
+    my $user = $provider->create_user(%options);
+    if ($email_welcome) {
+        my $_welcome_send =
+            $settings->{welcome_send} || '_default_welcome_send';
+        my $code = _reset_code();
+        # Would be slightly more efficient to do this at time of creation, but
+        # this keeps the code simpler for the provider
+        $user = $provider->set_user_details($user->{username}, pw_reset_code => $code);
+        no strict 'refs';
+        # email hard-coded as per password_reset_send()
+        my %params = (code => $code, email => $user->{email}, user => $user);
+        &{$_welcome_send}($dsl, %params);
+    }
+    $user;
+}
+register create_user => \&create_user;
+
+
 =item password_reset_send - email a password reset request
 
 C<password_reset_send> sends a user an email with a password reset link. Along
@@ -826,15 +915,21 @@ In your application's configuation file:
             # After /logout: If no return_url is given: land here (no default)
             exit_page: '/'
 
-            # Password reset functionality
+            # Mailer options for reset password and welcome emails
             mailer:
                 module: Mail::Message # Email module to use
                 options:              # Options for module
                     via: sendmail     # Options passed to $msg->send
             mail_from: '"App name" <myapp@example.com>' # From email address
+
+            # Password reset functionality
             password_reset_send_email: My::App::reset_send # Customise sending sub
             password_reset_text: My::App::reset_text # Customise reset text
             
+            # create_user options
+            welcome_send: My::App::welcome_send # Customise welcome email sub
+            welcome_text: My::App::welcome_text # Customise welcome email text
+
             # List each authentication realm, with the provider to use and the
             # provider-specific settings (see the documentation for the provider
             # you wish to use)
@@ -1093,6 +1188,31 @@ A request has been received to reset your password for $appname. If
 you would like to do so, please follow the link below:
 
 $site/login/$options{code}
+__EMAIL
+    }
+
+    _send_email(to => $options{email}, %message);
+}
+
+sub _default_welcome_send {
+    my ($dsl, %options)  = @_;
+
+    my %message;
+    if (my $welcome_text = $settings->{welcome_text}) {
+        no strict 'refs';
+        %message = &{$welcome_text}($dsl, %options);
+    } else {
+        my $site          = $dsl->request->base;
+        my $host          = $site->host;
+        my $appname       = $dsl->config->{appname} || '[unknown]';
+        my $reset_link    = $site."login/$options{code}";
+        $message{subject} = "Welcome to $host";
+        $message{from}    = $settings->{mail_from},
+        $message{plain}   = <<__EMAIL;
+An account has been created for you at $host. If you would like
+to accept this, please follow the link below to set a password:
+
+$reset_link
 __EMAIL
     }
 
