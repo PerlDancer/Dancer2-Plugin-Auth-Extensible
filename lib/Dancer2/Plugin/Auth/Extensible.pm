@@ -6,6 +6,7 @@ use strict;
 use Carp;
 use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
+use String::Random;
 
 our $VERSION = '0.306';
 
@@ -25,6 +26,10 @@ my $load_settings = sub {
     $logoutpage = $settings->{logout_page} || '/logout';
     $deniedpage = $settings->{denied_page} || '/login/denied';
     $exitpage = $settings->{exit_page};
+    if ($settings->{mailer} eq 'Mail::Message') {
+        # Attempt to load now, so that it fails at startup if missing
+        require Mail::Message;
+    }
 };
 
 =head1 NAME
@@ -495,7 +500,10 @@ Updates a user's details. If the authentication provider supports it, this
 keyword allows a user's details to be updated within the backend data store.
 
 In order to update the user's details, the keyword should be called with a
-hash of the values to be updated. 
+hash of the values to be updated. Note that whilst the password can be
+updated using this method, any new value will be stored directly into the
+provider as-is, not encrypted. It is recommended to use L<user_password>
+instead.
 
 By default the current logged in user is updated. However, if a different
 user is to be updated, then specify a username key and value as the first
@@ -540,6 +548,268 @@ sub update_user {
 register update_user => \&update_user;
 
 
+=item password_reset_send - email a password reset request
+
+C<password_reset_send> sends a user an email with a password reset link. Along
+with C<user_password>, it allows a user to reset their password.
+
+The function must be called with the key C<username> and a value that is the
+username. The username specified will be sent an email with a link to reset
+their password. Note that the provider being used must return the email address
+in the key C<email>, which in the case of a database will normally require that
+column to exist in the user's table. The provider must be able to write values
+to the user in order for this function to store the generated code.
+
+If the username is not found, a value of 0 is returned. If the username is
+found and the email is sent successfully, 1 is returned. Otherwise undef is
+returned.  Note: if you are displaying a success message, and you do not want
+people to be able to check the existance of a user on your system, then you
+should check for the return value being defined, not true. For example:
+
+    say "Success" if defined password_reset_send username => username;
+
+Note that this still leaves the possibility of checking the existance of a user
+if the email send mechanism is failing.
+
+The realm can also be specified using the key realm:
+
+    password_reset_send username => 'jsmith', realm => 'dbic'
+
+Default text for the email is automatically produced and emailed. This can be
+customized with one of 2 config parameters:
+
+=over
+
+=item password_reset_send_email
+
+This can be used to specify a subroutine that will be called to perform the
+entire message construction and email sending. Note that it must be a
+fully-qualified sub such as C<My::App:reset_send_handler>. The subroutine will
+be passed the dsl as the first parameter, followed by a hash with the keys
+C<code> and C<email>, which contain the generated reset code and user email
+address respectively.  For example:
+
+    sub reset_send_handler {
+        my ($dsl, %params) = @_;
+        my $user_email = $params{email};
+        my $reset_code = $params{code};
+        # Send email
+        return $result;
+    }
+
+=item password_reset_text
+
+This can be used to generate the text for the email, with this module sending
+the actual email itself. It must be a fully-qualified sub, as per the previous
+option. It will be passed the same parameters as L<password_reset_send_email>,
+and should return a hash with the following keys:
+
+=over
+
+=item subject
+
+The subject of the email message.
+
+=item from
+
+The sender of the email message (optional, can also be specified using
+C<mail_from>.
+
+=item plain
+
+Plain text for the email. Either this, or html, or both should be returned.
+
+=item html
+
+HTML text for the email (optional, as per plain).
+
+=back
+
+Here is an example subroutine:
+
+    sub reset_text_handler {
+        my ($dsl, %params) = @_;
+        return (
+            from    => '"My name" <myapp@example.com',
+            subject => 'the subject',
+            plain   => "reset here: $params{code}",
+        );
+    }
+
+# Example configuration
+
+    Auth::Extensible:
+        mailer:
+            module: Mail::Message # Module to send email with
+            options:              # Module options
+                via: sendmail
+        mail_from: '"My app" <myapp@example.com>'
+        password_reset_text: MyApp::reset_send
+
+=back
+
+=cut
+
+sub password_reset_send {
+
+    my ($dsl, %options) = @_;
+
+    my @realms_to_check = $options{realm}
+                        ? ($options{realm})
+                        : (keys %{ $settings->{realms} });
+
+    my $username = $options{username}
+        or die "username must be passed to password_reset_send";
+
+    my $_default_email_password_reset =
+        $settings->{password_reset_send_email} || '_default_email_password_reset';
+    my $result; # 1 for success, 0 for not found, undef for error sending email
+    foreach my $realm (@realms_to_check) {
+        my $this_result;
+        $dsl->app->log( debug  => "Attempting to find $username against realm $realm for password reset" );
+        my $provider = auth_provider($dsl, $realm);
+        # Generate random string for the password reset URL
+        my $code = _reset_code(); my $user;
+        my $ret = eval { $user = $provider->set_user_details($username, pw_reset_code => $code) };
+        unless ($ret) {
+            $dsl->app->log( debug  => "Failed to set_user_details with $realm: $@" );
+            next;
+        }
+        if ($user) {
+            $this_result = 1;
+            no strict 'refs';
+            # Okay, so email key is hard-coded, and therefore relies on the
+            # provider returning that key. The alternative is to have a
+            # separate provider function to get an email address, which seems
+            # an overkill. Providers can make the email key configurable if
+            # need be
+            my %options  = (code => $code, email => $user->{email});
+            $this_result = undef unless &{$_default_email_password_reset}($dsl, %options);
+        } else {
+            $this_result = 0;
+        }
+        $result = $this_result unless $result;
+    }
+    $result; # 1 if at least one send was successful
+}
+register password_reset_send => \&password_reset_send;
+
+
+=item user_password - manage a user's password
+
+This provides various functions to check or reset a user's password, either
+from a reset code that was previously send by L<password_reset_send> or
+directly by specifying a username and password. Functions that update a
+password rely on a provider that has write access to a user's details.
+
+By default, the user to update is the currently logged-in user. A specific user
+can be specified with the key C<username> for a certain username, or C<code>
+for a previously sent reset code. Using these parameters on their own will
+return the username if it is a valid request.
+
+If the above parameters are specified with the additional parameter
+C<new_password>, then the password will be set to that value, assuming that it
+is a valid request.
+
+The realm can be optionally specified with the keyword C<realm>.
+
+Examples:
+
+Check the logged-in user's password:
+
+    user_password password => 'mysecret'
+
+Check a specific user's password:
+
+    user_password username => 'jsmith', password => 'bigsecret'
+
+Check a previously sent reset code:
+
+    user_password code => 'XXXX'
+
+Reset a password with a previously sent code:
+
+    user_password code => 'XXXX', new_password => 'newsecret'
+
+Change a user's password (username optional)
+
+    user_password username => 'jbloggs', password => 'old', new_password => 'secret'
+
+Force set a specific user's password, without checking existing password:
+
+    user_password username => 'jbloggs', new_password => 'secret'
+
+=back
+
+=cut
+
+sub user_password {
+    my ($dsl, %params) = @_;
+
+    my $username; my $realm;
+
+    my @realms_to_check = $params{realm}
+                        ? ($params{realm})
+                        : (keys %{ $settings->{realms} });
+
+    # Expect either a code, username or nothing (for logged-in user)
+    if (my $code = $params{code}) {
+
+        foreach my $realm_check (@realms_to_check) {
+            my $provider = auth_provider($dsl, $realm_check);
+            # Realm may not support get_user_by_code
+            my $ret = eval { $username = $provider->get_user_by_code($code) };
+            unless ($ret) {
+                $dsl->app->log( debug  => "Failed to check for code with $realm_check: $@" );
+            }
+            if ($username) {
+                $realm = $realm_check;
+                last;
+            }
+        }
+        return unless $username;
+    } else {
+        if (!$params{username}) {
+            $username = $dsl->session->read('logged_in_user')
+                or die "No username specified and no logged-in user";
+            $realm    = $dsl->session->read('logged_in_user_realm');
+        } else {
+            $username = $params{username};
+            $realm    = $params{realm};
+        }
+        if (exists $params{password}) {
+            my $success;
+            # Possible that realm will not be set before this statement
+            ($success, $realm) = authenticate_user($dsl, $username, $params{password}, $realm);
+            $success or return;
+        }
+    }
+
+    # We now have a valid user. Reset the password?
+    if (my $new_password = $params{new_password}) {
+        if (!$realm) {
+            # It's possible that the realm is unknown at this stage
+            foreach my $realm_check (@realms_to_check) {
+                my $provider = auth_provider($dsl, $realm_check);
+                $realm = $realm_check if $provider->get_user_details($username);
+            }
+            return unless $realm; # Invalid user
+        }
+        my $provider = auth_provider($dsl, $realm);
+        $provider->set_user_password($username, $new_password);
+        if ($params{code}) {
+            # Stop reset code being reused
+            $provider->set_user_details($username, pw_reset_code => undef);
+            # Force them to login if this was a reset with a code. This forces
+            # a check that they have the new password correct, and there is a
+            # chance they could have been logged-in as another user
+            $dsl->app->destroy_session;
+        }
+    }
+    $username;
+}
+register user_password=> \&user_password;
+
 =back
 
 =head2 SAMPLE CONFIGURATION
@@ -555,6 +825,15 @@ In your application's configuation file:
             user_home_page: '/user'
             # After /logout: If no return_url is given: land here (no default)
             exit_page: '/'
+
+            # Password reset functionality
+            mailer:
+                module: Mail::Message # Email module to use
+                options:              # Options for module
+                    via: sendmail     # Options passed to $msg->send
+            mail_from: '"App name" <myapp@example.com>' # From email address
+            password_reset_send_email: My::App::reset_send # Customise sending sub
+            password_reset_text: My::App::reset_text # Customise reset text
             
             # List each authentication realm, with the provider to use and the
             # provider-specific settings (see the documentation for the provider
@@ -797,6 +1076,75 @@ $login_fail_message
 PAGE
 }
 
+sub _default_email_password_reset {
+    my ($dsl, %options)  = @_;
+
+    my %message;
+    if (my $password_reset_text = $settings->{password_reset_text}) {
+        no strict 'refs';
+        %message = &{$password_reset_text}($dsl, %options);
+    } else {
+        my $site          = $dsl->request->uri_base;
+        my $appname       = $dsl->config->{appname} || '[unknown]';
+        $message{subject} = "Password reset request";
+        $message{from}    = $settings->{mail_from},
+        $message{plain}   = <<__EMAIL;
+A request has been received to reset your password for $appname. If
+you would like to do so, please follow the link below:
+
+$site/login/$options{code}
+__EMAIL
+    }
+
+    _send_email(to => $options{email}, %message);
+}
+
+sub _send_email {
+    my $mailer = $settings->{mailer}
+        or die "No mailer configured";
+    my $module = $mailer->{module}
+        or die "No email module specified for mailer";
+
+    if ($module eq 'Mail::Message') {
+#        require Mail::Message;
+        require Mail::Message::Body::String;
+        return _email_mail_message(@_);
+    } else {
+        die "No support for $module. Please submit a PR!";
+    }
+}
+
+sub _email_mail_message {
+    my %params = @_;
+    my $mailer_options = $settings->{mailer}->{options} || {};
+
+    my @parts;
+
+    push @parts, Mail::Message::Body::String->new(
+        mime_type   => 'text/plain',
+        disposition => 'inline',
+        data        => $params{plain},
+    ) if ($params{plain});
+
+    push @parts, Mail::Message::Body::String->new(
+        mime_type   => 'text/html',
+        disposition => 'inline',
+        data        => $params{html},
+    ) if ($params{html});
+
+    @parts or die "No plain or HTML email text supplied";
+
+    my $content_type = @parts > 1 ? 'multipart/alternative' : $parts[0]->type;
+
+    Mail::Message->build(
+        To             => $params{to},
+        Subject        => $params{subject},
+        From           => $params{from},
+        'Content-Type' => $content_type,
+        attach         => \@parts,
+    )->send(%$mailer_options);
+}
+
 # Replacement for much maligned and misunderstood smartmatch operator
 sub _smart_match {
     my ($got, $want) = @_;
@@ -811,7 +1159,11 @@ sub _smart_match {
     }
 }
 
-
+sub _reset_code {
+    my $gen = String::Random->new;
+    $gen->{'A'} = [ 'A'..'Z', 'a'..'z' ];
+    scalar $gen->randregex('\w{32}');
+}
 
 
 =head1 AUTHOR
@@ -869,3 +1221,4 @@ See http://dev.perl.org/licenses/ for more information.
 =cut
 
 1; # End of Dancer2::Plugin::Auth::Extensible
+

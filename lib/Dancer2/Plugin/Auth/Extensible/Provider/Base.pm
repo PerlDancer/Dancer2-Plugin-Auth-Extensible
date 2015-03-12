@@ -60,6 +60,16 @@ sub match_password {
 }
 
 
+sub encrypt_password {
+    my ($self, $password, $algorithm) = @_;
+    $algorithm ||= 'SHA-1';
+    my $crypt = Crypt::SaltedHash->new(algorithm => $algorithm);
+    $crypt->add($password);
+    $crypt->generate;
+}
+
+
+
 # Install basic method placeholders which will blow up if the provider module
 # did not implement their own version. 
 {
@@ -69,6 +79,7 @@ sub match_password {
         get_user_details
         set_user_details
         get_user_roles
+        set_user_password
         ))
     {
         *$method = sub {
