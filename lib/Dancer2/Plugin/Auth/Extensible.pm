@@ -618,7 +618,10 @@ sub create_user {
     my $provider = auth_provider($dsl, $realm);
     # Prevent duplicate users. Would be nice to make this an exception,
     # but that's not in keeping with other functions of this module
-    return if $provider->get_user_details($options{username});
+    if ($provider->get_user_details($options{username})) {
+        $dsl->app->log( info  => "User $options{username} already exists. Not creating." );
+        return;
+    }
     my $user = $provider->create_user(%options);
     if ($email_welcome) {
         my $_welcome_send =
