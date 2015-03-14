@@ -215,8 +215,12 @@ and should do at least the following:
         session->destroy;
     };
     
+
 If you want to use the default C<post '/login'> and C<any '/logout'> routes
 you can configure them. See below.
+
+The default routes also contain functionality for a user to perform password
+resets. See the L<PASSWORD RESETS> documentation for more details.
 
 =head2 Keywords
 
@@ -886,6 +890,54 @@ register user_password=> \&user_password;
 
 =back
 
+=head2 PASSWORD RESETS
+
+A variety of functionality is provided to make it easier to manage requests
+from users to reset their passwords. The keywords L<password_reset_send> and
+L<user_password> form the core of this functionality - see the documentation of
+these keywords for full details. This functionality can only be used with a
+provider that supports write access.
+
+When utilising this functionality, it is wise to only allow passwords to be
+reset with a POST request. This is because some email scanners "open" links
+before delivering the email to the end user. With only a single-use GET
+request, this will result in the link being "used" by the time it reaches the
+end user, thus rendering it invalid.
+
+Password reset functionality is also built-in to the default route handlers.
+To enable this, set the configuration value C<reset_password_handler> to a true
+value (having already configured the mail handler, as per the keyword
+documentation above). Once this is done, the default login page will contain
+additional form controls to allow the user to enter their username and request
+a reset password link.
+
+If using C<login_page_handler> to replace the default login page, you can still
+use the default password reset handlers. Add 2 controls to your form for
+submitting a password reset request: a text input called username_reset for the
+username, and submit_reset to submit the request. Your login_page_handler is
+then passed the following additional params:
+
+=over
+
+=item new_password
+
+Contains the new automatically-generated password, once the password reset has
+been performed successfully.
+
+=item reset_sent
+
+Is true when a password reset has been emailed to the user.
+
+=item password_code_valid
+
+Is true when a valid password reset code has been submitted with a GET request.
+In this case, the user should be given the chance to confirm with a POST
+request, with a form control called C<confirm_reset>.
+
+For a full example, see the default handler in this module's code.
+
+=back
+
 =head2 SAMPLE CONFIGURATION
 
 In your application's configuation file:
@@ -906,6 +958,9 @@ In your application's configuation file:
                 options:              # Options for module
                     via: sendmail     # Options passed to $msg->send
             mail_from: '"App name" <myapp@example.com>' # From email address
+
+            # Set to true to enable password reset code in the default handlers
+            reset_password_handler: 1
 
             # Password reset functionality
             password_reset_send_email: My::App::reset_send # Customise sending sub
