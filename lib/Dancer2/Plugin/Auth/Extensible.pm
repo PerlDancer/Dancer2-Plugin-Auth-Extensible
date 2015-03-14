@@ -516,7 +516,7 @@ In your application's configuation file:
 B<Please note> that you B<must> have a session provider configured.  The 
 authentication framework requires sessions in order to track information about 
 the currently logged in user.
-Please see L<Dancer2::Session> for information on how to configure session 
+Please see L<Dancer2::Core::Session> for information on how to configure session 
 management within your application.
 
 =cut
