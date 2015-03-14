@@ -624,7 +624,7 @@ sub create_user {
 register create_user => \&create_user;
 
 
-=item password_reset_send - email a password reset request
+=item password_reset_send
 
 C<password_reset_send> sends a user an email with a password reset link. Along
 with C<user_password>, it allows a user to reset their password.
@@ -771,7 +771,7 @@ sub password_reset_send {
 register password_reset_send => \&password_reset_send;
 
 
-=item user_password - manage a user's password
+=item user_password
 
 This provides various functions to check or reset a user's password, either
 from a reset code that was previously send by L<password_reset_send> or
