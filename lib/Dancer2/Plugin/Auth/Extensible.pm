@@ -827,8 +827,8 @@ sub user_password {
                         : (keys %{ $settings->{realms} });
 
     # Expect either a code, username or nothing (for logged-in user)
-    if (my $code = $params{code}) {
-
+    if (exists $params{code}) {
+        my $code = $params{code} or return;
         foreach my $realm_check (@realms_to_check) {
             my $provider = auth_provider($dsl, $realm_check);
             # Realm may not support get_user_by_code
