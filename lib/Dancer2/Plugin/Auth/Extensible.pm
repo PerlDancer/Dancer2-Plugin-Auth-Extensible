@@ -1023,7 +1023,7 @@ on_plugin_import {
 
                 my ($code) = $dsl->request->splat; # Reset password code submitted?
                 if ($settings->{reset_password_handler} && user_password($dsl, code => $code)) {
-                    $app->request->vars->{password_code_valid} = 1;
+                    $app->request->params->{password_code_valid} = 1;
                 } else {
                     $dsl->response->status(401);
                 }
@@ -1176,7 +1176,7 @@ SENT
 
     # Valid password reset request. Just need to confirm to
     # prevent GET requests by email filters
-    if ($dsl->request->vars->{password_code_valid}) {
+    if ($dsl->request->param('password_code_valid')) {
         return <<VALID;
 <h1>Reset your password</h1>
 <p>
