@@ -815,8 +815,6 @@ Force set a specific user's password, without checking existing password:
 
     user_password username => 'jbloggs', new_password => 'secret'
 
-=back
-
 =cut
 
 sub user_password {
