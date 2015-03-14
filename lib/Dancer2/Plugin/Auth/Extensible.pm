@@ -42,7 +42,8 @@ methods/sources (config file, database, Unix system users, etc).
 Designed to support multiple authentication realms and to be as extensible as
 possible, and to make secure password handling easy.  The base class for auth
 providers makes handling C<RFC2307>-style hashed passwords really simple, so you
-have no excuse for storing plain-text passwords.  A simple script to generate
+have no excuse for storing plain-text passwords.  A simple script called
+B<generate-crypted-password> to generate
 RFC2307-style hashed passwords is included, or you can use L<Crypt::SaltedHash>
 yourself to do so, or use the C<slappasswd> utility if you have it installed.
 
