@@ -532,7 +532,7 @@ sub update_user {
 register update_user => \&update_user;
 
 
-=item create_user - create a new user
+=item create_user
 
 Creates a new user, if the authentication provider supports it. Optionally
 sends a welcome message with a password reset request, in which case an
