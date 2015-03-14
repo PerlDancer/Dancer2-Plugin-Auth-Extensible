@@ -1013,7 +1013,7 @@ on_plugin_import {
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
             method => 'get',
-            regexp => $loginpage,
+            regexp => qr!$loginpage/?([\w]{32})?!, # Match optional reset code, but not "denied"
             code => sub {
                 my $dsl = shift;
 
@@ -1021,7 +1021,13 @@ on_plugin_import {
                     $dsl->redirect($dsl->request->params->{return_url} || $userhomepage);
                 }
 
-                $dsl->response->status(401);
+                my ($code) = $dsl->request->splat; # Reset password code submitted?
+                if ($settings->{reset_password_handler} && user_password($dsl, code => $code)) {
+                    $app->request->vars->{password_code_valid} = 1;
+                } else {
+                    $dsl->response->status(401);
+                }
+
                 my $_default_login_page =
                     $settings->{login_page_handler} || '_default_login_page';
                 no strict 'refs';
@@ -1046,7 +1052,7 @@ on_plugin_import {
     if ( !$settings->{no_login_handler} ) {
         $app->add_route(
             method => 'post',
-            regexp => $loginpage,
+            regexp => qr!$loginpage/?([\w]{32})?!, # Match optional reset code, but not "denied"
             code => \&_post_login_route,
         );
 
@@ -1063,6 +1069,26 @@ on_plugin_import {
 # implementation of post login route
 sub _post_login_route {
     my $app = shift;
+
+    # First check for password reset request, if applicable
+    if ($settings->{reset_password_handler} && $app->request->param('submit_reset')) {
+        my $username = $app->request->param('username_reset');
+        die "Attempt to pass reference to reset blocked" if ref $username;
+        password_reset_send($app, username => $username);
+        $app->forward($loginpage, { reset_sent => 1 }, { method => 'GET' });
+    }
+
+    # Then for a password reset itself (confirmed by POST request)
+    my ($code) = $settings->{reset_password_handler}
+        && $app->request->param('confirm_reset')
+        && $app->request->splat;
+    if ($code) {
+        my $gen = String::Random->new;
+        my $randompw = scalar $gen->randregex('\w{8}');
+        if (user_password($app, code => $code, new_password => $randompw)) {
+            $app->forward($loginpage, { new_password => $randompw }, { method => 'GET' });
+        }
+    }
 
     # For security, ensure the username and password are straight scalars; if
     # the app is using a serializer and we were sent a blob of JSON, they could
@@ -1130,11 +1156,54 @@ PAGE
 
 sub _default_login_page {
     my $dsl = shift;
+
+    if (my $new_password = $dsl->request->param('new_password')) {
+        return <<NEWPW;
+<h1>New password</h1>
+<p>
+Your new password is $new_password
+</p>
+<a href="$loginpage">Click here to login</a>
+NEWPW
+    }
+
+    if ($dsl->request->param('reset_sent')) {
+        return <<SENT;
+<h1>Request sent</h1>
+<p>A password reset request has been sent. Please check your email.</p>
+SENT
+    }
+
+    # Valid password reset request. Just need to confirm to
+    # prevent GET requests by email filters
+    if ($dsl->request->vars->{password_code_valid}) {
+        return <<VALID;
+<h1>Reset your password</h1>
+<p>
+Please click the button below to reset your password
+</p>
+<form method="post">
+<input type="submit" name="confirm_reset" value="Reset password">
+</form>
+VALID
+    }
+
+    my $pwreset_html = !$settings->{reset_password_handler}
+        ? ""
+        : <<RESETPW;
+<h2>Password reset</h2>
+<p>Enter your username to obtain an email to reset your password</p>
+<label for="username_reset">Username:</label>
+<input type="text" name="username_reset" id="username_reset">
+<input type="submit" name="submit_reset" value="Submit">
+RESETPW
+    my $return_url = $dsl->request->params->{return_url} || '';
+
     my $login_fail_message = $dsl->request->vars->{login_failed}
          ? "<p>LOGIN FAILED</p>"
          : "";
-     my $return_url = $dsl->request->params->{return_url} || '';
-     return <<PAGE;
+
+    return <<PAGE;
 <h1>Login Required</h1>
 
 <p>
@@ -1152,6 +1221,7 @@ $login_fail_message
 <br />
 <input type="hidden" name="return_url" value="$return_url">
 <input type="submit" value="Login">
+$pwreset_html
 </form>
 PAGE
 }
