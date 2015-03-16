@@ -631,6 +631,18 @@ on_plugin_import {
                 code => \&_logout_route,
             );
         }
+
+        $app->add_route(
+            method => 'get',
+            regexp => $deniedpage,
+            code => sub {
+                $dsl->response->status(403);
+                my $_default_permission_denied_page =
+                    $settings->{permission_denied_page_handler}
+                    || '_default_permission_denied_page';
+                no strict 'refs';
+                return &{$_default_permission_denied_page}($dsl);
+            });
     }
 };
 
