@@ -206,7 +206,7 @@ sub get_user_roles {
 
     my $settings = $self->realm_settings;
     # Get our database handle and find out the table and column names:
-    my $database = database($settings->{db_connection_name});
+    my $database = $self->realm_dsl->database($settings->{db_connection_name});
 
     # Get details of the user first; both to check they exist, and so we have
     # their ID to use.
