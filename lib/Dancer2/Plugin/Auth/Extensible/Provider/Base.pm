@@ -23,15 +23,16 @@ implementation, which will die if they are not overridden.
 =cut
 
 sub new {
-    my ($class, $realm_settings) = @_;
+    my ($class, $realm_settings, $dsl) = @_;
     my $self = {
         realm_settings => $realm_settings,
+        dsl => $dsl,
     };
     return bless $self => $class;
 }
 
 sub realm_settings { shift->{realm_settings} || {} }
-
+sub realm_dsl { shift->{dsl} }
 
  
 sub match_password {
