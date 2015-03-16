@@ -778,7 +778,8 @@ Support for user_roles looking in other realms by Colin Ewen (casao)
 
 LDAP provider added by Mark Meyer (ofosos)
 
-Config options for default login/logout handlers by Henk van Oers (hvoers)
+Config options for default login/logout handlers and
+include the dsl object in the provider constructorby Henk van Oers (hvoers).
 
 Documentation fix by Vince Willems.
 
