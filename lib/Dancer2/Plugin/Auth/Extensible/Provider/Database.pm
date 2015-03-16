@@ -182,7 +182,7 @@ sub get_user_details {
     my $settings = $self->realm_settings;
 
     # Get our database handle and find out the table and column names:
-    my $database = database($settings->{db_connection_name})
+    my $database = $self->realm_dsl->database($settings->{db_connection_name})
         or die "No database connection";
 
     my $users_table     = $settings->{users_table}     || 'users';
