@@ -795,12 +795,13 @@ Support for user_roles looking in other realms by Colin Ewen (casao)
 
 LDAP provider added by Mark Meyer (ofosos)
 
-Config options for default login/logout handlers and
-include the dsl object in the provider constructorby Henk van Oers (hvoers).
-
 Documentation fix by Vince Willems.
 
-Support for DBIC provider and warning on missing realms by Andrew Beverley.
+Henk van Oers (GH #8, #13).
+
+Andrew Beverly (GH #6, #7, #17).
+
+Gabor Szabo (GH #11, #16).
 
 =head1 LICENSE AND COPYRIGHT
 
