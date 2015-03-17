@@ -1,5 +1,22 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.305 Tue Mar 17 09:48:43 2015 CET
+
+    [ENHANCEMENTS]
+
+    * Include the dsl object in the provider constructor (Henk van Oers, GH #13).
+
+    [BUG FIXES]
+
+    * Fix no_default_pages and no_login_handler options (Andrew Beverly, GH #17).
+    * Add missing "Permission Denied" route (Stefan Hornburg, GH #15).
+    * Use Dancer2 in the example and test the example (Gabor Szabo, GH #16).
+    * Remove Mock::Quick from prerequisites (Henk van Oers, GH #8).
+
+    [DOCUMENTATION]
+
+    * Include the name of the command line tool in the pod (Gabor Szabo, GH #11).
+
 0.304 Fri Feb 20 09:12:18 2015 CET
 
     [ENHANCEMENTS]

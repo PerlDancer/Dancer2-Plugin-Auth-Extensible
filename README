@@ -15,9 +15,10 @@ DESCRIPTION
     extensible as possible, and to make secure password handling easy. The
     base class for auth providers makes handling `RFC2307'-style hashed
     passwords really simple, so you have no excuse for storing plain-text
-    passwords. A simple script to generate RFC2307-style hashed passwords is
-    included, or you can use Crypt::SaltedHash yourself to do so, or use the
-    `slappasswd' utility if you have it installed.
+    passwords. A simple script called generate-crypted-password to generate
+    RFC2307-style hashed passwords is included, or you can use
+    Crypt::SaltedHash yourself to do so, or use the `slappasswd' utility if
+    you have it installed.
 
 SYNOPSIS
     Configure the plugin to use the authentication provider class you wish
@@ -272,8 +273,8 @@ CONTROLLING ACCESS TO ROUTES
 
     Please note that you must have a session provider configured. The
     authentication framework requires sessions in order to track information
-    about the currently logged in user. Please see Dancer2::Session for
-    information on how to configure session management within your
+    about the currently logged in user. Please see Dancer2::Core::Session
+    for information on how to configure session management within your
     application.
 
 AUTHOR
@@ -304,13 +305,13 @@ ACKNOWLEDGEMENTS
 
     LDAP provider added by Mark Meyer (ofosos)
 
-    Config options for default login/logout handlers by Henk van Oers
-    (hvoers)
-
     Documentation fix by Vince Willems.
 
-    Support for DBIC provider and warning on missing realms by Andrew
-    Beverley.
+    Henk van Oers (GH #8, #13).
+
+    Andrew Beverly (GH #6, #7, #17).
+
+    Gabor Szabo (GH #11, #16).
 
 LICENSE AND COPYRIGHT
     Copyright 2012-13 David Precious.
