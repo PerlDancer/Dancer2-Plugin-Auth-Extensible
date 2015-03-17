@@ -16,15 +16,19 @@ plugins:
                       pass: 'password'
                       name: 'Beer drinker'
                       roles:
-                        - BeerDrinker
+                        - Beer_Drinker
                     - user: 'vodkadrinker'
-                      pass: 'password'
+                      pass: '{SSHA}hDx1aYOV3UcMI9OAwE5RSOO+dzwSRehz'
                       name: 'Vodka drinker'
                       roles:
-                        - VodkaDrinker
-
-
-
+                        - Vodka_Drinker
+                        - Heavy_Drinker
+                    - user: 'arakdrinker'
+                      pass: '{SSHA}lHxzJtu9bxJeCrhSN+IQWJz2kBzV4fjJ'
+                      name: 'Arak drinker'
+                      roles:
+                        - Arak_Drinker
+                        - Heavy_Drinker
 
 show_errors: 1
 
