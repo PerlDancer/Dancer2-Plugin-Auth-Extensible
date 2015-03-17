@@ -5,7 +5,7 @@ use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
 use Dancer2 qw(warning);
 
-our $VERSION = '0.304';
+our $VERSION = '0.305';
 
 =head1 NAME 
 
