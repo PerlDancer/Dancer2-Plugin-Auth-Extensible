@@ -20,6 +20,7 @@ MANIFEST.SKIP
 bin/generate-crypted-password
 example/authextest.pl
 example/config.yml
+example/demo.t
 ignore.txt
 Makefile.PL
 Changes
