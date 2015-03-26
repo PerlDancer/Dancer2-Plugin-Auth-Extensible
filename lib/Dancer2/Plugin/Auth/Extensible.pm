@@ -801,7 +801,7 @@ Henk van Oers (GH #8, #13).
 
 Andrew Beverly (GH #6, #7, #17).
 
-Gabor Szabo (GH #11, #16).
+Gabor Szabo (GH #11, #16, #18).
 
 =head1 LICENSE AND COPYRIGHT
 
