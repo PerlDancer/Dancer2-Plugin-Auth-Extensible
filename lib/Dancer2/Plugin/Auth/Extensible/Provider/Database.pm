@@ -5,7 +5,7 @@ use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Dancer2::Plugin::Database;
 use Dancer2 qw(:syntax);
 
-our $VERSION = '0.305';
+our $VERSION = '0.306';
 
 =head1 NAME 
 

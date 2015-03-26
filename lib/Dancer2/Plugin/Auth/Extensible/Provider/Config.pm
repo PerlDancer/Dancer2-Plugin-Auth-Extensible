@@ -3,7 +3,7 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
-our $VERSION = '0.305';
+our $VERSION = '0.306';
 
 =head1 NAME 
 
