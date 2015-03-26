@@ -608,7 +608,7 @@ on_plugin_import {
                 my $dsl = shift;
 
                 if(logged_in_user($dsl)) {
-                    $dsl->redirect($dsl->params->{return_url} || $userhomepage);
+                    $dsl->redirect($dsl->request->params->{return_url} || $userhomepage);
                 }
 
                 $dsl->response->status(401);
