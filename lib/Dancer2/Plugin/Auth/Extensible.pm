@@ -6,7 +6,7 @@ use strict;
 use Carp;
 use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
-use String::Random;
+use Session::Token;
 
 our $VERSION = '0.306';
 
@@ -1138,8 +1138,7 @@ sub _post_login_route {
         && $app->request->param('confirm_reset')
         && $app->request->splat;
     if ($code) {
-        my $gen = String::Random->new;
-        my $randompw = scalar $gen->randregex('\w{8}');
+        my $randompw = Session::Token->new(length => 8)->get;
         if (user_password($app, code => $code, new_password => $randompw)) {
             $app->forward($loginpage, { new_password => $randompw }, { method => 'GET' });
         }
@@ -1390,9 +1389,7 @@ sub _smart_match {
 }
 
 sub _reset_code {
-    my $gen = String::Random->new;
-    $gen->{'A'} = [ 'A'..'Z', 'a'..'z' ];
-    scalar $gen->randregex('\w{32}');
+    Session::Token->new(length => 32)->get;
 }
 
 
