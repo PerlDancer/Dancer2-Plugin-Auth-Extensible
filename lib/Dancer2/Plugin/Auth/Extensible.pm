@@ -169,8 +169,8 @@ handle the route. Note that it must be a fully qualified sub. E.g.
 
     plugins:
       Auth::Extensible:
-        login_page_handler: 'My::App:login_page_handler'
-        permission_denied_page_handler: 'My::App:permission_denied_page_handler'
+        login_page_handler: 'My::App::login_page_handler'
+        permission_denied_page_handler: 'My::App::permission_denied_page_handler'
 
 Then in your code you might simply use a template:
 
