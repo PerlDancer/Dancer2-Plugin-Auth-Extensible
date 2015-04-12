@@ -9,6 +9,7 @@ t/lib/public/.placeholder
 t/lib/lib/.placeholder
 t/lib/config.yml
 t/manifest.t
+t/pod-coverage.t
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Database.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config.pm
