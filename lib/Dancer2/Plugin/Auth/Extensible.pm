@@ -26,7 +26,7 @@ my $load_settings = sub {
     $logoutpage = $settings->{logout_page} || '/logout';
     $deniedpage = $settings->{denied_page} || '/login/denied';
     $exitpage = $settings->{exit_page};
-    if ($settings->{mailer} eq 'Mail::Message') {
+    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
         # Attempt to load now, so that it fails at startup if missing
         require Mail::Message;
     }
