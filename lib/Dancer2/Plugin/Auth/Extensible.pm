@@ -551,8 +551,10 @@ The updated user's details are returned, as per L<logged_in_user>.
 sub update_current_user {
     my ($dsl, %update) = @_;
 
-    if (my $username = $dsl->app->session->read('logged_in_user')) {
-        update_user($dsl, $username, %update);
+    my $session = $dsl->app->session;
+    if (my $username = $session->read('logged_in_user')) {
+        my $realm    = $session->read('logged_in_user_realm');
+        update_user($dsl, $username, realm => $realm, %update);
     } else {
         $dsl->app->log( debug  => "Could not update current user as no user currently logged in" );
     }
