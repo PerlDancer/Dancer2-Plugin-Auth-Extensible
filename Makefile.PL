@@ -16,6 +16,7 @@ WriteMakefile(
         'Dancer2'     => 0.15,
         'Crypt::SaltedHash' => 0,
         'YAML'       => 0, # for config files (TODO: make optional?)
+        'Session::Token' => 0,
     },
     EXE_FILES => [ 'bin/generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
