@@ -536,6 +536,30 @@ sub update_user {
 register update_user => \&update_user;
 
 
+=item update_current_user
+
+The same as L<update_user>, but does not take a username as the first parameter,
+instead updating the currently logged-in user.
+
+    # Update user, only one realm configured
+    update_current_user surname => "Smith"
+
+The updated user's details are returned, as per L<logged_in_user>.
+
+=cut
+
+sub update_current_user {
+    my ($dsl, %update) = @_;
+
+    if (my $username = $dsl->app->session->read('logged_in_user')) {
+        update_user($dsl, $username, %update);
+    } else {
+        $dsl->app->log( debug  => "Could not update current user as no user currently logged in" );
+    }
+}
+register update_current_user => \&update_current_user;
+
+
 =item create_user
 
 Creates a new user, if the authentication provider supports it. Optionally
