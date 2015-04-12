@@ -1010,10 +1010,15 @@ the currently logged in user.
 Please see L<Dancer2::Core::Session> for information on how to configure session 
 management within your application.
 
+=head1 FUNCTIONS
+
+=head2 auth_provider($dsl, $realm)
+
+Given a realm, returns a configured and ready to use instance of the provider
+specified by that realm's config.
+
 =cut
 
-# Given a realm, returns a configured and ready to use instance of the provider
-# specified by that realm's config.
 {
 my %realm_provider;
 sub auth_provider {
