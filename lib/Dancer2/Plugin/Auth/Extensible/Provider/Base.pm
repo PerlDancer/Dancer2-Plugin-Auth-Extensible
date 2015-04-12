@@ -31,10 +31,41 @@ sub new {
     return bless $self => $class;
 }
 
+=head1 METHODS SUPPLIED BY BASE PROVIDER
+
+=head2 realm_settings
+
+Accessor for realm settings.
+
+=head2 realm_dsl
+
+Accessor for realm DSL object.
+
+=head2 match_password($given, $correct)
+
+Matches C<$given> password with the C<$correct> one.
+
+=head2 encrypt_password($password, $algorithm)
+
+Encrypts password C<$password> with C<$algorithm) which defaults to SHA-1.
+
+=head1 METHODS IMPLEMENTED BY PROVIDER
+
+=head2 authenticate_user
+
+=head2 get_user_details
+
+=head2 set_user_details
+
+=head2 get_user_roles
+
+=head2 set_user_password
+
+=cut
+
 sub realm_settings { shift->{realm_settings} || {} }
 sub realm_dsl { shift->{dsl} }
 
- 
 sub match_password {
     my ($self, $given, $correct) = @_;
 
