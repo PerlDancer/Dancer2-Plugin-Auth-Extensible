@@ -776,8 +776,8 @@ sub password_reset_send {
         my $provider = auth_provider($dsl, $realm);
         # Generate random string for the password reset URL
         my $code = _reset_code(); my $user;
-        my $ret = eval { $user = $provider->set_user_details($username, pw_reset_code => $code) };
-        unless ($ret) {
+        eval { $user = $provider->set_user_details($username, pw_reset_code => $code) };
+        if ($@) {
             $dsl->app->log( debug  => "Failed to set_user_details with $realm: $@" );
             next;
         }
