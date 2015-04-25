@@ -373,13 +373,19 @@ The details you get back will depend upon the authentication provider in use.
 =cut
 
 sub logged_in_user {
-    my $dsl = shift;
-    my $session = $dsl->app->session;
+    my $dsl     = shift;
+    my $app     = $dsl->app;
+    my $session = $app->session;
+    my $request = $app->request;
 
     if (my $user = $session->read('logged_in_user')) {
+        my $existing = $request->vars->{logged_in_user_hash};
+        return $existing if $existing;
         my $realm    = $session->read('logged_in_user_realm');
         my $provider = auth_provider($dsl, $realm);
-        return $provider->get_user_details($user, $realm);
+        my $user = $provider->get_user_details($user, $realm);
+        $request->vars->{logged_in_user_hash} = $user;
+        return $user;
     } else {
         return;
     }
@@ -531,7 +537,12 @@ sub update_user {
 
     my $realm    = delete $update{realm} || $all_realms[0];
     my $provider = auth_provider($dsl, $realm);
-    $provider->set_user_details($username, %update);
+    my $updated  = $provider->set_user_details($username, %update);
+    my $request  = $dsl->app->request;
+    my $session  = $dsl->app->session;
+    $request->vars->{logged_in_user_hash} = $updated
+        if $username eq $session->read('logged_in_user');
+    $updated;
 }
 register update_user => \&update_user;
 
