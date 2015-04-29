@@ -937,6 +937,7 @@ full configuration details.
 
 sub logged_in_user_password_expired {
     my $dsl      = shift;
+    return unless $dsl->logged_in_user;
     my $provider = auth_provider($dsl);
     $provider->password_expired($dsl->logged_in_user);
 }
