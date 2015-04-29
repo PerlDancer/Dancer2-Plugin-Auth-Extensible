@@ -487,7 +487,8 @@ sub authenticate_user {
     for my $realm (@realms_to_check) {
         $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
         my $provider = auth_provider($dsl, $realm);
-        if ($provider->authenticate_user($username, $password)) {
+        my %lastlogin = $settings->{record_lastlogin} ? (lastlogin => 'logged_in_user_lastlogin') : ();
+        if ($provider->authenticate_user($username, $password, %lastlogin)) {
             $dsl->app->log ( debug => "$realm accepted user $username");
             return wantarray ? (1, $realm) : 1;
         }
@@ -502,6 +503,23 @@ sub authenticate_user {
 }
 
 register authenticate_user => \&authenticate_user;
+
+
+=item logged_in_user_lastlogin
+
+Returns (as a DateTime object) the time of the last successful login of the
+current logged in user.
+
+To enable this functionality, set the configuration key C<record_lastlogin> to
+a true value. The backend provider must support write access for a user and
+have lastlogin functionality implemented.
+
+=cut
+
+sub logged_in_user_lastlogin {
+    shift->app->session->read('logged_in_user_lastlogin');
+}
+register logged_in_user_lastlogin => \&logged_in_user_lastlogin;
 
 
 =item update_user
@@ -998,6 +1016,9 @@ In your application's configuation file:
 
             # Set to true to enable password reset code in the default handlers
             reset_password_handler: 1
+
+            # Set to a true value to enable recording of successsful last login times
+            record_lastlogin: 1
 
             # Password reset functionality
             password_reset_send_email: My::App::reset_send # Customise sending sub
