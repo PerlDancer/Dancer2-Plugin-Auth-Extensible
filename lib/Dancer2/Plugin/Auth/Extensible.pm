@@ -925,6 +925,24 @@ sub user_password {
 }
 register user_password=> \&user_password;
 
+
+=item logged_in_user_password_expired
+
+Returns true if the password of the currently logged in user has expired.  To
+use this functionality, the provider must support the C<password_expired>
+function, and must be configured accordingly. See the relevant provider for
+full configuration details.
+
+=cut
+
+sub logged_in_user_password_expired {
+    my $dsl      = shift;
+    my $provider = auth_provider($dsl);
+    $provider->password_expired($dsl->logged_in_user);
+}
+register logged_in_user_password_expired => \&logged_in_user_password_expired;
+
+
 =back
 
 =head2 PASSWORD RESETS
