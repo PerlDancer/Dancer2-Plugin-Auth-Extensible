@@ -111,6 +111,7 @@ sub encrypt_password {
         set_user_details
         get_user_roles
         set_user_password
+        password_expired
         ))
     {
         *$method = sub {

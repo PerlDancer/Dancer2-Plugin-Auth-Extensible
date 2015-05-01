@@ -943,6 +943,40 @@ sub user_password {
 }
 register user_password=> \&user_password;
 
+
+=item logged_in_user_password_expired
+
+Returns true if the password of the currently logged in user has expired.  To
+use this functionality, the provider must support the C<password_expired>
+function, and must be configured accordingly. See the relevant provider for
+full configuration details.
+
+Note that this functionality does B<not> prevent the user accessing any
+protected pages, even if the password has expired. This is so that the
+developer can still leave some protected routes available, such as a page to
+change the password. Therefore, if using this functionality, it is suggested
+that a check is done in the C<before> hook:
+
+    hook before => sub {
+        if (logged_in_user_password_expired)
+        {
+            # Redirect to user details page if password expired, but only if that
+            # is not the currently request page to prevent redirect loops
+            redirect '/password_update' unless request->uri eq '/password_update';
+        }
+    }
+
+=cut
+
+sub logged_in_user_password_expired {
+    my $dsl      = shift;
+    return unless $dsl->logged_in_user;
+    my $provider = auth_provider($dsl);
+    $provider->password_expired($dsl->logged_in_user);
+}
+register logged_in_user_password_expired => \&logged_in_user_password_expired;
+
+
 =back
 
 =head2 PASSWORD RESETS
