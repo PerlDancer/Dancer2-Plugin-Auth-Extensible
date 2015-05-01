@@ -933,6 +933,21 @@ use this functionality, the provider must support the C<password_expired>
 function, and must be configured accordingly. See the relevant provider for
 full configuration details.
 
+Note that this functionality does B<not> prevent the user accessing any
+protected pages, even if the password has expired. This is so that the
+developer can still leave some protected routes available, such as a page to
+change the password. Therefore, if using this functionality, it is suggested
+that a check is done in the C<before> hook:
+
+    hook before => sub {
+        if (logged_in_user_password_expired)
+        {
+            # Redirect to user details page if password expired, but only if that
+            # is not the currently request page to prevent redirect loops
+            redirect '/password_update' unless request->uri eq '/password_update';
+        }
+    }
+
 =cut
 
 sub logged_in_user_password_expired {
