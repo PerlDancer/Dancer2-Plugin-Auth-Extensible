@@ -1017,13 +1017,13 @@ In your application's configuation file:
             # Set to true to enable password reset code in the default handlers
             reset_password_handler: 1
 
-            # Set to a true value to enable recording of successsful last login times
+            # Set to a true value to enable recording of successful last login times
             record_lastlogin: 1
 
             # Password reset functionality
             password_reset_send_email: My::App::reset_send # Customise sending sub
             password_reset_text: My::App::reset_text # Customise reset text
-            
+
             # create_user options
             welcome_send: My::App::welcome_send # Customise welcome email sub
             welcome_text: My::App::welcome_text # Customise welcome email text

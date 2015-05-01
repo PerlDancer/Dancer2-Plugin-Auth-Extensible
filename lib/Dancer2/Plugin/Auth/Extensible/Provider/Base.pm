@@ -47,7 +47,7 @@ Matches C<$given> password with the C<$correct> one.
 
 =head2 encrypt_password($password, $algorithm)
 
-Encrypts password C<$password> with C<$algorithm) which defaults to SHA-1.
+Encrypts password C<$password> with C<$algorithm> which defaults to SHA-1.
 
 =head1 METHODS IMPLEMENTED BY PROVIDER
 
