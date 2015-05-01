@@ -323,7 +323,7 @@ sub _build_wrapper {
     return sub {
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->execute_hook('require_login', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect($dsl->uri_for(
                 $loginpage,
