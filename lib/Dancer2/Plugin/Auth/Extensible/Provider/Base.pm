@@ -61,6 +61,8 @@ Encrypts password C<$password> with C<$algorithm> which defaults to SHA-1.
 
 =head2 set_user_password
 
+=head2 password_expired
+
 =cut
 
 sub realm_settings { shift->{realm_settings} || {} }
