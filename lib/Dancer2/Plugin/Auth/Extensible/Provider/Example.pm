@@ -46,6 +46,10 @@ to build your own authentication provider class, this may be of use.
 
 =over
 
+=item users
+
+Returns hash reference with example users.
+
 =item authenticate_user
 
 Given the username and password entered by the user, return true if they are
