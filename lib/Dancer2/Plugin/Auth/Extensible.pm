@@ -1526,9 +1526,12 @@ Documentation fix by Vince Willems.
 
 Henk van Oers (GH #8, #13).
 
-Andrew Beverly (GH #6, #7, #17).
+Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26).
+This includes support for creating and editing users and manage user passwords.
 
 Gabor Szabo (GH #11, #16, #18).
+
+Evan Brown (GH #20).
 
 =head1 LICENSE AND COPYRIGHT
 
