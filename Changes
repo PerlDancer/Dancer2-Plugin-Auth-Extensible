@@ -1,5 +1,25 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.400 Thu May 21 08:36:36 2015 CEST
+
+    [ENHANCEMENTS]
+
+    * Add logged_in_user_password_expired keyword (Andrew Beverly, GH #26).
+    * Add functionality to record the last successful login (Andrew Beverly, GH #25).
+    * Cache user details within each request (Andrew Beverly, GH #24).
+    * Create and edit users, and manage user passwords (Andrew Beverly, GH #10).
+
+    [DOCUMENTATION]
+
+    * Add documentation on users method for the example provider (Stefan Hornburg).
+    * Add documentation for methods of the base provider class (Stefan Hornburg).
+    * Add documentation for auth_provider method (Stefan Hornburg).
+    * Fix a few typos (Evan Brown, GH #20).
+
+    [TESTS]
+
+    * Add POD coverage test (Stefan Hornburg).
+
 0.306 Thu Mar 26 18:41:53 2015 CET
 
     [BUG FIXES]
