@@ -1000,6 +1000,10 @@ documentation above). Once this is done, the default login page will contain
 additional form controls to allow the user to enter their username and request
 a reset password link.
 
+By default, the default handlers will generate a random 8 character password using
+L<Session::Token>. To use your own function, set C<password_generator> in your
+configuration. See the L<SAMPLE CONFIGURATION> for an example.
+
 If using C<login_page_handler> to replace the default login page, you can still
 use the default password reset handlers. Add 2 controls to your form for
 submitting a password reset request: a text input called username_reset for the
@@ -1050,6 +1054,7 @@ In your application's configuation file:
 
             # Set to true to enable password reset code in the default handlers
             reset_password_handler: 1
+            password_generator: My::App::random_pw # Optional random password generator
 
             # Set to a true value to enable recording of successful last login times
             record_lastlogin: 1
@@ -1218,6 +1223,10 @@ on_plugin_import {
     }
 };
 
+sub _default_password_generator {
+    Session::Token->new(length => 8)->get;
+}
+
 # implementation of post login route
 sub _post_login_route {
     my $app = shift;
@@ -1235,7 +1244,11 @@ sub _post_login_route {
         && $app->request->param('confirm_reset')
         && $app->request->splat;
     if ($code) {
-        my $randompw = Session::Token->new(length => 8)->get;
+        my $_password_generator =
+            $settings->{password_generator}
+            || '_default_password_generator';
+        no strict 'refs';
+        my $randompw = &{$_password_generator};
         if (user_password($app, code => $code, new_password => $randompw)) {
             $app->forward($loginpage, { new_password => $randompw }, { method => 'GET' });
         }
