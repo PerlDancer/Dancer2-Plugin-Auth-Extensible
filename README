@@ -525,6 +525,11 @@ CONTROLLING ACCESS TO ROUTES
     allow the user to enter their username and request a reset password
     link.
 
+    By default, the default handlers will generate a random 8 character
+    password using Session::Token. To use your own function, set
+    `password_generator' in your configuration. See the SAMPLE CONFIGURATION
+    for an example.
+
     If using `login_page_handler' to replace the default login page, you can
     still use the default password reset handlers. Add 2 controls to your
     form for submitting a password reset request: a text input called
@@ -568,6 +573,7 @@ CONTROLLING ACCESS TO ROUTES
 
                 # Set to true to enable password reset code in the default handlers
                 reset_password_handler: 1
+                password_generator: My::App::random_pw # Optional random password generator
 
                 # Set to a true value to enable recording of successful last login times
                 record_lastlogin: 1
