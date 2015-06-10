@@ -3,7 +3,7 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Example;
 use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
-our $VERSION = '0.400';
+our $VERSION = '0.401';
 
 # A more sensible provider would be likely to get this information from e.g. a
 # database (or LDAP, or...) rather than hardcoding it.  This, however, is an

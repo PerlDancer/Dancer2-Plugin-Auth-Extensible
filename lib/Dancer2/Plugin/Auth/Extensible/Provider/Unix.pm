@@ -5,7 +5,7 @@ use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
 use Unix::Passwd::File;
 
-our $VERSION = '0.400';
+our $VERSION = '0.401';
 
 =head1 NAME
 
