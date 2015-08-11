@@ -1170,7 +1170,7 @@ on_plugin_import {
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
             method => 'get',
-            regexp => qr!$loginpage/?([\w]{32})?!, # Match optional reset code, but not "denied"
+            regexp => qr!^$loginpage/?([\w]{32})?$!, # Match optional reset code, but not "denied"
             code => sub {
                 my $dsl = shift;
 
@@ -1194,7 +1194,7 @@ on_plugin_import {
 
         $app->add_route(
             method => 'get',
-            regexp => $deniedpage,
+            regexp => qr!^$deniedpage$!,
             code => sub {
                 $dsl->response->status(403);
                 my $_default_permission_denied_page =
@@ -1209,14 +1209,14 @@ on_plugin_import {
     if ( !$settings->{no_login_handler} ) {
         $app->add_route(
             method => 'post',
-            regexp => qr!$loginpage/?([\w]{32})?!, # Match optional reset code, but not "denied"
+            regexp => qr!^$loginpage/?([\w]{32})?$!, # Match optional reset code, but not "denied"
             code => \&_post_login_route,
         );
 
         for my $method (qw/get post/) {
             $app->add_route(
                 method => $method,
-                regexp => $logoutpage,
+                regexp => qr!^$logoutpage$!,
                 code => \&_logout_route,
             );
         }
