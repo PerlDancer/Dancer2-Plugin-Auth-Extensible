@@ -279,6 +279,13 @@ sub test_the_app_sub {
                'http://localhost/foobar',
                'Redirect after login to given return_url works');
         }
+        
+        # Check that login route doesn't match any request string with '/login'.
+        {
+            my $res = $cb->(GET '/foo/login', @headers);
+
+            is($res->code, 404, "'/foo/login' URL not matched by login route regex.");
+        }
     }
 };
 
