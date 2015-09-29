@@ -3,34 +3,63 @@ package Dancer2::Plugin::Auth::Extensible;
 use warnings;
 use strict;
 
+use Moo;
+extends 'Dancer2::Plugin2';
+
 use Carp;
-use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
 use Session::Token;
 
 our $VERSION = '0.402';
 
-my $settings;
+#my $load_settings = sub {
+#    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
+#        # Attempt to load now, so that it fails at startup if missing
+#        require Mail::Message;
+#    }
+#};
 
-my $loginpage;
-my $userhomepage;
-my $logoutpage;
-my $deniedpage;
-my $exitpage;
-
-my $load_settings = sub {
-    $settings = plugin_setting;
-
-    $loginpage = $settings->{login_page} || '/login';
-    $userhomepage = $settings->{user_home_page} || '/';
-    $logoutpage = $settings->{logout_page} || '/logout';
-    $deniedpage = $settings->{denied_page} || '/login/denied';
-    $exitpage = $settings->{exit_page};
-    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
-        # Attempt to load now, so that it fails at startup if missing
-        require Mail::Message;
+has login_page => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{login_page} || '/login';
     }
-};
+);
+
+has logout_page => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{logout_page} || '/logout';
+    }
+);
+
+has denied_page => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{denied_page} || '/login/denied';
+    }
+);
+
+has user_home_page => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{user_home_page} || '/';
+    }
+);
+
+has exit_page => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{exit_page};
+    }
+);
+
+has realms => (
+    is => 'ro',
+    default => sub {
+        $_[0]->config->{realms};
+    }
+);
 
 =head1 NAME
 
@@ -222,6 +251,27 @@ you can configure them. See below.
 The default routes also contain functionality for a user to perform password
 resets. See the L<PASSWORD RESETS> documentation for more details.
 
+=cut
+
+# List of keywords
+sub keywords {qw/require_login     requires_login
+                 require_role      requires_role
+                 require_any_role  requires_any_role
+                 require_all_roles requires_all_roles
+                 logged_in_user
+                 user_has_role
+                 user_roles
+                 authenticate_user
+                 logged_in_user_lastlogin
+                 update_user
+                 update_current_user
+                 create_user
+                 password_reset_send
+                 user_password
+                 logged_in_user_password_expired
+                /
+}
+
 =head2 Keywords
 
 =over
@@ -249,14 +299,13 @@ sub require_login {
             $dsl->execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect
-                ($dsl->uri_for($loginpage, { return_url => $dsl->request->request_uri }));
+                ($dsl->uri_for($dsl->login_page, { return_url => $dsl->request->request_uri }));
         }
         return $coderef->($dsl);
     };
 }
 
-register require_login  => \&require_login;
-register requires_login => \&require_login;
+*requires_login = *require_login;
 
 =item require_role
 
@@ -275,8 +324,7 @@ sub require_role {
     return _build_wrapper(@_, 'single');
 }
 
-register require_role  => \&require_role;
-register requires_role => \&require_role;
+*requires_role = *require_role;
 
 =item require_any_role
 
@@ -291,8 +339,7 @@ sub require_any_role {
     return _build_wrapper(@_, 'any');
 }
 
-register require_any_role  => \&require_any_role;
-register requires_any_role => \&require_any_role;
+*requires_any_role = *require_any_role;
 
 =item require_all_roles
 
@@ -307,9 +354,7 @@ sub require_all_roles {
     return _build_wrapper(@_, 'all');
 }
 
-register require_all_roles  => \&require_all_roles;
-register requires_all_roles => \&require_all_roles;
-
+*requires_all_roles = *require_all_roles;
 
 sub _build_wrapper {
     my $dsl = shift;
@@ -326,7 +371,7 @@ sub _build_wrapper {
             $dsl->execute_hook('login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect($dsl->uri_for(
-                $loginpage,
+                $dsl->login_page,
                 { return_url => $dsl->request->request_uri }));
         }
 
@@ -359,7 +404,7 @@ sub _build_wrapper {
         $dsl->execute_hook('permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
         return $dsl->redirect(
-            $dsl->uri_for($deniedpage, { return_url => $dsl->request->request_uri }));
+            $dsl->uri_for($dsl->denied_page, { return_url => $dsl->request->request_uri }));
     };
 }
 
@@ -390,7 +435,6 @@ sub logged_in_user {
         return;
     }
 }
-register logged_in_user => \&logged_in_user;
 
 =item user_has_role
 
@@ -429,7 +473,6 @@ sub user_has_role {
 
     return 0;
 }
-register user_has_role => \&user_has_role;
 
 =item user_roles
 
@@ -454,7 +497,6 @@ sub user_roles {
     return unless defined $roles;
     return wantarray ? @$roles : $roles;
 }
-register user_roles => \&user_roles;
 
 
 =item authenticate_user
@@ -482,12 +524,12 @@ C<($success, $realm)>.
 
 sub authenticate_user {
     my ($dsl, $username, $password, $realm) = @_;
-    my @realms_to_check = $realm? ($realm) : (keys %{ $settings->{realms} });
+    my @realms_to_check = $realm? ($realm) : (keys %{ $dsl->realms });
 
     for my $realm (@realms_to_check) {
         $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
         my $provider = auth_provider($dsl, $realm);
-        my %lastlogin = $settings->{record_lastlogin} ? (lastlogin => 'logged_in_user_lastlogin') : ();
+        my %lastlogin = $dsl->config->{record_lastlogin} ? (lastlogin => 'logged_in_user_lastlogin') : ();
         if ($provider->authenticate_user($username, $password, %lastlogin)) {
             $dsl->app->log ( debug => "$realm accepted user $username");
             return wantarray ? (1, $realm) : 1;
@@ -502,7 +544,6 @@ sub authenticate_user {
     return wantarray ? (0, undef) : 0;
 }
 
-register authenticate_user => \&authenticate_user;
 
 
 =item logged_in_user_lastlogin
@@ -519,7 +560,6 @@ have lastlogin functionality implemented.
 sub logged_in_user_lastlogin {
     shift->app->session->read('logged_in_user_lastlogin');
 }
-register logged_in_user_lastlogin => \&logged_in_user_lastlogin;
 
 
 =item update_user
@@ -549,7 +589,7 @@ The updated user's details are returned, as per L<logged_in_user>.
 sub update_user {
     my ($dsl, $username, %update) = @_;
 
-    my @all_realms = keys %{ $settings->{realms} };
+    my @all_realms = keys %{ $dsl->realms };
     die "Realm must be specified when more than one realm configured"
         if !$update{realm} && @all_realms > 1;
 
@@ -562,7 +602,6 @@ sub update_user {
         if $username eq $session->read('logged_in_user');
     $updated;
 }
-register update_user => \&update_user;
 
 
 =item update_current_user
@@ -588,7 +627,6 @@ sub update_current_user {
         $dsl->app->log( debug  => "Could not update current user as no user currently logged in" );
     }
 }
-register update_current_user => \&update_current_user;
 
 
 =item create_user
@@ -651,7 +689,7 @@ sub create_user {
     my $dsl     = shift;
     my %options = @_;
 
-    my @all_realms = keys %{ $settings->{realms} };
+    my @all_realms = keys %{ $dsl->{realms} };
     die "Realm must be specified when more than one realm configured"
         if !$options{realm} && @all_realms > 1;
 
@@ -668,7 +706,7 @@ sub create_user {
     my $user = $provider->create_user(%options);
     if ($email_welcome) {
         my $_welcome_send =
-            $settings->{welcome_send} || '_default_welcome_send';
+            $dsl->config->{welcome_send} || '_default_welcome_send';
         my $code = _reset_code();
         # Would be slightly more efficient to do this at time of creation, but
         # this keeps the code simpler for the provider
@@ -680,7 +718,6 @@ sub create_user {
     }
     $user;
 }
-register create_user => \&create_user;
 
 
 =item password_reset_send
@@ -791,13 +828,13 @@ sub password_reset_send {
 
     my @realms_to_check = $options{realm}
                         ? ($options{realm})
-                        : (keys %{ $settings->{realms} });
+                        : (keys %{ $dsl->realms });
 
     my $username = $options{username}
         or die "username must be passed to password_reset_send";
 
     my $_default_email_password_reset =
-        $settings->{password_reset_send_email} || '_default_email_password_reset';
+        $dsl->config->{password_reset_send_email} || '_default_email_password_reset';
     my $result; # 1 for success, 0 for not found, undef for error sending email
     foreach my $realm (@realms_to_check) {
         my $this_result;
@@ -827,7 +864,6 @@ sub password_reset_send {
     }
     $result; # 1 if at least one send was successful
 }
-register password_reset_send => \&password_reset_send;
 
 
 =item user_password
@@ -883,7 +919,7 @@ sub user_password {
 
     my @realms_to_check = $params{realm}
                         ? ($params{realm})
-                        : (keys %{ $settings->{realms} });
+                        : (keys %{ $dsl->realms });
 
     # Expect either a code, username or nothing (for logged-in user)
     if (exists $params{code}) {
@@ -941,7 +977,6 @@ sub user_password {
     }
     $username;
 }
-register user_password=> \&user_password;
 
 
 =item logged_in_user_password_expired
@@ -974,7 +1009,6 @@ sub logged_in_user_password_expired {
     my $provider = auth_provider($dsl);
     $provider->password_expired($dsl->logged_in_user);
 }
-register logged_in_user_password_expired => \&logged_in_user_password_expired;
 
 
 =back
@@ -1094,6 +1128,7 @@ specified by that realm's config.
 my %realm_provider;
 sub auth_provider {
     my ($dsl, $realm) = @_;
+    my $settings = $dsl->config;
 
     # If no realm was provided, but we have a logged in user, use their realm.
     # Don't try and read the session any earlier though, as it won't be
@@ -1126,8 +1161,8 @@ sub auth_provider {
 }
 }
 
-register_hook qw(login_required permission_denied);
-register_plugin for_versions => [qw(1 2)];
+#register_hook qw(login_required permission_denied);
+#register_plugin for_versions => [qw(1 2)];
 
 
 # Given a class method name and a set of parameters, try calling that class
@@ -1136,26 +1171,24 @@ register_plugin for_versions => [qw(1 2)];
 # succeeded and the response.
 # Note: all provider class methods return a single value; if any need to return
 # a list in future, this will need changing)
-sub _try_realms {
-    my ($method, @args);
-    for my $realm (keys %{ $settings->{realms} }) {
-        my $provider = auth_provider($realm);
-        if (!$provider->can($method)) {
-            die "Provider $provider does not provide a $method method!";
-        }
-        if (defined(my $result = $provider->$method(@args))) {
-            return $result;
-        }
-    }
-    return;
-}
+# sub _try_realms {
+#     my ($method, @args);
+#     for my $realm (keys %{ $settings->{realms} }) {
+#         my $provider = auth_provider($realm);
+#         if (!$provider->can($method)) {
+#             die "Provider $provider does not provide a $method method!";
+#         }
+#         if (defined(my $result = $provider->$method(@args))) {
+#             return $result;
+#         }
+#     }
+#     return;
+# }
 
-on_plugin_import {
+sub BUILD {
     my $dsl = shift;
     my $app = $dsl->app;
-
-    # get settings
-    $load_settings->();
+    my $settings = $dsl->config;
 
     my @realms = keys %{ $settings->{realms} }
         or warn "No Auth::Extensible realms configured with which to authenticate user";
@@ -1167,6 +1200,8 @@ on_plugin_import {
         auth_provider($dsl, $realm);
     }
 
+    my $loginpage = $dsl->login_page;
+
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
             method => 'get',
@@ -1175,7 +1210,7 @@ on_plugin_import {
                 my $dsl = shift;
 
                 if(logged_in_user($dsl)) {
-                    $dsl->redirect($dsl->request->params->{return_url} || $userhomepage);
+                    $dsl->redirect($dsl->request->params->{return_url} || $dsl->user_home_page);
                 }
 
                 my ($code) = $dsl->request->splat; # Reset password code submitted?
@@ -1186,11 +1221,13 @@ on_plugin_import {
                 }
 
                 my $_default_login_page =
-                    $settings->{login_page_handler} || '_default_login_page';
+                    $dsl->config->{login_page_handler} || '_default_login_page';
                 no strict 'refs';
                 return &{$_default_login_page}($dsl);
             }
         );
+
+        my $deniedpage = $dsl->denied_page;
 
         $app->add_route(
             method => 'get',
@@ -1213,6 +1250,8 @@ on_plugin_import {
             code => \&_post_login_route,
         );
 
+        my $logoutpage = $dsl->logout_page;
+
         for my $method (qw/get post/) {
             $app->add_route(
                 method => $method,
@@ -1230,7 +1269,10 @@ sub _default_password_generator {
 # implementation of post login route
 sub _post_login_route {
     my $app = shift;
-
+    my $settings = {};
+    my $loginpage = $settings->{login_page};
+    my $userhomepage = $settings->{user_home_page};
+    
     # First check for password reset request, if applicable
     if ($settings->{reset_password_handler} && $app->request->param('submit_reset')) {
         my $username = $app->request->param('username_reset');
@@ -1294,7 +1336,8 @@ sub _post_login_route {
 sub _logout_route {
     my $app = shift;
     my $req = $app->request;
-
+    my $exitpage;
+    
     $app->destroy_session;
 
     if ($req->params->{return_url}) {
@@ -1320,6 +1363,7 @@ PAGE
 
 sub _default_login_page {
     my $dsl = shift;
+    my $loginpage = $dsl->login_page;
 
     if (my $new_password = $dsl->request->param('new_password')) {
         return <<NEWPW;
@@ -1352,7 +1396,7 @@ Please click the button below to reset your password
 VALID
     }
 
-    my $pwreset_html = !$settings->{reset_password_handler}
+    my $pwreset_html = $dsl->config->{reset_password_handler}
         ? ""
         : <<RESETPW;
 <h2>Password reset</h2>
@@ -1394,14 +1438,14 @@ sub _default_email_password_reset {
     my ($dsl, %options)  = @_;
 
     my %message;
-    if (my $password_reset_text = $settings->{password_reset_text}) {
+    if (my $password_reset_text = $dsl->config->{password_reset_text}) {
         no strict 'refs';
         %message = &{$password_reset_text}($dsl, %options);
     } else {
         my $site          = $dsl->request->uri_base;
         my $appname       = $dsl->config->{appname} || '[unknown]';
         $message{subject} = "Password reset request";
-        $message{from}    = $settings->{mail_from},
+        $message{from}    = $dsl->config->{mail_from},
         $message{plain}   = <<__EMAIL;
 A request has been received to reset your password for $appname. If
 you would like to do so, please follow the link below:
@@ -1417,7 +1461,7 @@ sub _default_welcome_send {
     my ($dsl, %options)  = @_;
 
     my %message;
-    if (my $welcome_text = $settings->{welcome_text}) {
+    if (my $welcome_text = $dsl->config->{welcome_text}) {
         no strict 'refs';
         %message = &{$welcome_text}($dsl, %options);
     } else {
@@ -1426,7 +1470,7 @@ sub _default_welcome_send {
         my $appname       = $dsl->config->{appname} || '[unknown]';
         my $reset_link    = $site."login/$options{code}";
         $message{subject} = "Welcome to $host";
-        $message{from}    = $settings->{mail_from},
+        $message{from}    = $dsl->config->{mail_from},
         $message{plain}   = <<__EMAIL;
 An account has been created for you at $host. If you would like
 to accept this, please follow the link below to set a password:
@@ -1439,6 +1483,7 @@ __EMAIL
 }
 
 sub _send_email {
+    my $settings;
     my $mailer = $settings->{mailer}
         or die "No mailer configured";
     my $module = $mailer->{module}
@@ -1455,6 +1500,7 @@ sub _send_email {
 
 sub _email_mail_message {
     my %params = @_;
+    my $settings;
     my $mailer_options = $settings->{mailer}->{options} || {};
 
     my @parts;

@@ -7,7 +7,7 @@ use Dancer2;
 set session => 'simple';
 set plugins => { 'Auth::Extensible' => { provider => 'Example' } };
 
-use Dancer2::Plugin::Auth::Extensible;
+use Dancer2::Plugin::Auth::Extensible ':app';
 no warnings 'uninitialized';
 
 
