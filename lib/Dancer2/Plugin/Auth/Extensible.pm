@@ -3,14 +3,30 @@ package Dancer2::Plugin::Auth::Extensible;
 use warnings;
 use strict;
 
-use Moo;
-extends 'Dancer2::Plugin2';
+use Dancer2::Plugin2;
 
 use Carp;
 use Class::Load qw(try_load_class);
 use Session::Token;
 
 our $VERSION = '0.402';
+
+plugin_keywords qw/require_login     requires_login
+                   require_role      requires_role
+                   require_any_role  requires_any_role
+                   require_all_roles requires_all_roles
+                   logged_in_user
+                   user_has_role
+                   user_roles
+                   authenticate_user
+                   logged_in_user_lastlogin
+                   update_user
+                   update_current_user
+                   create_user
+                   password_reset_send
+                   user_password
+                   logged_in_user_password_expired
+                  /;
 
 #my $load_settings = sub {
 #    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
@@ -250,27 +266,6 @@ you can configure them. See below.
 
 The default routes also contain functionality for a user to perform password
 resets. See the L<PASSWORD RESETS> documentation for more details.
-
-=cut
-
-# List of keywords
-sub keywords {qw/require_login     requires_login
-                 require_role      requires_role
-                 require_any_role  requires_any_role
-                 require_all_roles requires_all_roles
-                 logged_in_user
-                 user_has_role
-                 user_roles
-                 authenticate_user
-                 logged_in_user_lastlogin
-                 update_user
-                 update_current_user
-                 create_user
-                 password_reset_send
-                 user_password
-                 logged_in_user_password_expired
-                /
-}
 
 =head2 Keywords
 
