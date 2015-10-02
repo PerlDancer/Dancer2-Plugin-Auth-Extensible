@@ -28,6 +28,9 @@ plugin_keywords qw/require_login     requires_login
                    logged_in_user_password_expired
                   /;
 
+plugin_hooks qw/login_required
+                permission_denied/;
+
 #my $load_settings = sub {
 #    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
 #        # Attempt to load now, so that it fails at startup if missing
@@ -75,6 +78,11 @@ has realms => (
     default => sub {
         $_[0]->config->{realms};
     }
+);
+
+has realm_provider => (
+    is => 'rw',
+    default => sub {{}},
 );
 
 =head1 NAME
@@ -291,10 +299,10 @@ sub require_login {
 
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->app->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return $dsl->redirect
-                ($dsl->uri_for($dsl->login_page, { return_url => $dsl->request->request_uri }));
+            return $dsl->app->redirect
+                ($dsl->app->request->uri_for($dsl->login_page, { return_url => $dsl->app->request->request_uri }));
         }
         return $coderef->($dsl);
     };
@@ -352,38 +360,39 @@ sub require_all_roles {
 *requires_all_roles = *require_all_roles;
 
 sub _build_wrapper {
-    my $dsl = shift;
+    my $plugin = shift;
     my $require_role = shift;
     my $coderef = shift;
     my $mode = shift;
+    my $app = $plugin->app;
 
     my @role_list = ref $require_role eq 'ARRAY' 
         ? @$require_role
         : $require_role;
     return sub {
-        my $user = logged_in_user($dsl);
+        my $user = $plugin->logged_in_user;
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $app->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
-            return $dsl->redirect($dsl->uri_for(
-                $dsl->login_page,
-                { return_url => $dsl->request->request_uri }));
+            return $app->redirect($app->request->uri_for(
+                $plugin->login_page,
+                { return_url => $app->request->request_uri }));
         }
 
         my $role_match;
         if ($mode eq 'single') {
-            for (user_roles($dsl)) {
+            for ($plugin->user_roles) {
                 $role_match++ and last if _smart_match($_, $require_role);
             }
         } elsif ($mode eq 'any') {
             my %role_ok = map { $_ => 1 } @role_list;
-            for (user_roles($dsl)) {
+            for ($plugin->user_roles) {
                 $role_match++ and last if $role_ok{$_};
             }
         } elsif ($mode eq 'all') {
             $role_match++;
             for my $role (@role_list) {
-                if (!user_has_role($dsl, $role)) {
+                if (!$plugin->user_has_role($role)) {
                     $role_match = 0;
                     last;
                 }
@@ -393,13 +402,13 @@ sub _build_wrapper {
         if ($role_match) {
             # We're happy with their roles, so go head and execute the route
             # handler coderef.
-            return $coderef->($dsl);
+            return $coderef->($app);
         }
 
-        $dsl->execute_hook('permission_denied', $coderef);
+        $app->execute_hook('plugin.auth_extensible.permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
-        return $dsl->redirect(
-            $dsl->uri_for($dsl->denied_page, { return_url => $dsl->request->request_uri }));
+        return $app->redirect(
+            $app->request->uri_for($plugin->denied_page, { return_url => $app->request->request_uri }));
     };
 }
 
@@ -413,8 +422,8 @@ The details you get back will depend upon the authentication provider in use.
 =cut
 
 sub logged_in_user {
-    my $dsl     = shift;
-    my $app     = $dsl->app;
+    my $plugin     = shift;
+    my $app     = $plugin->app;
     my $session = $app->session;
     my $request = $app->request;
 
@@ -422,7 +431,7 @@ sub logged_in_user {
         my $existing = $request->vars->{logged_in_user_hash};
         return $existing if $existing;
         my $realm    = $session->read('logged_in_user_realm');
-        my $provider = auth_provider($dsl, $realm);
+        my $provider = $plugin->auth_provider($realm);
         my $user = $provider->get_user_details($user, $realm);
         $request->vars->{logged_in_user_hash} = $user;
         return $user;
@@ -481,14 +490,14 @@ Returns a list or arrayref depending on context.
 =cut
 
 sub user_roles {
-    my ($dsl, $username, $realm) = @_;
-    my $session = $dsl->app->session;
+    my ($plugin, $username, $realm) = @_;
+    my $session = $plugin->app->session;
 
     $username = $session->read('logged_in_user') unless defined $username;
 
     my $search_realm = ($realm ? $realm : '');
 
-    my $roles = auth_provider($dsl, $search_realm)->get_user_roles($username);
+    my $roles = $plugin->auth_provider($search_realm)->get_user_roles($username);
     return unless defined $roles;
     return wantarray ? @$roles : $roles;
 }
@@ -519,11 +528,12 @@ C<($success, $realm)>.
 
 sub authenticate_user {
     my ($dsl, $username, $password, $realm) = @_;
-    my @realms_to_check = $realm? ($realm) : (keys %{ $dsl->realms });
+    my $plugin = $dsl->app->with_plugins('Auth::Extensible');
+    my @realms_to_check = $realm? ($realm) : (keys %{ $plugin->realms });
 
     for my $realm (@realms_to_check) {
         $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
-        my $provider = auth_provider($dsl, $realm);
+        my $provider = $plugin->auth_provider($realm);
         my %lastlogin = $dsl->config->{record_lastlogin} ? (lastlogin => 'logged_in_user_lastlogin') : ();
         if ($provider->authenticate_user($username, $password, %lastlogin)) {
             $dsl->app->log ( debug => "$realm accepted user $username");
@@ -589,7 +599,7 @@ sub update_user {
         if !$update{realm} && @all_realms > 1;
 
     my $realm    = delete $update{realm} || $all_realms[0];
-    my $provider = auth_provider($dsl, $realm);
+    my $provider = $dsl->auth_provider($realm);
     my $updated  = $provider->set_user_details($username, %update);
     my $request  = $dsl->app->request;
     my $session  = $dsl->app->session;
@@ -691,7 +701,7 @@ sub create_user {
     my $realm = delete $options{realm} || $all_realms[0];
     my $email_welcome = delete $options{email_welcome};
 
-    my $provider = auth_provider($dsl, $realm);
+    my $provider = $dsl->auth_provider($realm);
     # Prevent duplicate users. Would be nice to make this an exception,
     # but that's not in keeping with other functions of this module
     if ($provider->get_user_details($options{username})) {
@@ -834,7 +844,7 @@ sub password_reset_send {
     foreach my $realm (@realms_to_check) {
         my $this_result;
         $dsl->app->log( debug  => "Attempting to find $username against realm $realm for password reset" );
-        my $provider = auth_provider($dsl, $realm);
+        my $provider = $dsl->auth_provider($realm);
         # Generate random string for the password reset URL
         my $code = _reset_code(); my $user;
         eval { $user = $provider->set_user_details($username, pw_reset_code => $code) };
@@ -920,7 +930,7 @@ sub user_password {
     if (exists $params{code}) {
         my $code = $params{code} or return;
         foreach my $realm_check (@realms_to_check) {
-            my $provider = auth_provider($dsl, $realm_check);
+            my $provider = $dsl->auth_provider($realm_check);
             # Realm may not support get_user_by_code
             my $ret = eval { $username = $provider->get_user_by_code($code) };
             unless ($ret) {
@@ -954,12 +964,12 @@ sub user_password {
         if (!$realm) {
             # It's possible that the realm is unknown at this stage
             foreach my $realm_check (@realms_to_check) {
-                my $provider = auth_provider($dsl, $realm_check);
+                my $provider = $dsl->auth_provider($realm_check);
                 $realm = $realm_check if $provider->get_user_details($username);
             }
             return unless $realm; # Invalid user
         }
-        my $provider = auth_provider($dsl, $realm);
+        my $provider = $dsl->auth_provider($realm);
         $provider->set_user_password($username, $new_password);
         if ($params{code}) {
             # Stop reset code being reused
@@ -1001,7 +1011,7 @@ that a check is done in the C<before> hook:
 sub logged_in_user_password_expired {
     my $dsl      = shift;
     return unless $dsl->logged_in_user;
-    my $provider = auth_provider($dsl);
+    my $provider = $dsl->auth_provider;
     $provider->password_expired($dsl->logged_in_user);
 }
 
@@ -1119,26 +1129,24 @@ specified by that realm's config.
 
 =cut
 
-{
-my %realm_provider;
 sub auth_provider {
-    my ($dsl, $realm) = @_;
-    my $settings = $dsl->config;
+    my ($plugin, $realm) = @_;
+    my $settings = $plugin->config;
 
     # If no realm was provided, but we have a logged in user, use their realm.
     # Don't try and read the session any earlier though, as it won't be
     # available on plugin load
-    if (!$realm && $dsl->app->session->read('logged_in_user')) {
-        $realm = $dsl->app->session->read('logged_in_user_realm');
+    if (!$realm && $plugin->app->session->read('logged_in_user')) {
+        $realm = $plugin->app->session->read('logged_in_user_realm');
     }
 
     # First, if we already have a provider for this realm, go ahead and use it:
-    return $realm_provider{$realm} if exists $realm_provider{$realm};
+    return $plugin->realm_provider->{$realm} if exists $plugin->realm_provider->{$realm};
 
     # OK, we need to find out what provider this realm uses, and get an instance
     # of that provider, configured with the settings from the realm.
-    my $realm_settings = $settings->{realms}{$realm}
-        or die "Invalid realm $realm";
+    my $realm_settings = $plugin->realms->{$realm}
+        or die "Invalid realm $realm " . join(',', caller); 
     my $provider_class = $realm_settings->{provider}
         or die "No provider configured - consult documentation for "
             . __PACKAGE__;
@@ -1152,8 +1160,9 @@ sub auth_provider {
         die "Cannot load provider $provider_class: $error";
     }
 
-    return $realm_provider{$realm} = $provider_class->new($realm_settings, $dsl);
-}
+    my $provider = $provider_class->new($realm_settings, $plugin);
+    $plugin->realm_provider->{$realm} = $provider;
+    return $plugin->realm_provider->{$realm};
 }
 
 #register_hook qw(login_required permission_denied);
@@ -1181,9 +1190,9 @@ sub auth_provider {
 # }
 
 sub BUILD {
-    my $dsl = shift;
-    my $app = $dsl->app;
-    my $settings = $dsl->config;
+    my $plugin = shift;
+    my $app = $plugin->app;
+    my $settings = $plugin->config;
 
     my @realms = keys %{ $settings->{realms} }
         or warn "No Auth::Extensible realms configured with which to authenticate user";
@@ -1192,48 +1201,56 @@ sub BUILD {
     # If we try and load later, then if the provider is using other
     # keywords (such as schema) they will not be available from the dsl.
     for my $realm (@realms) {
-        auth_provider($dsl, $realm);
+        $plugin->auth_provider($realm);
     }
 
-    my $loginpage = $dsl->login_page;
+    # Register hooks
+    $app->add_hook( Dancer2::Core::Hook->new(
+        name => 'after',
+        code => sub{
+            $app->execute_hook('plugin.auth_extensible.login_required');
+        }
+    ));
+
+    my $loginpage = $plugin->login_page;
 
     if ( !$settings->{no_default_pages} ) {
         $app->add_route(
             method => 'get',
             regexp => qr!^$loginpage/?([\w]{32})?$!, # Match optional reset code, but not "denied"
             code => sub {
-                my $dsl = shift;
+                my $app = shift;
 
-                if(logged_in_user($dsl)) {
-                    $dsl->redirect($dsl->request->params->{return_url} || $dsl->user_home_page);
+                if(logged_in_user($plugin)) {
+                    $plugin->redirect($plugin->request->params->{return_url} || $plugin->user_home_page);
                 }
 
-                my ($code) = $dsl->request->splat; # Reset password code submitted?
-                if ($settings->{reset_password_handler} && user_password($dsl, code => $code)) {
+                my ($code) = $app->request->splat; # Reset password code submitted?
+                if ($settings->{reset_password_handler} && user_password($plugin, code => $code)) {
                     $app->request->params->{password_code_valid} = 1;
                 } else {
-                    $dsl->response->status(401);
+                    $app->response->status(401);
                 }
 
                 my $_default_login_page =
-                    $dsl->config->{login_page_handler} || '_default_login_page';
+                    $plugin->config->{login_page_handler} || '_default_login_page';
                 no strict 'refs';
-                return &{$_default_login_page}($dsl);
+                return &{$_default_login_page}($plugin);
             }
         );
 
-        my $deniedpage = $dsl->denied_page;
+        my $deniedpage = $plugin->denied_page;
 
         $app->add_route(
             method => 'get',
             regexp => qr!^$deniedpage$!,
             code => sub {
-                $dsl->response->status(403);
+                $plugin->response->status(403);
                 my $_default_permission_denied_page =
                     $settings->{permission_denied_page_handler}
                     || '_default_permission_denied_page';
                 no strict 'refs';
-                return &{$_default_permission_denied_page}($dsl);
+                return &{$_default_permission_denied_page}($plugin);
             }
         );
     }
@@ -1242,10 +1259,12 @@ sub BUILD {
         $app->add_route(
             method => 'post',
             regexp => qr!^$loginpage/?([\w]{32})?$!, # Match optional reset code, but not "denied"
-            code => \&_post_login_route,
+            code => sub {
+                $plugin->_post_login_route;
+            }
         );
 
-        my $logoutpage = $dsl->logout_page;
+        my $logoutpage = $plugin->logout_page;
 
         for my $method (qw/get post/) {
             $app->add_route(
@@ -1263,11 +1282,12 @@ sub _default_password_generator {
 
 # implementation of post login route
 sub _post_login_route {
-    my $app = shift;
+    my $plugin = shift;
+    my $app = $plugin->app;
     my $settings = {};
     my $loginpage = $settings->{login_page};
     my $userhomepage = $settings->{user_home_page};
-    
+
     # First check for password reset request, if applicable
     if ($settings->{reset_password_handler} && $app->request->param('submit_reset')) {
         my $username = $app->request->param('username_reset');
@@ -1309,21 +1329,23 @@ sub _post_login_route {
         }
     }
 
-    if(logged_in_user($app)) {
-        $app->redirect($app->params->{return_url} || $userhomepage);
+    if($plugin->logged_in_user($app)) {
+        warn "Redirection to home page.\n";
+        $app->redirect($app->params->{return_url} || $plugin->user_home_page);
     }
 
-    my ($success, $realm) = authenticate_user(
-        $app, $username, $password
+    my ($success, $realm) = $plugin->authenticate_user(
+        $username, $password
     );
+
     if ($success) {
         $app->app->session->write(logged_in_user => $username);
         $app->app->session->write(logged_in_user_realm => $realm);
         $app->log(core => "Realm is $realm");
-        $app->redirect($app->request->params->{return_url} || $userhomepage);
+        $app->redirect($app->request->params->{return_url} || $plugin->user_home_page);
     } else {
         $app->request->vars->{login_failed}++;
-        $app->forward($loginpage, { login_failed => 1 }, { method => 'GET' });
+        $app->forward($plugin->login_page, { login_failed => 1 }, { method => 'GET' });
     }
 }
 
@@ -1357,10 +1379,11 @@ PAGE
 }
 
 sub _default_login_page {
-    my $dsl = shift;
-    my $loginpage = $dsl->login_page;
+    my $plugin = shift;
+    my $app = $plugin->app;
+    my $loginpage = $plugin->login_page;
 
-    if (my $new_password = $dsl->request->param('new_password')) {
+    if (my $new_password = $app->request->param('new_password')) {
         return <<NEWPW;
 <h1>New password</h1>
 <p>
@@ -1370,7 +1393,7 @@ Your new password is $new_password
 NEWPW
     }
 
-    if ($dsl->request->param('reset_sent')) {
+    if ($app->request->param('reset_sent')) {
         return <<SENT;
 <h1>Request sent</h1>
 <p>A password reset request has been sent. Please check your email.</p>
@@ -1379,7 +1402,7 @@ SENT
 
     # Valid password reset request. Just need to confirm to
     # prevent GET requests by email filters
-    if ($dsl->request->param('password_code_valid')) {
+    if ($app->request->param('password_code_valid')) {
         return <<VALID;
 <h1>Reset your password</h1>
 <p>
@@ -1391,7 +1414,7 @@ Please click the button below to reset your password
 VALID
     }
 
-    my $pwreset_html = $dsl->config->{reset_password_handler}
+    my $pwreset_html = $plugin->config->{reset_password_handler}
         ? ""
         : <<RESETPW;
 <h2>Password reset</h2>
@@ -1400,9 +1423,9 @@ VALID
 <input type="text" name="username_reset" id="username_reset">
 <input type="submit" name="submit_reset" value="Submit">
 RESETPW
-    my $return_url = $dsl->request->params->{return_url} || '';
+    my $return_url = $app->request->params->{return_url} || '';
 
-    my $login_fail_message = $dsl->request->vars->{login_failed}
+    my $login_fail_message = $app->request->vars->{login_failed}
          ? "<p>LOGIN FAILED</p>"
          : "";
 
