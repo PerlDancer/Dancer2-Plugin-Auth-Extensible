@@ -1,15 +1,10 @@
 package t::lib::TestApp;
 
+use strict;
+use warnings;
+
 use Dancer2;
-
-
-
-set session => 'simple';
-set plugins => { 'Auth::Extensible' => { provider => 'Example' } };
-
 use Dancer2::Plugin::Auth::Extensible ':app';
-no warnings 'uninitialized';
-
 
 get '/' => sub {
     "Index always accessible";
