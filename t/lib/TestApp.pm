@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Dancer2;
-use Dancer2::Plugin::Auth::Extensible ':app';
+use Dancer2::Plugin::Auth::Extensible;
 
 get '/' => sub {
     "Index always accessible";
