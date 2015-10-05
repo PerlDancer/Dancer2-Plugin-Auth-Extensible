@@ -41,44 +41,36 @@ plugin_hooks qw/login_required
 
 has login_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{login_page} || '/login';
-    }
+    from_config => 1,
+    default => sub { '/login' }
 );
 
 has logout_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{logout_page} || '/logout';
-    }
+    from_config => 1,
+    default => sub { '/logout' }
 );
 
 has denied_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{denied_page} || '/login/denied';
-    }
+    from_config => 1,
+    default => sub { '/login/denied' }
 );
 
 has user_home_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{user_home_page} || '/';
-    }
+    from_config => 1,
+    default => sub { '/' }
 );
 
 has exit_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{exit_page};
-    }
+    from_config => 1,
 );
 
 has realms => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{realms};
-    }
+    from_config => 1,
 );
 
 has realm_provider => (
