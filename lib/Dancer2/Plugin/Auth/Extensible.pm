@@ -41,26 +41,22 @@ plugin_hooks qw/login_required
 
 has login_page => (
     is => 'ro',
-    from_config => 1,
-    default => sub { '/login' }
+    from_config => sub { '/login' }
 );
 
 has logout_page => (
     is => 'ro',
-    from_config => 1,
-    default => sub { '/logout' }
+    from_config => sub { '/logout' }
 );
 
 has denied_page => (
     is => 'ro',
-    from_config => 1,
-    default => sub { '/login/denied' }
+    from_config => sub { '/login/denied' }
 );
 
 has user_home_page => (
     is => 'ro',
-    from_config => 1,
-    default => sub { '/' }
+    from_config => sub { '/' }
 );
 
 has exit_page => (
