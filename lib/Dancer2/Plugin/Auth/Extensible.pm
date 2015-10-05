@@ -11,10 +11,11 @@ use Session::Token;
 
 our $VERSION = '0.401';
 
-plugin_keywords qw/require_login     requires_login
-                   require_role      requires_role
-                   require_any_role  requires_any_role
-                   require_all_roles requires_all_roles
+plugin_keywords [ qw/ require_login requires_login / ],
+                [ qw/ require_role  requires_role /],
+                [ qw/ require_any_role  requires_any_role /],
+                [ qw/ require_all_roles requires_all_roles /],
+                qw/
                    logged_in_user
                    user_has_role
                    user_roles
@@ -40,44 +41,32 @@ plugin_hooks qw/login_required
 
 has login_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{login_page} || '/login';
-    }
+    from_config => sub { '/login' }
 );
 
 has logout_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{logout_page} || '/logout';
-    }
+    from_config => sub { '/logout' }
 );
 
 has denied_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{denied_page} || '/login/denied';
-    }
+    from_config => sub { '/login/denied' }
 );
 
 has user_home_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{user_home_page} || '/';
-    }
+    from_config => sub { '/' }
 );
 
 has exit_page => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{exit_page};
-    }
+    from_config => 1,
 );
 
 has realms => (
     is => 'ro',
-    default => sub {
-        $_[0]->config->{realms};
-    }
+    from_config => 1,
 );
 
 has realm_provider => (
@@ -308,8 +297,6 @@ sub require_login {
     };
 }
 
-*requires_login = *require_login;
-
 =item require_role
 
 Used to wrap a route which requires a user to be logged in as a user with the
@@ -327,8 +314,6 @@ sub require_role {
     return _build_wrapper(@_, 'single');
 }
 
-*requires_role = *require_role;
-
 =item require_any_role
 
 Used to wrap a route which requires a user to be logged in as a user with any
@@ -342,8 +327,6 @@ sub require_any_role {
     return _build_wrapper(@_, 'any');
 }
 
-*requires_any_role = *require_any_role;
-
 =item require_all_roles
 
 Used to wrap a route which requires a user to be logged in as a user with all
@@ -356,8 +339,6 @@ of the roles listed in order to access it.
 sub require_all_roles {
     return _build_wrapper(@_, 'all');
 }
-
-*requires_all_roles = *require_all_roles;
 
 sub _build_wrapper {
     my $plugin = shift;
