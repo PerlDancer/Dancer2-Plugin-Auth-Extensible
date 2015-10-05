@@ -11,10 +11,11 @@ use Session::Token;
 
 our $VERSION = '0.401';
 
-plugin_keywords qw/require_login     requires_login
-                   require_role      requires_role
-                   require_any_role  requires_any_role
-                   require_all_roles requires_all_roles
+plugin_keywords [ qw/ require_login requires_login / ],
+                [ qw/ require_role  requires_role /],
+                [ qw/ require_any_role  requires_any_role /],
+                [ qw/ require_all_roles requires_all_roles /],
+                qw/
                    logged_in_user
                    user_has_role
                    user_roles
@@ -308,8 +309,6 @@ sub require_login {
     };
 }
 
-*requires_login = *require_login;
-
 =item require_role
 
 Used to wrap a route which requires a user to be logged in as a user with the
@@ -327,8 +326,6 @@ sub require_role {
     return _build_wrapper(@_, 'single');
 }
 
-*requires_role = *require_role;
-
 =item require_any_role
 
 Used to wrap a route which requires a user to be logged in as a user with any
@@ -342,8 +339,6 @@ sub require_any_role {
     return _build_wrapper(@_, 'any');
 }
 
-*requires_any_role = *require_any_role;
-
 =item require_all_roles
 
 Used to wrap a route which requires a user to be logged in as a user with all
@@ -356,8 +351,6 @@ of the roles listed in order to access it.
 sub require_all_roles {
     return _build_wrapper(@_, 'all');
 }
-
-*requires_all_roles = *require_all_roles;
 
 sub _build_wrapper {
     my $plugin = shift;
