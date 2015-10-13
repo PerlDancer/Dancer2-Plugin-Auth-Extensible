@@ -9,6 +9,16 @@ use lib 't/lib';
 use Dancer2;
 use InsidePluginApp;
 
+set plugins => {
+    "Auth::Extensible" => {
+        realms => {
+            config => {
+                provider => 'Config',
+            }
+        }
+    }
+};
+
 my $mech = Test::WWW::Mechanize::PSGI->new(
     app => InsidePluginApp->to_app
 );
