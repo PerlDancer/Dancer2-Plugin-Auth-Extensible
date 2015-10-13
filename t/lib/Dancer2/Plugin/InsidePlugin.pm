@@ -25,11 +25,8 @@ sub BUILD {
     $plugin->app->add_route(
         method => 'get',
         regexp => '/members',
-        code   => sub {
-            $plugin->require_login(
-                \&members_route
-            )
-        });
+        code   => $plugin->require_login(\&members_route),
+    )
 }
 
 1;

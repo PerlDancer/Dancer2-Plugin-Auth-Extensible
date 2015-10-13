@@ -28,6 +28,9 @@ my $mech = Test::WWW::Mechanize::PSGI->new(
     app => InsidePluginApp->to_app
 );
 
+# don't follow redirects
+$mech->max_redirect( 0 );
+
 $mech->get ( '/members' );
 ok( $mech->status == 302, 'Correct HTTP status code (302) for /members' )
     || diag "Status from response: ", $mech->status ;
