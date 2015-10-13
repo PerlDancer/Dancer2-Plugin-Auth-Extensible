@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Dancer2::Plugin2;
-use Dancer2::Plugin::Auth::Extensible;
+use Dancer2::Plugin::Auth::Extensible ();
 
 has auth_extensible => (
     is => 'ro',
@@ -12,7 +12,7 @@ has auth_extensible => (
     default => sub {
         scalar $_[0]->app->with_plugins( 'Auth::Extensible' )
     },
-    handles => { 'requires_login' => 'requires_login' },
+    handles => [ 'require_login' ],
 );
 
 sub members_route {
@@ -26,7 +26,7 @@ sub BUILD {
         method => 'get',
         regexp => '/members',
         code   => sub {
-            $plugin->requires_login(
+            $plugin->require_login(
                 \&members_route
             )
         });
