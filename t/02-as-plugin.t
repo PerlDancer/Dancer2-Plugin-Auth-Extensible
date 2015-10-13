@@ -23,6 +23,8 @@ my $mech = Test::WWW::Mechanize::PSGI->new(
     app => InsidePluginApp->to_app
 );
 
-$mech->get_ok ( '/members');
+$mech->get ( '/members' );
+ok( $mech->status == 302, 'Correct HTTP status code (302) for /members' )
+    || diag "Status from response: ", $mech->status ;
 
 done_testing;
