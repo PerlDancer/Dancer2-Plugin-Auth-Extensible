@@ -6,12 +6,8 @@ use Test::WWW::Mechanize::PSGI;
 
 use lib 't/lib';
 
-use Dancer2;
-
-use InsidePluginApp;
-
-{
-    package InsidePluginApp;
+BEGIN {
+    use Dancer2;
 
     set plugins => {
         "Auth::Extensible" => {
@@ -23,6 +19,8 @@ use InsidePluginApp;
         }
     };
 }
+
+use InsidePluginApp;
 
 my $mech = Test::WWW::Mechanize::PSGI->new(
     app => InsidePluginApp->to_app
