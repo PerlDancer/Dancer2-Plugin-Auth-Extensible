@@ -1175,15 +1175,8 @@ sub BUILD {
     my $app = $plugin->app;
     my $settings = $plugin->config;
 
-    my @realms = keys %{ $settings->{realms} }
+    my @realms = keys % { $plugin->realms }
         or warn "No Auth::Extensible realms configured with which to authenticate user";
-
-    # Force all providers to load whilst we have access to the full dsl.
-    # If we try and load later, then if the provider is using other
-    # keywords (such as schema) they will not be available from the dsl.
-    for my $realm (@realms) {
-        $plugin->auth_provider($realm);
-    }
 
     # Register hooks
     $app->add_hook( Dancer2::Core::Hook->new(
