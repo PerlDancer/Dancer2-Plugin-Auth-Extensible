@@ -67,6 +67,7 @@ has exit_page => (
 has realms => (
     is => 'ro',
     from_config => 1,
+    default => sub {{}},
 );
 
 has realm_provider => (
