@@ -10,7 +10,7 @@ has auth_extensible => (
     is => 'ro',
     lazy => 1,
     default => sub {
-        scalar $_[0]->app->with_plugins( 'Auth::Extensible' )
+        scalar $_[0]->app->with_plugin( 'Auth::Extensible' )
     },
     handles => [ 'require_login' ],
 );

@@ -509,7 +509,7 @@ C<($success, $realm)>.
 
 sub authenticate_user {
     my ($dsl, $username, $password, $realm) = @_;
-    my $plugin = $dsl->app->with_plugins('Auth::Extensible');
+    my $plugin = $dsl->app->with_plugin( 'Auth::Extensible' );
     my @realms_to_check = $realm? ($realm) : (keys %{ $plugin->realms });
 
     for my $realm (@realms_to_check) {
