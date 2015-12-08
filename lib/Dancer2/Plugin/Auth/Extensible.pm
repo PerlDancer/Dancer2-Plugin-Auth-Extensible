@@ -1544,7 +1544,7 @@ This includes support for creating and editing users and manage user passwords.
 
 Gabor Szabo (GH #11, #16, #18).
 
-Evan Brown (GH #20).
+Evan Brown (GH #20, #32).
 
 =head1 LICENSE AND COPYRIGHT
 
