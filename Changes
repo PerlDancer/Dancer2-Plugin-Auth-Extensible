@@ -1,5 +1,12 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.402 Tue Dec  8 14:44:19 2015 CET
+
+    [BUG FIXES]
+
+    * Adjust regexp for routes to be stricter in order to prevent
+      incorrect matches causing redirect loops (Evan Brown, GH #32).
+
 0.401 Wed Jun 10 19:23:30 2015 CEST
 
 	[ENHANCEMENTS]
