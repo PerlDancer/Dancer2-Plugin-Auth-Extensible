@@ -3,7 +3,7 @@ package Dancer2::Plugin::InsidePlugin;
 use strict;
 use warnings;
 
-use Dancer2::Plugin2;
+use Dancer2::Plugin;
 use Dancer2::Plugin::Auth::Extensible ();
 
 has auth_extensible => (

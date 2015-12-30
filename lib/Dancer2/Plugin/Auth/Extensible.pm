@@ -3,7 +3,7 @@ package Dancer2::Plugin::Auth::Extensible;
 use warnings;
 use strict;
 
-use Dancer2::Plugin2;
+use Dancer2::Plugin;
 
 use Carp;
 use Class::Load qw(try_load_class);
