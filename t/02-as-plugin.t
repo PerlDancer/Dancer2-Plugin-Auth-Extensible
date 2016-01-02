@@ -7,6 +7,8 @@ use Test::WWW::Mechanize::PSGI;
 use lib 't/lib';
 
 BEGIN {
+    package InsidePluginApp;
+
     use Dancer2;
 
     set plugins => {
