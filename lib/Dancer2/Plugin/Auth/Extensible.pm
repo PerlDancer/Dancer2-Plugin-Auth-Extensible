@@ -65,9 +65,7 @@ has exit_page => (
 );
 
 has realms => (
-    is => 'ro',
-    from_config => 1,
-    default => sub {{}},
+    is => 'rwp',
 );
 
 has realm_provider => (
@@ -516,6 +514,7 @@ sub authenticate_user {
     for my $realm (@realms_to_check) {
         $dsl->app->log ( debug  => "Attempting to authenticate $username against realm $realm");
         my $provider = $plugin->auth_provider($realm);
+        $dsl->app->log ( debug  => "Provider for realm: $provider.");
         my %lastlogin = $dsl->config->{record_lastlogin} ? (lastlogin => 'logged_in_user_lastlogin') : ();
         if ($provider->authenticate_user($username, $password, %lastlogin)) {
             $dsl->app->log ( debug => "$realm accepted user $username");
@@ -936,7 +935,7 @@ sub user_password {
         if (exists $params{password}) {
             my $success;
             # Possible that realm will not be set before this statement
-            ($success, $realm) = authenticate_user($dsl, $username, $params{password}, $realm);
+            ($success, $realm) = $dsl->authenticate_user($username, $params{password}, $realm);
             $success or return;
         }
     }
@@ -1142,7 +1141,7 @@ sub auth_provider {
         die "Cannot load provider $provider_class: $error";
     }
 
-    my $provider = $provider_class->new($realm_settings, $plugin);
+    my $provider = $provider_class->new($realm_settings, $plugin->app);
     $plugin->realm_provider->{$realm} = $provider;
     return $plugin->realm_provider->{$realm};
 }
@@ -1175,6 +1174,17 @@ sub BUILD {
     my $plugin = shift;
     my $app = $plugin->app;
     my $settings = $plugin->config;
+
+    my $r = $plugin->realms;
+
+    if (! defined $r) {
+        if (exists $settings->{realms}) {
+            $plugin->_set_realms($settings->{realms});
+        }
+        else {
+            die "No realms found in configuration.";
+        }
+    }
 
     my @realms = keys % { $plugin->realms }
         or warn "No Auth::Extensible realms configured with which to authenticate user";
