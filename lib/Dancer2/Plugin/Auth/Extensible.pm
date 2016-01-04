@@ -246,10 +246,10 @@ sub require_login {
 
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect
-                ($dsl->uri_for($loginpage, { return_url => $dsl->request->request_uri }));
+                ($dsl->uri_for($loginpage, { return_url => $dsl->app->request->request_uri }));
         }
         return $coderef->($dsl);
     };
@@ -323,11 +323,11 @@ sub _build_wrapper {
     return sub {
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect($dsl->uri_for(
                 $loginpage,
-                { return_url => $dsl->request->request_uri }));
+                { return_url => $dsl->app->request->request_uri }));
         }
 
         my $role_match;
@@ -356,10 +356,10 @@ sub _build_wrapper {
             return $coderef->($dsl);
         }
 
-        $dsl->execute_hook('permission_denied', $coderef);
+        $dsl->execute_hook('plugin.auth_extensible.permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
         return $dsl->redirect(
-            $dsl->uri_for($deniedpage, { return_url => $dsl->request->request_uri }));
+            $dsl->uri_for($deniedpage, { return_url => $dsl->app->request->request_uri }));
     };
 }
 
@@ -1175,12 +1175,12 @@ on_plugin_import {
                 my $dsl = shift;
 
                 if(logged_in_user($dsl)) {
-                    $dsl->redirect($dsl->request->params->{return_url} || $userhomepage);
+                    $dsl->redirect($dsl->app->request->params->{return_url} || $userhomepage);
                 }
 
-                my ($code) = $dsl->request->splat; # Reset password code submitted?
+                my ($code) = $dsl->app->request->splat; # Reset password code submitted?
                 if ($settings->{reset_password_handler} && user_password($dsl, code => $code)) {
-                    $app->request->params->{password_code_valid} = 1;
+                    $app->app->request->params->{password_code_valid} = 1;
                 } else {
                     $dsl->response->status(401);
                 }
@@ -1264,7 +1264,7 @@ sub _post_login_route {
     # with paremeterisation) - but if params->{password} was something
     # different, e.g. { 'like' => '%' }, we might end up with some SQL like
     # WHERE password LIKE '%' instead - which would not be a Good Thing.
-    my ($username, $password) = @{ $app->app->request->params() }{qw(username password)};
+    my ($username, $password) = @{ $app->request->params() }{qw(username password)};
     for ($username, $password) {
         if (ref $_) {
             # TODO: handle more cleanly
