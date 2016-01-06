@@ -89,4 +89,20 @@ get '/does_undef_drink_beer' => sub {
     return user_has_role(undef, 'BeerDrinker');
 };
 
+get '/authenticate_user_with_realm_pass' => sub {
+    return authenticate_user('dave', 'beer', 'config1');
+};
+
+get '/authenticate_user_with_realm_fail' => sub {
+    return authenticate_user('dave', 'cider', 'config1');
+};
+
+get '/authenticate_user_with_wrong_realm' => sub {
+    return authenticate_user('dave', 'beer', 'config2');
+};
+
+get '/user_password' => sub {
+    return user_password params('query');
+};
+
 1;

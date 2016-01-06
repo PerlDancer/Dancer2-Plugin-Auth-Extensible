@@ -365,6 +365,117 @@ sub test_the_app_sub {
             is $res->code, 200, "/does_undef_drink_beer response is 200";
             ok !$res->content, "undefined users cannot drink";
         }
+
+        # 3 arg authenticate_user
+        {
+            my $res = $cb->( GET '/authenticate_user_with_realm_pass' );
+            is $res->code, 200,
+              "/authenticate_user_with_realm_pass response is 200";
+            ok $res->content, "authentication success";
+        }
+        {
+            my $res = $cb->( GET '/authenticate_user_with_realm_fail' );
+            is $res->code, 200,
+              "/authenticate_user_with_realm_fail response is 200";
+            ok !$res->content, "authentication failure";
+        }
+        {
+            my $res = $cb->( GET '/authenticate_user_with_wrong_realm' );
+            is $res->code, 200,
+              "/authenticate_user_with_wrong_realm response is 200";
+            ok !$res->content, "authentication failure";
+        }
+
+        # user_password
+        {
+            my $res = $cb->( GET '/user_password?username=dave&password=beer' );
+            is $res->code, 200,
+              "/user_password?username=dave&password=beer response is 200"
+              or diag explain $trap->read;
+            ok $res->content, "content shows success";
+        }
+        {
+            my $res = $cb->( GET '/user_password?username=dave&password=cider' );
+            is $res->code, 200,
+              "/user_password?username=dave&password=cider response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "content shows fail";
+        }
+        {
+            my $res = $cb->( GET '/user_password?username=dave&password=beer&realm=config1' );
+            is $res->code, 200,
+              "/user_password?username=dave&password=beer&realm=config1 response is 200"
+              or diag explain $trap->read;
+            ok $res->content, "content shows success";
+        }
+        {
+            my $res = $cb->( GET '/user_password?username=dave&password=beer&realm=config2' );
+            is $res->code, 200,
+              "/user_password?username=dave&password=beer&realm=config2 response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "content shows fail";
+        }
+        {
+            my $res = $cb->( GET '/user_password?password=beer', @headers );
+            is $res->code, 200,
+              "/user_password?password=beer response is 200"
+              or diag explain $trap->read;
+            ok $res->content, "content shows success";
+        }
+        {
+            my $res = $cb->( GET '/user_password?password=cider', @headers );
+            is $res->code, 200,
+              "/user_password?password=cider response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "content shows fail";
+        }
+        {
+            $trap->read; # clear logs
+            my $res = $cb->( GET '/user_password?code=', @headers );
+            is $res->code, 200,
+              "/user_password?code= response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "content shows fail";
+            my $logs = $trap->read;
+            ok !@$logs, "No log message";
+        }
+        {
+            $trap->read; # clear logs
+            my $res = $cb->( GET '/user_password?code=beer', @headers );
+            is $res->code, 200,
+              "/user_password?code=beer response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "content shows fail";
+            my $logs = $trap->read;
+            is $logs->[0]->{level}, 'debug', "we got a debug log message";
+            like $logs->[0]->{message},
+              qr/^Failed to check for code with config.+get_user_by_code/,
+              "message is: Failed to check for code with config...";
+        }
+        {
+            $trap->read; # clear logs
+            my $res = $cb->( GET '/user_password?new_password=beer', @headers );
+            is $res->code, 500,
+              "/user_password?new_password=beer response is 500"
+              or diag explain $trap->read;
+            my $logs = $trap->read;
+            is $logs->[0]->{level}, 'error', "we got a debug log message";
+            like $logs->[0]->{message},
+              qr/^Route exception: set_user_password was not implemented/,
+              "message is: 'Route exception: set_user_password was not implemented...'";
+        }
+        {
+            $trap->read; # clear logs
+            my $res = $cb->( GET '/user_password?new_password=beer&realm=config1', @headers );
+            is $res->code, 500,
+              "/user_password?new_password=beer&realm=config1 response is 500"
+              or diag explain $trap->read;
+            my $logs = $trap->read;
+            is $logs->[0]->{level}, 'error', "we got a debug log message";
+            like $logs->[0]->{message},
+              qr/^Route exception: set_user_password was not implemented/,
+              "message is: 'Route exception: set_user_password was not implemented...'";
+        }
     }
 };
 
