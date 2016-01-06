@@ -1,10 +1,13 @@
 package t::lib::TestSub;
 
 use Test::More;
+use Test::Deep;
 use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
 
 sub test_the_app_sub {
     my $sub = sub {
+
+        my $trap = t::lib::TestApp->dancer_app->logger_engine->trapper;
 
         my $cb = shift;
 
@@ -285,6 +288,28 @@ sub test_the_app_sub {
             my $res = $cb->(GET '/foo/login', @headers);
 
             is($res->code, 404, "'/foo/login' URL not matched by login route regex.");
+        }
+
+        # require_login should receive a coderef
+        {
+            $trap->read;    # clear logs
+            my $res  = $cb->( GET '/require_login_no_sub' );
+            my $logs = $trap->read;
+            is @$logs, 1, "One message in the logs";
+            is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
+            is $logs->[0]->{message},
+              'Invalid require_login usage, please see docs',
+              "Warning message is as expected";
+        }
+        {
+            $trap->read;    # clear logs
+            my $res  = $cb->( GET '/require_login_not_coderef' );
+            my $logs = $trap->read;
+            is @$logs, 1, "One message in the logs";
+            is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
+            is $logs->[0]->{message},
+              'Invalid require_login usage, please see docs',
+              "Warning message is as expected";
         }
     }
 };

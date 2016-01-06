@@ -241,7 +241,7 @@ sub require_login {
 
     return sub {
         if (!$coderef || ref $coderef ne 'CODE') {
-            warn "Invalid require_login usage, please see docs";
+            $dsl->warning("Invalid require_login usage, please see docs");
         }
 
         my $user = logged_in_user($dsl);

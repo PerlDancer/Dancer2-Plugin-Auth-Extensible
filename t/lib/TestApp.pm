@@ -6,6 +6,8 @@ use Dancer2;
 
 set session => 'simple';
 set plugins => { 'Auth::Extensible' => { provider => 'Example' } };
+set logger  => "capture";
+set log     => "debug";
 
 use Dancer2::Plugin::Auth::Extensible;
 no warnings 'uninitialized';
@@ -66,5 +68,8 @@ get qr{/regex/(.+)} => require_login sub {
     return "Matched";
 };
 
+get '/require_login_no_sub' => require_login;
+
+get '/require_login_not_coderef' => require_login { a => 1 };
 
 1;
