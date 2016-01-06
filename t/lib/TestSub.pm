@@ -301,6 +301,12 @@ sub test_the_app_sub {
             is($res->code, 404, "'/foo/login' URL not matched by login route regex.");
         }
 
+        # Now, log out again
+        {
+            my $res = $cb->(POST '/logout', @headers );
+            is $res->code, 200, 'Logged out again';
+        }
+
         # require_login should receive a coderef
         {
             $trap->read;    # clear logs
@@ -321,6 +327,31 @@ sub test_the_app_sub {
             is $logs->[0]->{message},
               'Invalid require_login usage, please see docs',
               "Warning message is as expected";
+        }
+
+        # login as dave
+        {
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
+            is( $res->code, 302, 'Login with real details succeeds' );
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok( $cookie, "Got the cookie: $cookie" );
+            @headers = ( Cookie => $cookie );
+        }
+
+        # 2 arg user_has_role
+        {
+            my $res = $cb->(GET '/does_dave_drink_beer', @headers);
+            is $res->code, 200, "/does_dave_drink_beer response is 200";
+            ok $res->content, "yup - dave drinks beer";
+        }
+        {
+            my $res = $cb->(GET '/does_dave_drink_cider', @headers);
+            is $res->code, 200, "/does_dave_drink_cider response is 200";
+            ok !$res->content, "no way does dave drink cider";
         }
     }
 };

@@ -76,4 +76,12 @@ get '/require_login_no_sub' => require_login;
 
 get '/require_login_not_coderef' => require_login { a => 1 };
 
+get '/does_dave_drink_beer' => sub {
+    return user_has_role('dave', 'BeerDrinker');
+};
+
+get '/does_dave_drink_cider' => sub {
+    return user_has_role('dave', 'CiderDrinker');
+};
+
 1;
