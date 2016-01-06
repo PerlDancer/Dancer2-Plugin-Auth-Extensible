@@ -84,4 +84,8 @@ get '/does_dave_drink_cider' => sub {
     return user_has_role('dave', 'CiderDrinker');
 };
 
+get '/does_undef_drink_beer' => sub {
+    return user_has_role(undef, 'BeerDrinker');
+};
+
 1;

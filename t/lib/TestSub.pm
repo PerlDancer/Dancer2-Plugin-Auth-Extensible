@@ -353,6 +353,11 @@ sub test_the_app_sub {
             is $res->code, 200, "/does_dave_drink_cider response is 200";
             ok !$res->content, "no way does dave drink cider";
         }
+        {
+            my $res = $cb->(GET '/does_undef_drink_beer', @headers);
+            is $res->code, 200, "/does_undef_drink_beer response is 200";
+            ok !$res->content, "undefined users cannot drink";
+        }
     }
 };
 
