@@ -331,6 +331,8 @@ sub _build_wrapper {
         }
 
         my $role_match;
+        # this is a private method and we should never need 'else'
+        # uncoverable branch false count:3
         if ($mode eq 'single') {
             for (user_roles($dsl)) {
                 $role_match++ and last if _smart_match($_, $require_role);

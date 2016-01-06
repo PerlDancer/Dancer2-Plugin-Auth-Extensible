@@ -134,6 +134,17 @@ sub test_the_app_sub {
                 "We can request a multi-role route with all roles required");
         }
 
+        {
+            my $res = $cb->( GET '/not_allroles', @headers );
+
+            is ($res->code, 302, "/not_allroles response code 302");
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login/denied?return_url=%2Fnot_allroles',
+                '/not_allroles redirected to denied page'
+            );
+        }
+
         # And also a route declared as a regex (this should be no different, but
         # melmothX was seeing issues with routes not requiring login when they should...
 

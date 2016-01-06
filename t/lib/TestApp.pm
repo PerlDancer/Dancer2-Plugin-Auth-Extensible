@@ -64,6 +64,10 @@ get '/allroles' => require_all_roles ['BeerDrinker', 'Motorcyclist'] => sub {
     "Matching multiple required roles works";
 };
 
+get '/not_allroles' => require_all_roles ['BeerDrinker', 'BadRole'] => sub {
+    "Matching multiple required roles should fail";
+};
+
 get qr{/regex/(.+)} => require_login sub {
     return "Matched";
 };
