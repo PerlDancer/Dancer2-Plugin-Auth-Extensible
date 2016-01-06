@@ -26,7 +26,8 @@ get '/name' => require_login sub {
 };
 
 get '/roles' => require_login sub {
-    return join ',', sort @{ user_roles() };
+    my $roles = user_roles() || [];
+    return join ',', sort @$roles;
 };
 
 get '/roles/:user' => require_login sub {

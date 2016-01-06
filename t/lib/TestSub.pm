@@ -250,6 +250,13 @@ sub test_the_app_sub {
             is($res->content, 'CiderDrinker', 'Correct roles for other user in current realm');
         }
 
+        # check roles: this user has no roles
+        {
+            my $res = $cb->( GET '/roles', @headers );
+
+            is ($res->content, '', 'Correct roles for logged in user');
+        }
+
         # Now, log out again
         {
             my $res = $cb->(POST '/logout', @headers );
