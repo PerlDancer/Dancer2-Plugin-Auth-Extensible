@@ -2,13 +2,6 @@ package t::lib::TestApp;
 
 use Dancer2 appname => 'TestApp';
 
-
-
-set session => 'simple';
-set plugins => { 'Auth::Extensible' => { provider => 'Example' } };
-set logger  => "capture";
-set log     => "debug";
-
 use Dancer2::Plugin::Auth::Extensible;
 no warnings 'uninitialized';
 

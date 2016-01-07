@@ -7,6 +7,7 @@ use t::lib::TestSub;
 
 BEGIN {
     $ENV{DANCER_CONFDIR} = 't/lib';
+    $ENV{DANCER_ENVIRONMENT} = 'provider-config';
 }
 
 {
