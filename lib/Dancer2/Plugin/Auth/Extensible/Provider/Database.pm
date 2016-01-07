@@ -2,8 +2,6 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 
 use strict;
 use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
-use Dancer2::Plugin::Database;
-use Dancer2 qw(:syntax);
 
 our $VERSION = '0.402';
 
@@ -194,7 +192,7 @@ sub get_user_details {
         $users_table, { $username_column => $username }
     );
     if (!$user) {
-        debug("No such user $username");
+        $self->realm_dsl->debug("No such user $username");
         return;
     } else {
         return $user;
