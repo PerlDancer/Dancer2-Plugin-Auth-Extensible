@@ -1,6 +1,6 @@
 package t::lib::TestApp;
 
-use Dancer2;
+use Dancer2 appname => 'TestApp';
 
 
 

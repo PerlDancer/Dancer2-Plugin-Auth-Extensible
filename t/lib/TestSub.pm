@@ -7,7 +7,7 @@ use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
 sub test_the_app_sub {
     my $sub = sub {
 
-        my $trap = t::lib::TestApp->dancer_app->logger_engine->trapper;
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
 
         my $cb = shift;
 

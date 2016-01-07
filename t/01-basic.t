@@ -10,7 +10,7 @@ BEGIN {
 }
 
 {
-    package MyApp;
+    package TestApp;
     use Dancer2;
     use t::lib::TestApp;
 }
