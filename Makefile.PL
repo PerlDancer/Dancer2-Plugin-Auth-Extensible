@@ -11,9 +11,12 @@ WriteMakefile(
       ? ('LICENSE'=> 'perl')
       : ()),
     PL_FILES            => {},
-    PREREQ_PM => {
+    BUILD_REQUIRES => {
+        'Class::Load' => 0,
         'Test::Deep' => 0,
         'Test::More' => 0,
+    },
+    PREREQ_PM => {
         'Dancer2'     => 0.15,
         'Crypt::SaltedHash' => 0,
         'YAML'       => 0, # for config files (TODO: make optional?)
