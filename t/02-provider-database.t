@@ -3,7 +3,6 @@ use warnings;
 
 use Test::More;
 use Class::Load 'try_load_class';
-use Plack::Test;
 use Dancer2::Plugin::Auth::Extensible::Test;
 
 BEGIN {
@@ -40,6 +39,6 @@ BEGIN {
 my $app = Dancer2->runner->psgi_app;
 is( ref $app, 'CODE', 'Got app' );
 
-test_psgi $app, Dancer2::Plugin::Auth::Extensible::Test::test_the_app_sub();
+Dancer2::Plugin::Auth::Extensible::Test::testme($app, 'base');
 
 done_testing;

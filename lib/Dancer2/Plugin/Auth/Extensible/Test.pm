@@ -1,18 +1,52 @@
 package Dancer2::Plugin::Auth::Extensible::Test;
 
+use warnings;
+use strict;
+
 use Test::More;
 use Test::Deep;
+use Plack::Test;
 use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
 
-sub test_the_app_sub {
+sub testme {
+    my $app = shift;
+    my %args = map { $_ => 1} @_;
+
+    # always run base tests
+    delete $args{base};
+    test_psgi $app, _test_base();
+
+    foreach my $name (
+        qw/ create_user update_user password_reset user_password
+        lastlogin expired/
+      )
+    {
+        if ( delete $args{$name} ) {
+            eval "_test_$name()";
+            ok !$@, "Testing $name OK" or diag explain $@;
+        }
+        else {
+            eval "_test_no_$name()";
+            ok !$@, "Not testing $name OK" or diag explain $@;
+        }
+    }
+
+    my @remaining = keys %args;
+
+    ok !@remaining, "No test names left" or diag explain @remaining;
+}
+
+# base
+
+sub _test_base {
     my $sub = sub {
 
         my $trap = TestApp->dancer_app->logger_engine->trapper;
 
         my $cb = shift;
 
-        # First, without being logged in, check we can access the index page, but not
-        # stuff we need to be logged in for:
+        # First, without being logged in, check we can access the index page,
+        # but not stuff we need to be logged in for:
 
         is (
             $cb->( GET '/' )->content,
@@ -59,7 +93,8 @@ sub test_the_app_sub {
         # OK, now check we can't log in with fake details
 
         {
-            my $res = $cb->( POST '/login', [ username => 'foo', password => 'bar' ] );
+            my $res =
+              $cb->( POST '/login', [ username => 'foo', password => 'bar' ] );
 
             is( $res->code, 401, 'Login with fake details fails');
         }
@@ -69,7 +104,8 @@ sub test_the_app_sub {
         # ... and that we can log in with real details
 
         {
-            my $res = $cb->( POST '/login', [ username => 'dave', password => 'beer' ] );
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
 
             is( $res->code, 302, 'Login with real details succeeds');
 
@@ -102,24 +138,29 @@ sub test_the_app_sub {
         {
             my $res = $cb->( GET '/roles', @headers );
 
-            is ($res->content, 'BeerDrinker,Motorcyclist', 'Correct roles for logged in user');
+            is( $res->content, 'BeerDrinker,Motorcyclist',
+                'Correct roles for logged in user' );
         }
 
         {
             my $res = $cb->( GET '/roles/bob', @headers );
 
-            is ($res->content, 'CiderDrinker', 'Correct roles for other user in current realm');
+            is( $res->content, 'CiderDrinker',
+                'Correct roles for other user in current realm' );
         }
 
         # Check we can request something which requires a role we have....
+
         {
             my $res = $cb->( GET '/beer', @headers );
 
-            is ($res->code, 200, 'We can request a route (/beer) requiring a role we have...');
+            is( $res->code, 200,
+                'We can request a route (/beer) requiring a role we have...' );
         }
 
-        # Check we can request a route that requires any of a list of roles, one of
-        # which we have:
+        # Check we can request a route that requires any of a list of roles,
+        # one of which we have:
+
         {
             my $res = $cb->( GET '/anyrole', @headers );
 
@@ -146,7 +187,8 @@ sub test_the_app_sub {
         }
 
         # And also a route declared as a regex (this should be no different, but
-        # melmothX was seeing issues with routes not requiring login when they should...
+        # melmothX was seeing issues with routes not requiring login when they
+        # should...
 
         {
             my $res = $cb->( GET '/regex/a', @headers );
@@ -157,7 +199,8 @@ sub test_the_app_sub {
         {
             my $res = $cb->( GET '/piss/regex', @headers );
 
-            is ($res->code, 200, "We can request a route requiring a regex role we have");
+            is( $res->code, 200,
+                "We can request a route requiring a regex role we have" );
         }
 
         # ... but can't request something requiring a role we don't have
@@ -179,7 +222,8 @@ sub test_the_app_sub {
             my $res = $cb->( GET '/realm', @headers );
 
             is($res->code, 200, 'Status code on /realm route.');
-            is($res->content, 'config1', 'Authenticated against expected realm');
+            is( $res->content, 'config1',
+                'Authenticated against expected realm' );
         }
 
         # Now, log out
@@ -195,7 +239,8 @@ sub test_the_app_sub {
         {
             my $res = $cb->(GET '/loggedin', @headers);
 
-            is($res->code, 302, 'Status code on accessing /loggedin after logout');
+            is( $res->code, 302,
+                'Status code on accessing /loggedin after logout' );
 
             is($res->headers->header('Location'),
                'http://localhost/login?return_url=%2Floggedin',
@@ -215,7 +260,10 @@ sub test_the_app_sub {
         # OK, log back in, this time as a user from the second realm
 
         {
-            my $res = $cb->(POST '/login', { username => 'burt', password => 'bacharach' });
+            my $res = $cb->(
+                POST '/login',
+                { username => 'burt', password => 'bacharach' }
+            );
 
             is($res->code, 302, 'Login as user from second realm succeeds');
 
@@ -232,10 +280,12 @@ sub test_the_app_sub {
         {
             my $res = $cb->(GET '/loggedin', @headers);
 
-            is($res->code, 200, 'Can access /loggedin now we are logged in again');
+            is( $res->code, 200,
+                'Can access /loggedin now we are logged in again' );
         }
 
         # And that the realm we authenticated against is what we expect
+
         {
             my $res = $cb->( GET '/realm', @headers );
 
@@ -247,10 +297,12 @@ sub test_the_app_sub {
             my $res = $cb->( GET '/roles/bob/config1', @headers );
 
             is($res->code, 200, 'Status code on /roles/bob/config1 route.');
-            is($res->content, 'CiderDrinker', 'Correct roles for other user in current realm');
+            is( $res->content, 'CiderDrinker',
+                'Correct roles for other user in current realm' );
         }
 
         # check roles: this user has no roles
+
         {
             my $res = $cb->( GET '/roles', @headers );
 
@@ -258,6 +310,7 @@ sub test_the_app_sub {
         }
 
         # Now, log out again
+
         {
             my $res = $cb->(POST '/logout', @headers );
 
@@ -265,10 +318,15 @@ sub test_the_app_sub {
         }
 
         # Now check we can log in as a user whose password is stored hashed:
+
         {
-            my $res = $cb->(POST '/login',
-                            {
-                                username => 'hashedpassword', password => 'password' });
+            my $res = $cb->(
+                POST '/login',
+                {
+                    username => 'hashedpassword',
+                    password => 'password'
+                }
+            );
 
             is($res->code, 302, 'Login as user with hashed password succeeds');
 
@@ -280,13 +338,16 @@ sub test_the_app_sub {
         }
 
         # And that now we're logged in again, we can access protected pages
+
         {
             my $res = $cb->(GET '/loggedin', @headers);
 
-            is($res->code, 200, 'Can access /loggedin now we are logged in again');
+            is( $res->code, 200,
+                'Can access /loggedin now we are logged in again' );
         }
 
         # Check that the redirect URL can be set when logging in
+
         {
             my $res = $cb->(POST '/login', {
                 username => 'dave',
@@ -302,19 +363,23 @@ sub test_the_app_sub {
         }
         
         # Check that login route doesn't match any request string with '/login'.
+
         {
             my $res = $cb->(GET '/foo/login', @headers);
 
-            is($res->code, 404, "'/foo/login' URL not matched by login route regex.");
+            is( $res->code, 404,
+                "'/foo/login' URL not matched by login route regex." );
         }
 
         # Now, log out again
+
         {
             my $res = $cb->(POST '/logout', @headers );
             is $res->code, 200, 'Logged out again';
         }
 
         # require_login should receive a coderef
+
         {
             $trap->read;    # clear logs
             my $res  = $cb->( GET '/require_login_no_sub' );
@@ -337,6 +402,7 @@ sub test_the_app_sub {
         }
 
         # login as dave
+
         {
             my $res = $cb->( POST '/login',
                 [ username => 'dave', password => 'beer' ] );
@@ -350,6 +416,7 @@ sub test_the_app_sub {
         }
 
         # 2 arg user_has_role
+
         {
             my $res = $cb->(GET '/does_dave_drink_beer', @headers);
             is $res->code, 200, "/does_dave_drink_beer response is 200";
@@ -367,6 +434,7 @@ sub test_the_app_sub {
         }
 
         # 3 arg authenticate_user
+
         {
             my $res = $cb->( GET '/authenticate_user_with_realm_pass' );
             is $res->code, 200,
@@ -387,6 +455,7 @@ sub test_the_app_sub {
         }
 
         # user_password
+
         {
             my $res = $cb->( GET '/user_password?username=dave&password=beer' );
             is $res->code, 200,
@@ -402,14 +471,16 @@ sub test_the_app_sub {
             ok !$res->content, "content shows fail";
         }
         {
-            my $res = $cb->( GET '/user_password?username=dave&password=beer&realm=config1' );
+            my $res = $cb->( GET
+                  '/user_password?username=dave&password=beer&realm=config1' );
             is $res->code, 200,
               "/user_password?username=dave&password=beer&realm=config1 response is 200"
               or diag explain $trap->read;
             ok $res->content, "content shows success";
         }
         {
-            my $res = $cb->( GET '/user_password?username=dave&password=beer&realm=config2' );
+            my $res = $cb->( GET
+                  '/user_password?username=dave&password=beer&realm=config2' );
             is $res->code, 200,
               "/user_password?username=dave&password=beer&realm=config2 response is 200"
               or diag explain $trap->read;
@@ -429,6 +500,112 @@ sub test_the_app_sub {
               or diag explain $trap->read;
             ok !$res->content, "content shows fail";
         }
+    };
+};
+
+# create_user
+
+sub _test_create_user {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_create_user {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+# update_user
+
+sub _test_update_user {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_update_user {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+# password_reset
+
+sub _test_password_reset {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_password_reset {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+# user_password
+
+sub _test_user_password {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_user_password {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+# lastlogin
+
+sub _test_lastlogin {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_lastlogin {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+# expired
+
+sub _test_expired {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+sub _test_no_expired {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+#########
+sub _test_reset_code {
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+
+        my @headers;
         {
             $trap->read; # clear logs
             my $res = $cb->( GET '/user_password?code=', @headers );
@@ -449,7 +626,7 @@ sub test_the_app_sub {
             my $logs = $trap->read;
             is $logs->[0]->{level}, 'debug', "we got a debug log message";
             like $logs->[0]->{message},
-              qr/^Failed to check for code with config.+get_user_by_code/,
+              qr/^Failed to check for code with config.+fooget_user_by_code/,
               "message is: Failed to check for code with config...";
         }
         {
