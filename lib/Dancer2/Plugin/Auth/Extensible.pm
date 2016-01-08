@@ -8,7 +8,7 @@ use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
 use Session::Token;
 
-our $VERSION = '0.402';
+our $VERSION = '0.500';
 
 my $settings;
 
