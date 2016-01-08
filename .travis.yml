@@ -12,5 +12,5 @@ perl:
     - "5.10"
 
 install:
-    - cpanm DBD::SQLite Test::CheckManifest --quiet --notest
+    - cpanm DBD::SQLite Dancer2::Plugin::Database Test::CheckManifest --quiet --notest
     - cpanm --quiet --installdeps --notest .
