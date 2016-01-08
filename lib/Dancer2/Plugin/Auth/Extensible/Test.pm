@@ -1,5 +1,11 @@
 package Dancer2::Plugin::Auth::Extensible::Test;
 
+=head1 NAME
+
+Dancer2::Plugin::Auth::Extensible::Test - test suite for Auth::Extensible plugin
+
+=cut
+
 use warnings;
 use strict;
 
@@ -7,6 +13,49 @@ use Test::More;
 use Test::Deep;
 use Plack::Test;
 use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
+
+=head1 DESCRIPTION
+
+Test suite for L<Dancer2::Plugin::Auth::Extensible> which can also be used
+by external providers. If you have written your own provider then you really
+want to use this since it should make sure your provider conforms as
+L<Dancer2::Plugin::Auth::Extensible> expects it to. It will also save you
+writing piles of tests yourself.
+
+=head1 FUNCTIONS
+
+=head2 testme $psgi_app @test_names?
+
+Current valid test names:
+
+=over
+
+=item * base
+
+This test is always run whether or not it is supplied in C<@test_names>. This
+tests all methods/functions that all providers must provide.
+
+=item * create_user
+
+Test provider's C<create_user> method.
+
+=item * update_user
+
+Test provider's C<update_user> and C<update_current_user> methods.
+
+=item * password_reset
+
+=item * user_password
+
+=item * lastlogin
+
+Test provider's C<password_expired> function.
+
+=item * expired
+
+=back
+
+=cut
 
 sub testme {
     my $app = shift;
