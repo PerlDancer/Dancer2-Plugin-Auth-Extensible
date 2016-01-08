@@ -1,14 +1,16 @@
 language: perl
+env: RELEASE_TESTING=1
+language: perl
 
 perl:
+    - "5.22"
+    - "5.20"
+    - "5.18"
     - "5.16"
     - "5.14"
     - "5.12"
     - "5.10"
 
 install:
-    - cpanm Dancer Crypt::SaltedHash --quiet --notest
-
-script:
-    - perl Makefile.PL
-    - make test
+    - cpanm Crypt::SaltedHash --quiet --notest
+    - cpanm --quiet --installdeps --notest .
