@@ -3,7 +3,6 @@ package Dancer2::Plugin::Auth::Extensible::Provider::LDAP;
 use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
-use Dancer2 qw(warning);
 
 our $VERSION = '0.402';
 
@@ -99,7 +98,7 @@ sub get_user_details {
         password => $settings->{password});
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->dsl->app->warning($mesg->error);
     }
 
     $mesg = $ldap->search(
@@ -108,7 +107,7 @@ sub get_user_details {
         );
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->dsl->app->warning($mesg->error);
     }
 
     my @extract = qw(cn dn name userPrincipalName sAMAccountName);
@@ -119,7 +118,7 @@ sub get_user_details {
             $props{$ex} = $mesg->entry(0)->get_value($ex);
         }
     } else {
-        warning("Error finding user details.");
+        $self->dsl->app->warning("Error finding user details.");
     } 
 
     $ldap->unbind;
@@ -146,7 +145,7 @@ sub get_user_roles {
         password => $settings->{password});
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->dsl->app->warning($mesg->error);
     }
 
     my @relevantroles = split /,/, $settings->{roles};
@@ -158,7 +157,7 @@ sub get_user_roles {
             filter => "(&(objectClass=user)(sAMAccountName=" . $username . ")(memberof=cn=". $role . "," . $settings->{usergroup} . "))",
             );
         if ($mesg->is_error) {
-            warning($mesg->error);
+            $self->dsl->app->warning($mesg->error);
         }
         if ($mesg->entries > 0) {
             push @roles, $role;
@@ -169,7 +168,7 @@ sub get_user_roles {
     $ldap->disconnect;
 
     if (@roles == 0) {
-        warning($settings->{roles});
+        $self->dsl->app->warning($settings->{roles});
     }
 
     return \@roles;
