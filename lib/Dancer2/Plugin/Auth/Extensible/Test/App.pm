@@ -1,10 +1,13 @@
 package t::lib::TestApp;
 
 use Dancer2 appname => 'TestApp';
-
 use Dancer2::Plugin::Auth::Extensible;
 no warnings 'uninitialized';
 
+set session => 'simple';
+set logger => 'capture';
+set log => 'debug';
+set show_errors => 1;
 
 get '/' => sub {
     "Index always accessible";

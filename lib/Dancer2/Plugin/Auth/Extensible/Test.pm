@@ -1,4 +1,4 @@
-package t::lib::TestSub;
+package Dancer2::Plugin::Auth::Extensible::Test;
 
 use Test::More;
 use Test::Deep;

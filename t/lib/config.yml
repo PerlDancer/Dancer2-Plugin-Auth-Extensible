@@ -1,4 +1,0 @@
-session: simple
-logger: capture
-log: debug
-show_errors: 1
