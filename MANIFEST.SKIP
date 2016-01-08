@@ -5,3 +5,5 @@ lib/Dancer2/Plugin/Auth/Extensible/Provider/LDAP.pm
 \.bak$
 \.bak/
 \.old$
+\.swp$
+cover_db/*
