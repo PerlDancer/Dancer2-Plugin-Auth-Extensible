@@ -1,7 +1,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More tests => 14 + 6;
 use Test::Exception;
 use Dancer2::Plugin::Auth::Extensible::Provider::Base;
 
@@ -38,22 +38,14 @@ lives_ok { $password = $provider->encrypt_password( 'password', 'SHA-1' ) }
 "encrypt_password('password', 'SHA-1')";
 like $password, qr/^{SSHA}.+$/, "password looks good";
 
-throws_ok { $provider->authenticate_user } qr/not implemented/,
-  "authenticate_user not implemented";
+my @methods = (
+    qw/ authenticate_user get_user_details set_user_details
+      get_user_roles set_user_password password_expired /
+);
 
-throws_ok { $provider->get_user_details } qr/not implemented/,
-  "get_user_details not implemented";
+can_ok( $provider, @methods );
 
-throws_ok { $provider->set_user_details } qr/not implemented/,
-  "set_user_details not implemented";
-
-throws_ok { $provider->get_user_roles } qr/not implemented/,
-  "get_user_roles not implemented";
-
-throws_ok { $provider->set_user_password } qr/not implemented/,
-  "set_user_password not implemented";
-
-throws_ok { $provider->password_expired } qr/not implemented/,
-  "password_expired not implemented";
-
-done_testing;
+foreach my $method (@methods) {
+    throws_ok { $provider->$method } qr/$method.+not implemented/,
+      "$method not implemented";
+}
