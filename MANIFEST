@@ -1,7 +1,8 @@
 README
 t/00-load.t
-t/01-provider-config.t
-t/02-provider-database.t
+t/01-provider-base.t
+t/plugin-provider-config.t
+t/plugin-provider-database.t
 t/database/config1.sql
 t/database/config2.sql
 t/database/testapp.ddl
