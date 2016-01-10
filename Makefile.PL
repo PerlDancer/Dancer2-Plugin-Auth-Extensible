@@ -12,7 +12,7 @@ WriteMakefile(
       : ()),
     PL_FILES            => {},
     BUILD_REQUIRES => {
-        'Class::Load' => 0,
+        'Module::Load::Conditional' => 0,
         'Test::Deep' => 0,
         'Test::More' => 0,
     },
