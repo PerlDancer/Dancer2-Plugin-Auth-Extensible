@@ -11,6 +11,9 @@ perl:
     - "5.12"
     - "5.10"
     - "5.8"
+matrix:
+    allow_failures:
+        - perl: 5.8
 
 install:
     - cpanm DBD::SQLite Dancer2::Plugin::Database Test::CheckManifest --quiet --notest
