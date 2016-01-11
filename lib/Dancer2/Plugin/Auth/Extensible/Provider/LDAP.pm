@@ -3,7 +3,6 @@ package Dancer2::Plugin::Auth::Extensible::Provider::LDAP;
 use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
-use Dancer2 qw(warning);
 
 our $VERSION = '0.402';
 

@@ -1,10 +1,23 @@
-#!perl -T
+#!/usr/bin/env perl
+use Test::More;
+use lib 'lib';
+use Path::Tiny;
 
-use Test::More tests => 1;
-
-BEGIN {
-    use_ok( 'Dancer2::Plugin::Auth::Extensible' ) || print "Bail out!
-";
+# try to import every .pm file in /lib
+my $dir = path('lib/');
+my $iter = $dir->iterator({
+            recurse         => 1,
+            follow_symlinks => 0,
+           });
+while (my $path = $iter->())
+{
+  
+  next if $path->is_dir || $path !~ /\.pm$/;
+  my $module = $path->relative;
+  $module =~ s/(?:^lib\/|\.pm$)//g;
+  $module =~ s/\//::/g;
+  # some things can't be tested this way
+  next if $module eq 'Dancer2::Plugin::Auth::Extensible::Test::App';
+  BAIL_OUT( "$module does not compile" ) unless require_ok( $module );
 }
-
-diag( "Testing Dancer2::Plugin::Auth::Extensible $Dancer2::Plugin::Auth::Extensible::VERSION, Perl $], $^X" );
+done_testing;

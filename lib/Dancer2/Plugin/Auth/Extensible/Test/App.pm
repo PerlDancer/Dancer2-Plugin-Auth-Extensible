@@ -1,4 +1,4 @@
-package t::lib::TestApp;
+package Dancer2::Plugin::Auth::Extensible::Test::App;
 
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;

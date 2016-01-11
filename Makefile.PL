@@ -7,12 +7,13 @@ WriteMakefile(
     AUTHOR              => q{David Precious <davidp@preshweb.co.uk>},
     VERSION_FROM        => 'lib/Dancer2/Plugin/Auth/Extensible.pm',
     ABSTRACT_FROM       => 'lib/Dancer2/Plugin/Auth/Extensible.pm',
-    ($ExtUtils::MakeMaker::VERSION >= 6.3002
+    ($ExtUtils::MakeMaker::VERSION >= 6.48
       ? ('LICENSE'=> 'perl')
       : ()),
     PL_FILES            => {},
     BUILD_REQUIRES => {
         'Module::Load::Conditional' => 0,
+        'Path::Tiny' => '0.016',
         'Test::Deep' => 0,
         'Test::More' => 0,
     },
