@@ -71,12 +71,10 @@ sub testme {
       )
     {
         if ( delete $args{$name} ) {
-            eval "_test_$name()";
-            ok !$@, "Testing $name OK" or diag explain $@;
+            test_psgi $app, eval "_test_$name()";
         }
         else {
-            eval "_test_no_$name()";
-            ok !$@, "Not testing $name OK" or diag explain $@;
+            test_psgi $app, eval "_test_no_$name()";
         }
     }
 
@@ -88,6 +86,9 @@ sub testme {
 # base
 
 sub _test_base {
+
+    note "test base";
+
     my $sub = sub {
 
         my $trap = TestApp->dancer_app->logger_engine->trapper;
@@ -555,13 +556,25 @@ sub _test_base {
 # create_user
 
 sub _test_create_user {
+    
+    note "test create_user";
+
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
+
+        is (
+            $cb->( GET '/' )->content,
+            'Index always accessible',
+            'Index accessible while not logged in'
+        );
     }
 };
 
 sub _test_no_create_user {
+
+    note "test no create_user";
+
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
