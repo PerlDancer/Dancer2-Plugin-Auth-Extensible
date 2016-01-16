@@ -394,6 +394,31 @@ sub logged_in_user {
 }
 register logged_in_user => \&logged_in_user;
 
+
+=item get_user_details
+
+Returns a hashref of details of the specified user. The realm can optionally
+be specified as the second parameter. If the realm is not specified, each
+realm will be checked, and the first matching user will be returned.
+
+The details you get back will depend upon the authentication provider in use.
+
+=cut
+
+sub get_user_details {
+    my ($dsl, $username, $realm) = @_;
+
+    my @realms_to_check = $realm ? ($realm) : (keys %{ $settings->{realms} });
+
+    for my $realm (@realms_to_check) {
+        $dsl->app->log ( debug  => "Attempting to find user $username in realm $realm");
+        my $provider = auth_provider($dsl, $realm);
+        my $user = $provider->get_user_details($username, $realm);
+        $user and return $user;
+    }
+}
+register get_user_details => \&get_user_details;
+
 =item user_has_role
 
 Check if a user has the role named.
