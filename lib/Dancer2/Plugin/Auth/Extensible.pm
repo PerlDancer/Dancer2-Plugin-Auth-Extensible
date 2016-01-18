@@ -1303,8 +1303,9 @@ sub _post_login_route {
         $app->redirect($app->params->{return_url} || $userhomepage);
     }
 
+    my $auth_realm = $app->app->request->param('realm');
     my ($success, $realm) = authenticate_user(
-        $app, $username, $password
+        $app, $username, $password, $auth_realm
     );
     if ($success) {
         $app->app->session->write(logged_in_user => $username);
