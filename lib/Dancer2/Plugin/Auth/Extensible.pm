@@ -585,8 +585,9 @@ sub update_user {
     my $updated  = $provider->set_user_details($username, %update);
     my $request  = $dsl->app->request;
     my $session  = $dsl->app->session;
+    my $cur_user = $session->read('logged_in_user');
     $request->vars->{logged_in_user_hash} = $updated
-        if $username eq $session->read('logged_in_user');
+        if $cur_user && $cur_user eq $username;
     $updated;
 }
 register update_user => \&update_user;
