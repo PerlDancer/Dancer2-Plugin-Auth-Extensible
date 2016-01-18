@@ -2,6 +2,7 @@ package Dancer2::Plugin::Auth::Extensible::Test::App;
 
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;
+use YAML ();
 no warnings 'uninitialized';
 
 set session => 'simple';
@@ -43,6 +44,10 @@ get '/realm' => require_login sub {
 
 get '/beer' => require_role BeerDrinker => sub {
     "You can have a beer";
+};
+
+get '/cider' => require_role CiderDrinker => sub {
+    "You can have a cider";
 };
 
 get '/piss' => require_role BearGrylls => sub {
@@ -100,5 +105,32 @@ get '/authenticate_user_with_wrong_realm' => sub {
 get '/user_password' => sub {
     return user_password params('query');
 };
+
+get '/create_user/:realm' => sub {
+    my $realm = param 'realm';
+    create_user username => 'newuser', realm => $realm;
+    user_password username => 'newuser', realm => $realm, new_password => "pish_$realm";
+};
+
+get '/update_current_user' => sub {
+    update_current_user name => "I love cider";
+};
+
+get '/update_user_name/:realm' => sub {
+    my $realm = param 'realm';
+    update_user 'mark', realm => $realm, name => "Wiltshire Apples $realm";
+};
+
+get '/update_user_role/:realm' => sub {
+    my $realm = param 'realm';
+    update_user 'mark', realm => $realm, role => { CiderDrinker => 1 };
+};
+
+get '/get_user_mark/:realm' => sub {
+    my $realm = param 'realm';
+    content_type 'text/x-yaml';
+    YAML::Dump get_user_details 'mark', $realm;
+};
+
 
 1;

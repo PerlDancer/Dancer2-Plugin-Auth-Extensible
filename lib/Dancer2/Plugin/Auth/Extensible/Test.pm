@@ -13,6 +13,7 @@ use Test::More;
 use Test::Deep;
 use Plack::Test;
 use HTTP::Request::Common qw(GET HEAD PUT POST DELETE);
+use YAML ();
 
 =head1 DESCRIPTION
 
@@ -563,11 +564,29 @@ sub _test_create_user {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
 
-        is (
-            $cb->( GET '/' )->content,
-            'Index always accessible',
-            'Index accessible while not logged in'
-        );
+        for my $realm (qw/config1 config2/) {
+
+            # First create a user
+
+            {
+                my $res = $cb->( GET "/create_user/$realm" );
+
+                is $res->code, 200,
+                  "/create_user response is 200"
+                  or diag explain $trap->read;
+            }
+
+            # Then try logging in with that user
+
+            {
+                my $res = $cb->( POST '/login',
+                    [ username => 'newuser', password => "pish_$realm", realm => $realm ] );
+                is( $res->code, 302, 'Login with newly created user succeeds' )
+                  or diag explain $trap->read;
+            }
+
+        }
+
     }
 };
 
@@ -587,6 +606,61 @@ sub _test_update_user {
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
+
+        for my $realm (qw/config1 config2/) {
+
+            # First test a standard user details update.
+
+            {
+                # Get the current user settings, and make sure name is not what
+                # we're going to change it to.
+                my $res = $cb->( GET "/get_user_mark/$realm" );
+                my $user = YAML::Load $res->content;
+                my $name = $user->{name} || '';
+                cmp_ok($name, 'ne', "Wiltshire Apples $realm", "Name is not currently Wiltshire Apples $realm");
+
+                # Update the user and check it
+                $res = $cb->( GET "/update_user_name/$realm" );
+                $res = $cb->( GET "/get_user_mark/$realm" );
+                $user = YAML::Load $res->content;
+                cmp_ok($user->{name}, 'eq', "Wiltshire Apples $realm", "Name is now Wiltshire Apples $realm");
+            }
+
+            # Now we're going to update the current user and add a role
+
+            {
+                # First login as the test user
+                my $res = $cb->( POST '/login',
+                    [ username => 'mark', password => "wantscider", realm => $realm ] );
+                is( $res->code, 302, "Login with real details succeeds (realm $realm)" )
+                  or diag explain $trap->read;
+                # Get cookie with session id
+                my $cookie = $res->header('Set-Cookie');
+                $cookie =~ s/^(.*?);.*$/$1/s;
+                ok ($cookie, "Got the cookie: $cookie");
+                my @headers = (Cookie => $cookie);
+
+                # Update the "current" user, that we logged in above
+                $res = $cb->( GET "/update_current_user", @headers );
+                # Check the update has worked
+                $res = $cb->( GET "/get_user_mark/$realm" );
+                my $user = YAML::Load $res->content;
+                cmp_ok($user->{name}, 'eq', "I love cider", "Name is now I love cider");
+
+                # Now the role. First check that the role doesn't work.
+                $res = $cb->( GET '/cider', @headers );
+                is( $res->code, 302, "[GET /cider] Correct code for realm $realm" );
+
+                # Now add the role
+                $res = $cb->( GET "/update_user_role/$realm" );
+                # And see whether we're now allowed access
+                $res = $cb->( GET '/cider', @headers );
+                is( $res->code, 200,
+                  "We can request a route (/cider) requiring a role we have (realm $realm)" )
+                  or diag explain $trap->read;
+                $res = $cb->(POST '/logout', @headers);
+            }
+        }
     }
 };
 
