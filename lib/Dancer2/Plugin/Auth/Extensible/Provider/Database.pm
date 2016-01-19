@@ -1,9 +1,8 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 
-use strict;
-use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
-use Dancer2;
-use Dancer2::Plugin::Database;
+use Moo;
+with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
+use namespace::clean;
 
 our $VERSION = '0.502';
 
@@ -187,8 +186,7 @@ sub get_user_details {
     my $settings = $self->realm_settings;
 
     # Get our database handle and find out the table and column names:
-    #my $database = $self->realm_dsl->database($settings->{db_connection_name})
-    my $database = database($settings->{db_connection_name})
+    my $database = $self->realm_dsl->database($settings->{db_connection_name})
         or die "No database connection";
 
     my $users_table     = $settings->{users_table}     || 'users';
@@ -216,8 +214,7 @@ sub get_user_roles {
 
     my $settings = $self->realm_settings;
     # Get our database handle and find out the table and column names:
-    #my $database = $self->realm_dsl->database($settings->{db_connection_name});
-    my $database = database($settings->{db_connection_name});
+    my $database = $self->realm_dsl->database($settings->{db_connection_name});
 
     # Get details of the user first; both to check they exist, and so we have
     # their ID to use.

@@ -1,13 +1,14 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
-use strict;
-use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
+use Moo;
+with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
+use namespace::clean;
 
 our $VERSION = '0.502';
 
 =head1 NAME 
 
-Dancer2::Plugin::Auth::Extensible::Config - example auth provider using app config
+Dancer2::Plugin::Auth::Extensible::Provider::Config - example auth provider using app config
 
 
 =head1 DESCRIPTION

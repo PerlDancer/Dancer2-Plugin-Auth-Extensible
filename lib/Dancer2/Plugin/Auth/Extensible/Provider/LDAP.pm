@@ -1,8 +1,9 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::LDAP;
 
-use strict;
-use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
+use Moo;
+with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
+use namespace::clean;
 
 our $VERSION = '0.502';
 

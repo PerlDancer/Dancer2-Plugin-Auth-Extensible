@@ -1,8 +1,10 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Unix;
 
-use strict;
-use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
+use Unix::Passwd::File;
+use Moo;
+with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
+use namespace::clean;
 
 our $VERSION = '0.502';
 
