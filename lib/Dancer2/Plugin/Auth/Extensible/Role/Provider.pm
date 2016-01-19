@@ -134,23 +134,5 @@ provider.
 
 =cut
 
-sub BUILDARGS {
-    my $class = shift;
-    my %args;
-    if (   @_ == 2
-        && ref( $_[0] ) eq 'HASH'
-        && $_[1]->$_isa('Dancer2::Core::DSL') )
-    {
-        # deprecated calling notation
-        warn 'new($realm_settings, $dsl) is deprecated.';
-        $args{realm_settings} = shift;
-        $args{realm_dsl}      = shift;
-    }
-    else {
-        %args = @_ == 1 ? %{ $_[0] } : @_;
-    }
-    return \%args;
-}
-
 1;
 

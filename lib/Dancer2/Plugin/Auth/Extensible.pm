@@ -1150,7 +1150,10 @@ sub auth_provider {
         die "Cannot load provider $provider_class: $error";
     }
 
-    return $realm_provider{$realm} = $provider_class->new($realm_settings, $dsl);
+    return $realm_provider{$realm} = $provider_class->new(
+        realm_settings => $realm_settings,
+        realm_dsl      => $dsl
+    );
 }
 }
 
