@@ -1,6 +1,6 @@
 README
 t/00-load.t
-t/01-provider-base.t
+t/01-role-provider.t
 t/plugin-provider-config.t
 t/plugin-provider-database.t
 t/database/config1.sql
@@ -19,6 +19,7 @@ lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Unix.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Base.pm
+lib/Dancer2/Plugin/Auth/Extensible/Role/Provider.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test/App.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
