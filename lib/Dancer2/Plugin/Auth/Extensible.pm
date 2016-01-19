@@ -103,19 +103,25 @@ Authenticates users using system accounts on Linux/Unix type boxes
 
 Authenticates users stored in a database table
 
-=item L<Dancer2::Plugin::Auth::Extensible::Provider::DBIC>
-
-Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
-
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::Config>
 
 Authenticates users stored in the app's config
 
 =back
 
-Need to write your own?  Just subclass
-L<Dancer2::Plugin::Auth::Extensible::Provider::Base> and implement the required
-methods, and you're good to go!
+The following external providers are also available on the CPAN:
+
+=over 4
+
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::DBIC>
+
+Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
+
+=back
+
+Need to write your own?  Just create a new provider class which consumes
+L<Dancer2::Plugin::Auth::Extensible::Role::Provider> and implements the
+required methods, and you're good to go!
 
 =head1 CONTROLLING ACCESS TO ROUTES
 
