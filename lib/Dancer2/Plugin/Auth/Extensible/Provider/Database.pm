@@ -151,9 +151,11 @@ for details, but a table definition using foreign keys could look like:
         UNIQUE KEY user_role (user_id, role_id)
     ) ENGINE=InnoDB;
 
+=head1 METHODS
+
+=head2 authenticate_user $username, $password
 
 =cut
-
 
 sub authenticate_user {
     my ($self, $username, $password) = @_;
@@ -170,6 +172,9 @@ sub authenticate_user {
     return $self->match_password($password, $user->{$password_column});
 }
 
+=head2 get_user_details $username
+
+=cut
 
 # Return details about the user.  The user's row in the users table will be
 # fetched and all columns returned as a hashref.
@@ -198,6 +203,10 @@ sub get_user_details {
         return $user;
     }
 }
+
+=head2 get_user_roles $username
+
+=cut
 
 sub get_user_roles {
     my ($self, $username) = @_;

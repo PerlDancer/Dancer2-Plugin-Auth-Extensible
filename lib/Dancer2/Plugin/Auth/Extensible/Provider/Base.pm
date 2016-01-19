@@ -20,6 +20,10 @@ passwords via Crypt::SaltedHash.
 Finally, provides the methods which providers must override with their
 implementation, which will die if they are not overridden.
 
+=head1 METHODS SUPPLIED BY BASE PROVIDER
+
+=head2 new
+
 =cut
 
 sub new {
@@ -31,7 +35,6 @@ sub new {
     return bless $self => $class;
 }
 
-=head1 METHODS SUPPLIED BY BASE PROVIDER
 
 =head2 realm_settings
 

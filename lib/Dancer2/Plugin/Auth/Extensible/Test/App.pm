@@ -1,5 +1,11 @@
 package Dancer2::Plugin::Auth::Extensible::Test::App;
 
+=head1 NAME
+
+Dancer2::Plugin::Auth::Extensible::Test::App - Dancer2 app for testing providers
+
+=cut
+
 our $VERSION = '0.500';
 
 use Dancer2 appname => 'TestApp';

@@ -19,11 +19,12 @@ authenticates Linux/Unix system accounts.
 Uses L<Unix::Passwd::File> to read user details, and L<Authen::Simple::PAM> to
 perform authentication via PAM.
 
-The C<get_user_details> call for this provider will return information from the
-C<passwd> file - expect C<gecos>, C<gid>, C<uid>, C<home>, C<shell>, C<uid>.
-
 Unix group membership is used as a reasonable facsimile for roles - this seems
 sensible.
+
+=head1 METHODS
+
+=head2 authenticate_user $username, $password
 
 =cut
 
@@ -32,7 +33,13 @@ sub authenticate_user {
     my $pam = Authen::Simple::PAM->new( service => 'login' );
     return $pam->authenticate($username, $password);
 }
-    
+
+=head2 get_user_details $username
+
+Returns information from the C<passwd> file - expect C<gecos>, C<gid>,
+C<uid>, C<home>, C<shell>, C<uid>.
+
+=cut
 
 sub get_user_details {
     my ($class, $username) = @_;
@@ -43,6 +50,10 @@ sub get_user_details {
     return if $result->[0] != 200;
     return $result->[2];
 }
+
+=head2 get_user_roles $username
+
+=cut
 
 sub get_user_roles {
     my ($class, $username) = @_;

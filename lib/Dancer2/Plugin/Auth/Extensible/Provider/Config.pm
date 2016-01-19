@@ -49,6 +49,10 @@ passwords, RFC2307-style, not plain text (although plain text *is* supported,
 but really not a good idea), and the roles for each user (if you're
 not planning to use roles, omit the roles section from each user entirely).
 
+=head1 METHODS
+
+=head2 authenticate_user $username, $password
+
 =cut
 
 sub authenticate_user {
@@ -56,6 +60,10 @@ sub authenticate_user {
     my $user_details = $self->get_user_details($username) or return;
     return $self->match_password($password, $user_details->{pass});
 }
+
+=head2 get_user_details $username
+
+=cut
 
 # Just return the whole user definition from the config; this way any additional
 # fields defined for users will just get passed through.
@@ -66,6 +74,10 @@ sub get_user_details {
     } @{ $self->realm_settings->{users} };
     return $user;
 }
+
+=head2 get_user_roles $username
+
+=cut
 
 sub get_user_roles {
     my ($self, $username) = @_;
