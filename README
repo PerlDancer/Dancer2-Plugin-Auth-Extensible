@@ -234,6 +234,16 @@ CONTROLLING ACCESS TO ROUTES
       The details you get back will depend upon the authentication provider
       in use.
 
+    get_user_details
+
+      Returns a hashref of details of the specified user. The realm can
+      optionally be specified as the second parameter. If the realm is not
+      specified, each realm will be checked, and the first matching user
+      will be returned.
+
+      The details you get back will depend upon the authentication provider
+      in use.
+
     user_has_role
 
       Check if a user has the role named.

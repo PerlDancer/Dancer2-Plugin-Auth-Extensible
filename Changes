@@ -1,5 +1,12 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.500 Tue Jan 19 15:08:37 2016 CET
+
+    [TESTS]
+
+    * Add infrastructure for provider tests and various other
+      improvements for testing (Peter Mottram).
+
 0.402 Tue Dec  8 14:44:19 2015 CET
 
     [BUG FIXES]
