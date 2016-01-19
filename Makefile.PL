@@ -22,6 +22,7 @@ WriteMakefile(
         'Crypt::SaltedHash' => 0,
         'YAML'       => 0, # for config files and tests
         'Session::Token' => 0,
+        'Moo' => '2.000000',
     },
     EXE_FILES => [ 'bin/generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
