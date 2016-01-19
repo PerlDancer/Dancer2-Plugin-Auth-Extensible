@@ -18,11 +18,15 @@ WriteMakefile(
         'Test::More' => 0,
     },
     PREREQ_PM => {
-        'Dancer2'     => 0.15,
+        'Dancer2'           => 0.15,
+        'Class::Load'       => 0,
         'Crypt::SaltedHash' => 0,
-        'YAML'       => 0, # for config files and tests
-        'Session::Token' => 0,
-        'Moo' => '2.000000',
+        'Moo'               => '2.000000',
+        'namespace::clean'  => 0,
+        'YAML'              => 0, # for config files and tests
+        'Safe::Isa'         => 0,
+        'Session::Token'    => 0,
+        'Sub::Quote'        => 0,
     },
     EXE_FILES => [ 'bin/generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
