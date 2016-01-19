@@ -512,45 +512,39 @@ sub _test_base {
         {
             my $res = $cb->( GET '/user_password?username=dave&password=beer' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer response is 200"
-              or diag explain $trap->read;
+              "/user_password?username=dave&password=beer response is 200";
             ok $res->content, "content shows success";
         }
         {
             my $res = $cb->( GET '/user_password?username=dave&password=cider' );
             is $res->code, 200,
-              "/user_password?username=dave&password=cider response is 200"
-              or diag explain $trap->read;
+              "/user_password?username=dave&password=cider response is 200";
             ok !$res->content, "content shows fail";
         }
         {
             my $res = $cb->( GET
                   '/user_password?username=dave&password=beer&realm=config1' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer&realm=config1 response is 200"
-              or diag explain $trap->read;
+              "/user_password?username=dave&password=beer&realm=config1 response is 200";
             ok $res->content, "content shows success";
         }
         {
             my $res = $cb->( GET
                   '/user_password?username=dave&password=beer&realm=config2' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer&realm=config2 response is 200"
-              or diag explain $trap->read;
+              "/user_password?username=dave&password=beer&realm=config2 response is 200";
             ok !$res->content, "content shows fail";
         }
         {
             my $res = $cb->( GET '/user_password?password=beer', @headers );
             is $res->code, 200,
-              "/user_password?password=beer response is 200"
-              or diag explain $trap->read;
+              "/user_password?password=beer response is 200";
             ok $res->content, "content shows success";
         }
         {
             my $res = $cb->( GET '/user_password?password=cider', @headers );
             is $res->code, 200,
-              "/user_password?password=cider response is 200"
-              or diag explain $trap->read;
+              "/user_password?password=cider response is 200";
             ok !$res->content, "content shows fail";
         }
     };
@@ -574,17 +568,21 @@ sub _test_create_user {
                 my $res = $cb->( GET "/create_user/$realm" );
 
                 is $res->code, 200,
-                  "/create_user response is 200"
-                  or diag explain $trap->read;
+                  "/create_user response is 200";
             }
 
             # Then try logging in with that user
 
             {
-                my $res = $cb->( POST '/login',
-                    [ username => 'newuser', password => "pish_$realm", realm => $realm ] );
-                is( $res->code, 302, 'Login with newly created user succeeds' )
-                  or diag explain $trap->read;
+                my $res = $cb->(
+                    POST '/login',
+                    [
+                        username => 'newuser',
+                        password => "pish_$realm",
+                        realm    => $realm
+                    ]
+                );
+                is( $res->code, 302, 'Login with newly created user succeeds' );
             }
 
         }
@@ -619,23 +617,39 @@ sub _test_update_user {
                 my $res = $cb->( GET "/get_user_mark/$realm" );
                 my $user = YAML::Load $res->content;
                 my $name = $user->{name} || '';
-                cmp_ok($name, 'ne', "Wiltshire Apples $realm", "Name is not currently Wiltshire Apples $realm");
+                cmp_ok(
+                    $name, 'ne',
+                    "Wiltshire Apples $realm",
+                    "Name is not currently Wiltshire Apples $realm"
+                );
 
                 # Update the user and check it
                 $res = $cb->( GET "/update_user_name/$realm" );
                 $res = $cb->( GET "/get_user_mark/$realm" );
                 $user = YAML::Load $res->content;
-                cmp_ok($user->{name}, 'eq', "Wiltshire Apples $realm", "Name is now Wiltshire Apples $realm");
+                cmp_ok(
+                    $user->{name}, 'eq',
+                    "Wiltshire Apples $realm",
+                    "Name is now Wiltshire Apples $realm"
+                );
             }
 
             # Now we're going to update the current user and add a role
 
             {
                 # First login as the test user
-                my $res = $cb->( POST '/login',
-                    [ username => 'mark', password => "wantscider", realm => $realm ] );
-                is( $res->code, 302, "Login with real details succeeds (realm $realm)" )
-                  or diag explain $trap->read;
+                my $res = $cb->(
+                    POST '/login',
+                    [
+                        username => 'mark',
+                        password => "wantscider",
+                        realm    => $realm
+                    ]
+                );
+
+                is( $res->code, 302,
+                    "Login with real details succeeds (realm $realm)" );
+
                 # Get cookie with session id
                 my $cookie = $res->header('Set-Cookie');
                 $cookie =~ s/^(.*?);.*$/$1/s;
@@ -647,19 +661,20 @@ sub _test_update_user {
                 # Check the update has worked
                 $res = $cb->( GET "/get_user_mark/$realm" );
                 my $user = YAML::Load $res->content;
-                cmp_ok($user->{name}, 'eq', "I love cider", "Name is now I love cider");
+
+                cmp_ok( $user->{name}, 'eq', "I love cider",
+                    "Name is now I love cider" );
 
                 # Now the role. First check that the role doesn't work.
                 $res = $cb->( GET '/cider', @headers );
-                is( $res->code, 302, "[GET /cider] Correct code for realm $realm" );
+                is( $res->code, 302,
+                    "[GET /cider] Correct code for realm $realm" );
 
                 # Now add the role
                 $res = $cb->( GET "/update_user_role/$realm" );
                 # And see whether we're now allowed access
                 $res = $cb->( GET '/cider', @headers );
-                is( $res->code, 200,
-                  "We can request a route (/cider) requiring a role we have (realm $realm)" )
-                  or diag explain $trap->read;
+                is( $res->code, 200, "We can request a route (/cider) requiring a role we have (realm $realm)");
                 $res = $cb->(POST '/logout', @headers);
             }
         }
