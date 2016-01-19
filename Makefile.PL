@@ -31,6 +31,7 @@ WriteMakefile(
             repository => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible',
             bugtracker => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible/issues',
             homepage   => 'https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible/',
+            IRC        => 'irc://irc.perl.org/#dancer',
         },
     },
 
