@@ -1,5 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Test::App;
 
+our $VERSION = '0.500';
+
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;
 use YAML ();

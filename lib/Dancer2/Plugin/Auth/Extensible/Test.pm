@@ -1,5 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Test;
 
+our $VERSION = '0.500';
+
 =head1 NAME
 
 Dancer2::Plugin::Auth::Extensible::Test - test suite for Auth::Extensible plugin
