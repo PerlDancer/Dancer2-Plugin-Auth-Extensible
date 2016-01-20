@@ -105,12 +105,15 @@ sub _test_base {
             $cb->( GET '/' )->content,
             'Index always accessible',
             'Index accessible while not logged in'
-        );
+        ) or diag explain $trap->read;
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/loggedin' );
 
-            is( $res->code, 302, '[GET /loggedin] Correct code' );
+            is( $res->code, 302, '[GET /loggedin] Correct code' )
+                or diag explain $trap->read;
 
             is(
                 $res->headers->header('Location'),
@@ -120,9 +123,12 @@ sub _test_base {
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/beer' );
 
-            is( $res->code, 302, '[GET /beer] Correct code' );
+            is( $res->code, 302, '[GET /beer] Correct code' )
+                or diag explain $trap->read;
 
             is(
                 $res->headers->header('Location'),
@@ -132,9 +138,12 @@ sub _test_base {
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/regex/a' );
 
-            is( $res->code, 302, '[GET /regex/a] Correct code' );
+            is( $res->code, 302, '[GET /regex/a] Correct code' )
+                or diag explain $trap->read;
 
             is(
                 $res->headers->header('Location'),
@@ -146,10 +155,13 @@ sub _test_base {
         # OK, now check we can't log in with fake details
 
         {
+            $trap->read; # clear logs
+
             my $res =
               $cb->( POST '/login', [ username => 'foo', password => 'bar' ] );
 
-            is( $res->code, 401, 'Login with fake details fails');
+            is( $res->code, 401, 'Login with fake details fails' )
+              or diag explain $trap->read;
         }
 
         my @headers;
@@ -157,10 +169,13 @@ sub _test_base {
         # ... and that we can log in with real details
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( POST '/login',
                 [ username => 'dave', password => 'beer' ] );
 
-            is( $res->code, 302, 'Login with real details succeeds');
+            is( $res->code, 302, 'Login with real details succeeds')
+                or diag explain $trap->read;
 
             # Get cookie with session id
             my $cookie = $res->header('Set-Cookie');
@@ -172,16 +187,24 @@ sub _test_base {
         # Now we're logged in, check we can access stuff we should...
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/loggedin' , @headers);
 
-            is ($res->code, 200, 'Can access /loggedin now we are logged in');
+            is ($res->code, 200, 'Can access /loggedin now we are logged in')
+                or diag explain $trap->read;
 
             is ($res->content, 'You are logged in',
                 'Correct page content while logged in, too');
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/name', @headers);
+
+            is ($res->code, 200, 'get /name is 200')
+                or diag explain $trap->read;
 
             is ($res->content, 'Hello, David Precious',
                 'Logged in user details via logged_in_user work');
@@ -189,14 +212,24 @@ sub _test_base {
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/roles', @headers );
+
+            is ($res->code, 200, 'get /roles is 200')
+                or diag explain $trap->read;
 
             is( $res->content, 'BeerDrinker,Motorcyclist',
                 'Correct roles for logged in user' );
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/roles/bob', @headers );
+
+            is ($res->code, 200, 'get /roles/bob is 200')
+                or diag explain $trap->read;
 
             is( $res->content, 'CiderDrinker',
                 'Correct roles for other user in current realm' );
@@ -205,33 +238,45 @@ sub _test_base {
         # Check we can request something which requires a role we have....
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/beer', @headers );
 
             is( $res->code, 200,
-                'We can request a route (/beer) requiring a role we have...' );
+                'We can request a route (/beer) requiring a role we have...' )
+                or diag explain $trap->read;
         }
 
         # Check we can request a route that requires any of a list of roles,
         # one of which we have:
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/anyrole', @headers );
 
             is ($res->code, 200,
-                "We can request a multi-role route requiring with any one role");
+                "We can request a multi-role route requiring with any one role")
+                or diag explain $trap->read;
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/allroles', @headers );
 
             is ($res->code, 200,
-                "We can request a multi-role route with all roles required");
+                "We can request a multi-role route with all roles required")
+                or diag explain $trap->read;
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/not_allroles', @headers );
 
-            is ($res->code, 302, "/not_allroles response code 302");
+            is ($res->code, 302, "/not_allroles response code 302")
+                or diag explain $trap->read;
             is(
                 $res->headers->header('Location'),
                 'http://localhost/login/denied?return_url=%2Fnot_allroles',
@@ -244,25 +289,34 @@ sub _test_base {
         # should...
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/regex/a', @headers );
 
-            is ($res->code, 200, "We can request a regex route when logged in");
+            is ($res->code, 200, "We can request a regex route when logged in")
+                or diag explain $trap->read;
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/piss/regex', @headers );
 
             is( $res->code, 200,
-                "We can request a route requiring a regex role we have" );
+                "We can request a route requiring a regex role we have" )
+                or diag explain $trap->read;
         }
 
         # ... but can't request something requiring a role we don't have
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/piss', @headers );
 
             is ($res->code, 302,
-                "Redirect on a route requiring a role we don't have");
+                "Redirect on a route requiring a role we don't have")
+                or diag explain $trap->read;
 
             is ($res->headers->header('Location'),
                 'http://localhost/login/denied?return_url=%2Fpiss',
@@ -272,9 +326,13 @@ sub _test_base {
         # Check the realm we authenticated against is what we expect
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/realm', @headers );
 
-            is($res->code, 200, 'Status code on /realm route.');
+            is($res->code, 200, 'Status code on /realm route.')
+                or diag explain $trap->read;
+
             is( $res->content, 'config1',
                 'Authenticated against expected realm' );
         }
@@ -282,18 +340,24 @@ sub _test_base {
         # Now, log out
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(POST '/logout', @headers );
 
-            is($res->code, 200, 'Logging out returns 200');
+            is($res->code, 200, 'Logging out returns 200')
+                or diag explain $trap->read;
         }
 
         # Check we can't access protected pages now we logged out:
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/loggedin', @headers);
 
             is( $res->code, 302,
-                'Status code on accessing /loggedin after logout' );
+                'Status code on accessing /loggedin after logout' )
+                or diag explain $trap->read;
 
             is($res->headers->header('Location'),
                'http://localhost/login?return_url=%2Floggedin',
@@ -301,9 +365,12 @@ sub _test_base {
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/beer', @headers);
 
-            is($res->code, 302, 'Status code on accessing /beer after logout');
+            is($res->code, 302, 'Status code on accessing /beer after logout')
+                or diag explain $trap->read;
 
             is($res->headers->header('Location'),
                'http://localhost/login?return_url=%2Fbeer',
@@ -313,12 +380,15 @@ sub _test_base {
         # OK, log back in, this time as a user from the second realm
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(
                 POST '/login',
                 { username => 'burt', password => 'bacharach' }
             );
 
-            is($res->code, 302, 'Login as user from second realm succeeds');
+            is($res->code, 302, 'Login as user from second realm succeeds')
+                or diag explain $trap->read;
 
             # Get cookie with session id
             my $cookie = $res->header('Set-Cookie');
@@ -331,25 +401,36 @@ sub _test_base {
         # And that now we're logged in again, we can access protected pages
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/loggedin', @headers);
 
             is( $res->code, 200,
-                'Can access /loggedin now we are logged in again' );
+                'Can access /loggedin now we are logged in again' )
+                or diag explain $trap->read;
         }
 
         # And that the realm we authenticated against is what we expect
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/realm', @headers );
 
-            is($res->code, 200, 'Status code on /realm route.');
+            is($res->code, 200, 'Status code on /realm route.')
+                or diag explain $trap->read;
+
             is($res->content, 'config2', 'Authenticated against expected realm');
         }
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/roles/bob/config1', @headers );
 
-            is($res->code, 200, 'Status code on /roles/bob/config1 route.');
+            is($res->code, 200, 'Status code on /roles/bob/config1 route.')
+                or diag explain $trap->read;
+
             is( $res->content, 'CiderDrinker',
                 'Correct roles for other user in current realm' );
         }
@@ -357,7 +438,12 @@ sub _test_base {
         # check roles: this user has no roles
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/roles', @headers );
+
+            is($res->code, 200, 'get /roles is 200 - this user has no roles')
+                or diag explain $trap->read;
 
             is ($res->content, '', 'Correct roles for logged in user');
         }
@@ -365,14 +451,19 @@ sub _test_base {
         # Now, log out again
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(POST '/logout', @headers );
 
-            is($res->code, 200, 'Logged out again');
+            is($res->code, 200, 'Logged out again')
+                or diag explain $trap->read;
         }
 
         # Now check we can log in as a user whose password is stored hashed:
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(
                 POST '/login',
                 {
@@ -381,7 +472,8 @@ sub _test_base {
                 }
             );
 
-            is($res->code, 302, 'Login as user with hashed password succeeds');
+            is($res->code, 302, 'Login as user with hashed password succeeds')
+                or diag explain $trap->read;
 
             # Get cookie with session id
             my $cookie = $res->header('Set-Cookie');
@@ -393,22 +485,28 @@ sub _test_base {
         # And that now we're logged in again, we can access protected pages
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/loggedin', @headers);
 
             is( $res->code, 200,
-                'Can access /loggedin now we are logged in again' );
+                'Can access /loggedin now we are logged in again' )
+                or diag explain $trap->read;
         }
 
         # Check that the redirect URL can be set when logging in
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(POST '/login', {
                 username => 'dave',
                 password => 'beer',
                 return_url => '/foobar',
             });
 
-            is($res->code, 302, 'Status code for login with return_url');
+            is($res->code, 302, 'Status code for login with return_url')
+                or diag explain $trap->read;
 
             is($res->headers->header('Location'),
                'http://localhost/foobar',
@@ -418,36 +516,44 @@ sub _test_base {
         # Check that login route doesn't match any request string with '/login'.
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/foo/login', @headers);
 
             is( $res->code, 404,
-                "'/foo/login' URL not matched by login route regex." );
+                "'/foo/login' URL not matched by login route regex." )
+                or diag explain $trap->read;
         }
 
         # Now, log out again
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(POST '/logout', @headers );
-            is $res->code, 200, 'Logged out again';
+            is $res->code, 200, 'Logged out again'
+                or diag explain $trap->read;
         }
 
         # require_login should receive a coderef
 
         {
-            $trap->read;    # clear logs
+            $trap->read; # clear logs
+
             my $res  = $cb->( GET '/require_login_no_sub' );
             my $logs = $trap->read;
-            is @$logs, 1, "One message in the logs";
+            is @$logs, 1, "One message in the logs" or diag explain $logs;
             is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
             is $logs->[0]->{message},
               'Invalid require_login usage, please see docs',
               "Warning message is as expected";
         }
         {
-            $trap->read;    # clear logs
+            $trap->read; # clear logs
+
             my $res  = $cb->( GET '/require_login_not_coderef' );
             my $logs = $trap->read;
-            is @$logs, 1, "One message in the logs";
+            is @$logs, 1, "One message in the logs" or diag explain $logs;
             is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
             is $logs->[0]->{message},
               'Invalid require_login usage, please see docs',
@@ -457,9 +563,12 @@ sub _test_base {
         # login as dave
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( POST '/login',
                 [ username => 'dave', password => 'beer' ] );
-            is( $res->code, 302, 'Login with real details succeeds' );
+            is( $res->code, 302, 'Login with real details succeeds' )
+                or diag explain $trap->read;
 
             # Get cookie with session id
             my $cookie = $res->header('Set-Cookie');
@@ -471,80 +580,116 @@ sub _test_base {
         # 2 arg user_has_role
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/does_dave_drink_beer', @headers);
-            is $res->code, 200, "/does_dave_drink_beer response is 200";
+            is $res->code, 200, "/does_dave_drink_beer response is 200"
+                or diag explain $trap->read;
             ok $res->content, "yup - dave drinks beer";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/does_dave_drink_cider', @headers);
-            is $res->code, 200, "/does_dave_drink_cider response is 200";
+            is $res->code, 200, "/does_dave_drink_cider response is 200"
+                or diag explain $trap->read;
             ok !$res->content, "no way does dave drink cider";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->(GET '/does_undef_drink_beer', @headers);
-            is $res->code, 200, "/does_undef_drink_beer response is 200";
+            is $res->code, 200, "/does_undef_drink_beer response is 200"
+                or diag explain $trap->read;
             ok !$res->content, "undefined users cannot drink";
         }
 
         # 3 arg authenticate_user
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/authenticate_user_with_realm_pass' );
             is $res->code, 200,
-              "/authenticate_user_with_realm_pass response is 200";
+              "/authenticate_user_with_realm_pass response is 200"
+                  or diag explain $trap->read;
             ok $res->content, "authentication success";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/authenticate_user_with_realm_fail' );
             is $res->code, 200,
-              "/authenticate_user_with_realm_fail response is 200";
+              "/authenticate_user_with_realm_fail response is 200"
+                  or diag explain $trap->read;
             ok !$res->content, "authentication failure";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/authenticate_user_with_wrong_realm' );
             is $res->code, 200,
-              "/authenticate_user_with_wrong_realm response is 200";
+              "/authenticate_user_with_wrong_realm response is 200"
+                  or diag explain $trap->read;
             ok !$res->content, "authentication failure";
         }
 
         # user_password
 
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/user_password?username=dave&password=beer' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer response is 200";
+              "/user_password?username=dave&password=beer response is 200"
+                  or diag explain $trap->read;
             ok $res->content, "content shows success";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/user_password?username=dave&password=cider' );
             is $res->code, 200,
-              "/user_password?username=dave&password=cider response is 200";
+              "/user_password?username=dave&password=cider response is 200"
+                  or diag explain $trap->read;
             ok !$res->content, "content shows fail";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET
                   '/user_password?username=dave&password=beer&realm=config1' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer&realm=config1 response is 200";
+              "/user_password?username=dave&password=beer&realm=config1 response is 200"
+                  or diag explain $trap->read;
             ok $res->content, "content shows success";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET
                   '/user_password?username=dave&password=beer&realm=config2' );
             is $res->code, 200,
-              "/user_password?username=dave&password=beer&realm=config2 response is 200";
+              "/user_password?username=dave&password=beer&realm=config2 response is 200"
+                  or diag explain $trap->read;
             ok !$res->content, "content shows fail";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/user_password?password=beer', @headers );
             is $res->code, 200,
-              "/user_password?password=beer response is 200";
+              "/user_password?password=beer response is 200"
+                  or diag explain $trap->read;
             ok $res->content, "content shows success";
         }
         {
+            $trap->read; # clear logs
+
             my $res = $cb->( GET '/user_password?password=cider', @headers );
             is $res->code, 200,
-              "/user_password?password=cider response is 200";
+              "/user_password?password=cider response is 200"
+                  or diag explain $trap->read;
             ok !$res->content, "content shows fail";
         }
     };
@@ -565,15 +710,20 @@ sub _test_create_user {
             # First create a user
 
             {
+                $trap->read; # clear logs
+
                 my $res = $cb->( GET "/create_user/$realm" );
 
                 is $res->code, 200,
-                  "/create_user response is 200";
+                  "/create_user response is 200"
+                      or diag explain $trap->read;
             }
 
             # Then try logging in with that user
 
             {
+                $trap->read; # clear logs
+
                 my $res = $cb->(
                     POST '/login',
                     [
@@ -582,7 +732,8 @@ sub _test_create_user {
                         realm    => $realm
                     ]
                 );
-                is( $res->code, 302, 'Login with newly created user succeeds' );
+                is( $res->code, 302, 'Login with newly created user succeeds' )
+                    or diag explain $trap->read;
             }
 
         }
@@ -612,9 +763,14 @@ sub _test_update_user {
             # First test a standard user details update.
 
             {
+                $trap->read; # clear logs
+
                 # Get the current user settings, and make sure name is not what
                 # we're going to change it to.
                 my $res = $cb->( GET "/get_user_mark/$realm" );
+                is $res->code, 200, "get /get_user_mark/$realm is 200"
+                    or diag explain $trap->read;
+
                 my $user = YAML::Load $res->content;
                 my $name = $user->{name} || '';
                 cmp_ok(
@@ -622,11 +778,23 @@ sub _test_update_user {
                     "Wiltshire Apples $realm",
                     "Name is not currently Wiltshire Apples $realm"
                 );
+            }
+            {
+                $trap->read; # clear logs
 
-                # Update the user and check it
-                $res = $cb->( GET "/update_user_name/$realm" );
+                # Update the user
+                my $res = $cb->( GET "/update_user_name/$realm" );
+                is $res->code, 200, "get /update_user_name/$realm is 200" 
+                    or diag explain $trap->read;
+
+                $trap->read; # clear logs
+
+                # check it
                 $res = $cb->( GET "/get_user_mark/$realm" );
-                $user = YAML::Load $res->content;
+                is $res->code, 200, "get /get_user_mark/$realm is 200"
+                    or diag explain $trap->read;
+
+                my $user = YAML::Load $res->content;
                 cmp_ok(
                     $user->{name}, 'eq',
                     "Wiltshire Apples $realm",
@@ -637,6 +805,8 @@ sub _test_update_user {
             # Now we're going to update the current user and add a role
 
             {
+                $trap->read; # clear logs
+
                 # First login as the test user
                 my $res = $cb->(
                     POST '/login',
@@ -656,25 +826,45 @@ sub _test_update_user {
                 ok ($cookie, "Got the cookie: $cookie");
                 my @headers = (Cookie => $cookie);
 
+                $trap->read; # clear logs
+
                 # Update the "current" user, that we logged in above
                 $res = $cb->( GET "/update_current_user", @headers );
+                is $res->code, 200, "get /update_current_user is 200"
+                    or diag explain $trap->read;
+
+                $trap->read; # clear logs
+
                 # Check the update has worked
                 $res = $cb->( GET "/get_user_mark/$realm" );
+                is $res->code, 200, "get /get_user_mark/$realm is 200"
+                    or diag explain $trap->read;
+
                 my $user = YAML::Load $res->content;
 
                 cmp_ok( $user->{name}, 'eq', "I love cider",
                     "Name is now I love cider" );
+
+                $trap->read; # clear logs
 
                 # Now the role. First check that the role doesn't work.
                 $res = $cb->( GET '/cider', @headers );
                 is( $res->code, 302,
                     "[GET /cider] Correct code for realm $realm" );
 
+                $trap->read; # clear logs
+
                 # Now add the role
                 $res = $cb->( GET "/update_user_role/$realm" );
+
+                $trap->read; # clear logs
+
                 # And see whether we're now allowed access
                 $res = $cb->( GET '/cider', @headers );
                 is( $res->code, 200, "We can request a route (/cider) requiring a role we have (realm $realm)");
+
+                $trap->read; # clear logs
+
                 $res = $cb->(POST '/logout', @headers);
             }
         }
