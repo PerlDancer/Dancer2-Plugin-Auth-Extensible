@@ -1,5 +1,11 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.501 Wed Jan 20 12:07:17 2016 CET
+
+    [TESTS]
+
+    * Always output log messages on get/post errors (Peter Mottram).
+
 0.500 Tue Jan 19 15:08:37 2016 CET
 
     [TESTS]
