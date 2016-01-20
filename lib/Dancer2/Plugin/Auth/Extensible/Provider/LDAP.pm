@@ -4,7 +4,7 @@ use strict;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 use Net::LDAP;
 
-our $VERSION = '0.500';
+our $VERSION = '0.501';
 
 =head1 NAME 
 
