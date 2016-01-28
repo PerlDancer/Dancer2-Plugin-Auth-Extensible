@@ -212,7 +212,7 @@ and should do at least the following:
     };
     
     any '/logout' => sub {
-        session->destroy;
+        app->destroy_session;
     };
     
 
