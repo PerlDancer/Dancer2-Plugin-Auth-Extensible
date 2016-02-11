@@ -3,7 +3,6 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Unix;
 use strict;
 use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
-use Unix::Passwd::File;
 
 our $VERSION = '0.501';
 
@@ -16,8 +15,8 @@ Dancer2::Plugin::Auth::Extensible::Unix - authenticate *nix system accounts
 An authentication provider for L<Dancer2::Plugin::Auth::Extensible> which
 authenticates Linux/Unix system accounts.
 
-Uses L<Unix::Passwd::File> to read user details, and L<Authen::Simple::PAM> to
-perform authentication via PAM.
+Uses C<getpwnam> and C<getgrent> to read user and group details,
+and L<Authen::Simple::PAM> to perform authentication via PAM.
 
 Unix group membership is used as a reasonable facsimile for roles - this seems
 sensible.
@@ -36,19 +35,28 @@ sub authenticate_user {
 
 =head2 get_user_details $username
 
-Returns information from the C<passwd> file - expect C<gecos>, C<gid>,
-C<uid>, C<home>, C<shell>, C<uid>.
+Returns information from the C<passwd> file as a hash reference with the
+following keys: uid, gid, quota, comment, gcos,  dir, shell, expire 
 
 =cut
 
 sub get_user_details {
     my ($class, $username) = @_;
 
-    my $result = Unix::Passwd::File::get_user(
-        user => $username
-    );
-    return if $result->[0] != 200;
-    return $result->[2];
+    my @result = getpwnam($username);
+
+    return unless @result;
+
+    return {
+        uid      => $result[2],
+        gid      => $result[3],
+        quota    => $result[4],
+        comment  => $result[5],
+        gcos     => $result[6],
+        dir      => $result[7],
+        shell    => $result[8],
+        expire   => $result[9],
+    };
 }
 
 =head2 get_user_roles $username
@@ -57,10 +65,22 @@ sub get_user_details {
 
 sub get_user_roles {
     my ($class, $username) = @_;
-    my $result = Unix::Passwd::File::get_user_groups(user => $username);
-    return if $result->[0] != 200;
-    return $result->[2];
+    my %roles;
+
+    # we also need gid from user_details since username might not be listed
+    # in the group file as being in that group
+    return unless my $user_details = $class->get_user_details($username);
+
+    my @primary_group = getgrgid($user_details->{gid}) if $user_details->{gid};
+
+    $roles{$primary_group[0]} = 1 if @primary_group;
+
+    while ( my ( $group_name, undef, undef, $members ) = getgrent() ) {
+        $roles{$group_name} = 1 if $members =~ m/\b$username\b/;
+    }
+    endgrent();
+
+    return [keys %roles];
 }
 
 1;
-
