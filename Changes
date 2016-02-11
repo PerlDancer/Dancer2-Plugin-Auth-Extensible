@@ -8,7 +8,8 @@ Revision history for Dancer2-Plugin-Auth-Extensible
       In addition to the obvious benefit of removing a dependency this also
       solves a problem with Unix::Passwd::File where it likes to lock the
       passwd file but that will fail if the user does not have permissions
-      which is normal for a web app.
+      which is normal for a web app (Peter Mottram).
+      Thanks to Jason Lewis for the heads up about this issue.
 
 0.501 Wed Jan 20 12:07:17 2016 CET
 
