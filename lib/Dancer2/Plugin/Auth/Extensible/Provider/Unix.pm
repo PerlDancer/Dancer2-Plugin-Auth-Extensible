@@ -36,7 +36,7 @@ sub authenticate_user {
 =head2 get_user_details $username
 
 Returns information from the C<passwd> file as a hash reference with the
-following keys: uid, gid, quota, comment, gcos,  dir, shell, expire 
+following keys: uid, gid, quota, comment, gecos,  dir, shell, expire 
 
 =cut
 
@@ -52,7 +52,7 @@ sub get_user_details {
         gid      => $result[3],
         quota    => $result[4],
         comment  => $result[5],
-        gcos     => $result[6],
+        gecos    => $result[6],
         dir      => $result[7],
         shell    => $result[8],
         expire   => $result[9],
