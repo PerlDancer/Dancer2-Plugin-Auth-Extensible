@@ -1575,6 +1575,8 @@ Gabor Szabo (GH #11, #16, #18).
 
 Evan Brown (GH #20, #32).
 
+Jason Lewis (Unix provider problem).
+
 =head1 LICENSE AND COPYRIGHT
 
 
