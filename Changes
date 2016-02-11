@@ -1,5 +1,15 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.502 Thu 11 Feb 16:06:29 CET 2016
+
+    [BUG FIXES]
+
+    * Use getpwnam/getgrent in Unix provider instead of Unix::Passwd::File.
+      In addition to the obvious benefit of removing a dependency this also
+      solves a problem with Unix::Passwd::File where it likes to lock the
+      passwd file but that will fail if the user does not have permissions
+      which is normal for a web app.
+
 0.501 Wed Jan 20 12:07:17 2016 CET
 
     [TESTS]

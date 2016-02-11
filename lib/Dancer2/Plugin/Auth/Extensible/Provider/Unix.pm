@@ -4,7 +4,7 @@ use strict;
 use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Authen::Simple::PAM;
 
-our $VERSION = '0.501';
+our $VERSION = '0.502';
 
 =head1 NAME
 

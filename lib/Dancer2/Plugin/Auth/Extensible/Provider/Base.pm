@@ -3,7 +3,7 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Base;
 use strict;
 use Crypt::SaltedHash;
 
-our $VERSION = '0.501';
+our $VERSION = '0.502';
 
 =head1 NAME
 
