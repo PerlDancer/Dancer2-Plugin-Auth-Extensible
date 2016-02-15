@@ -21,6 +21,14 @@ and L<Authen::Simple::PAM> to perform authentication via PAM.
 Unix group membership is used as a reasonable facsimile for roles - this seems
 sensible.
 
+B<WARNING>: in order to use PAM authentication on most modern Linux/UNIX
+systems the application performing authentication must have read access
+to the C</etc/shadow> file. B<This is a security risk> since it can lead
+to accidental disclosure of sensitive data if you have any path traversal
+vulnerabilities, etc. We strongly recommend B<AGAINST> using this module
+and provide it purely as an example. Any use of it B<IS AT YOUR OWN RISK>.
+You have been warned.
+
 =head1 METHODS
 
 =head2 authenticate_user $username, $password
