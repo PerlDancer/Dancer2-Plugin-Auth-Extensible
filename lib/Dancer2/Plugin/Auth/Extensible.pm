@@ -246,10 +246,10 @@ sub require_login {
 
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect
-                ($dsl->uri_for($loginpage, { return_url => $dsl->request->request_uri }));
+                ($dsl->uri_for($loginpage, { return_url => $dsl->app->request->request_uri }));
         }
         return $coderef->($dsl);
     };
@@ -323,11 +323,11 @@ sub _build_wrapper {
     return sub {
         my $user = logged_in_user($dsl);
         if (!$user) {
-            $dsl->execute_hook('login_required', $coderef);
+            $dsl->execute_hook('plugin.auth_extensible.login_required', $coderef);
             # TODO: see if any code executed by that hook set up a response
             return $dsl->redirect($dsl->uri_for(
                 $loginpage,
-                { return_url => $dsl->request->request_uri }));
+                { return_url => $dsl->app->request->request_uri }));
         }
 
         my $role_match;
@@ -358,10 +358,10 @@ sub _build_wrapper {
             return $coderef->($dsl);
         }
 
-        $dsl->execute_hook('permission_denied', $coderef);
+        $dsl->execute_hook('plugin.auth_extensible.permission_denied', $coderef);
         # TODO: see if any code executed by that hook set up a response
         return $dsl->redirect(
-            $dsl->uri_for($deniedpage, { return_url => $dsl->request->request_uri }));
+            $dsl->uri_for($deniedpage, { return_url => $dsl->app->request->request_uri }));
     };
 }
 
