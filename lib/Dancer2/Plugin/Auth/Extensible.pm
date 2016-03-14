@@ -4,11 +4,12 @@ use warnings;
 use strict;
 
 use Carp;
-use Dancer2::Plugin;
 use Class::Load qw(try_load_class);
 use Session::Token;
+use Dancer2::Plugin;
+use namespace::clean;
 
-our $VERSION = '0.502';
+our $VERSION = '0.600';
 
 my $settings;
 

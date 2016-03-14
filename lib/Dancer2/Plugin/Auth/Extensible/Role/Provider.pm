@@ -6,7 +6,7 @@ use Sub::Quote 'quote_sub';
 use Moo::Role;
 requires qw(authenticate_user get_user_details get_user_roles);
 
-our $VERSION = '0.500';
+our $VERSION = '0.600';
 
 =head1 NAME
 
