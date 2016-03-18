@@ -49,10 +49,10 @@ Required.
 
 has realm_dsl => (
     is  => 'ro',
-    isa => quote_sub(
-        q{ die "realm_dsl must be a Dancer2::Core::DSL object"
-           unless $_[0]->$_isa('Dancer2::Core::DSL') }
-    ),
+#    isa => quote_sub(
+#        q{ die "realm_dsl must be a Dancer2::Core::DSL object"
+#           unless $_[0]->$_isa('Dancer2::Core::DSL') }
+#    ),
     required => 1,
 );
 
