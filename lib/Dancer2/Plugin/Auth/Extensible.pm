@@ -68,7 +68,6 @@ has no_login_handler => (
 has mailer => (
     is        => 'ro',
     isa       => HashRef,
-    predicate => 1,
     default   => sub {
         $_[0]->config->{mailer};
     },
@@ -77,7 +76,6 @@ has mailer => (
 has mail_from => (
     is        => 'ro',
     isa       => Str,
-    predicate => 1,
     default   => sub {
         $_[0]->config->{mail_from};
     },
@@ -111,7 +109,6 @@ has password_reset_send_email => (
 has password_reset_text => (
     is        => 'ro',
     isa       => Str,
-    predicate => 1,
     default   => sub {
         $_[0]->config->{password_reset_text};
     },
@@ -178,7 +175,6 @@ has welcome_send => (
 has welcome_text => (
     is        => 'ro',
     isa       => Str,
-    predicate => 1,
     default   => sub {
         $_[0]->config->{welcome_text};
     },
