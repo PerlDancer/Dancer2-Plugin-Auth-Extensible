@@ -2,6 +2,8 @@ package Dancer2::Plugin::Auth::Extensible;
 
 our $VERSION = '0.600';
 
+use strict;
+use warnings;
 use Carp;
 use Module::Runtime qw(use_module);
 use Session::Token;
@@ -225,7 +227,7 @@ sub BUILD {
 
                 if ( $plugin->logged_in_user ) {
                     $app->redirect( $app->request->params->{return_url}
-                          || $app->user_home_page );
+                          || $plugin->user_home_page );
                 }
 
                 # Reset password code submitted?
@@ -425,6 +427,8 @@ sub logged_in_user_password_expired {
 
 sub password_reset_send {
     my ( $plugin, %options ) = @_;
+
+    my $result;
 
     my @realms_to_check =
       $options{realm}
@@ -746,7 +750,7 @@ sub _build_wrapper {
 # FIXME: this is not used anywhere - what is it for?
 sub _try_realms {
     my ( $plugin, $method, @args );
-    for my $realm ( keys %{ $settings->{realms} } ) {
+    for my $realm ( keys %{ $plugin->realms } ) {
         my $provider = $plugin->auth_provider($realm);
         if ( !$provider->can($method) ) {
             die "Provider $provider does not provide a $method method!";
@@ -821,7 +825,8 @@ sub _post_login_route {
     }
 
     if ( $plugin->logged_in_user ) {
-        $app->redirect( $app->params->{return_url} || $plugin->user_home_page );
+        $app->redirect( $app->request->params->{return_url}
+              || $plugin->user_home_page );
     }
 
     my $auth_realm = $app->request->param('realm');
@@ -832,7 +837,8 @@ sub _post_login_route {
         $app->app->session->write( logged_in_user       => $username );
         $app->app->session->write( logged_in_user_realm => $realm );
         $app->log( core => "Realm is $realm" );
-        $app->redirect( $app->request->params->{return_url} || $userhomepage );
+        $app->redirect( $app->request->params->{return_url}
+              || $plugin->user_home_page );
     }
     else {
         $app->request->vars->{login_failed}++;
@@ -1547,14 +1553,15 @@ specified by that realm's config.
 sub _logout_route {
     my $app = shift;
     my $req = $app->request;
+    my $plugin = $app->with_plugin('Auth::Extensible');
 
     $app->destroy_session;
 
     if ( $req->params->{return_url} ) {
         $app->redirect( $req->params->{return_url} );
     }
-    elsif ($exitpage) {
-        $app->redirect($exitpage);
+    elsif ($plugin->exit_page) {
+        $app->redirect($plugin->exit_page);
     }
     else {
         # TODO: perhaps make this more configurable, perhaps by attempting to
@@ -1574,9 +1581,11 @@ PAGE
 }
 
 sub _default_login_page {
-    my $dsl = shift;
+    my $app = shift;
+    my $plugin = $app->with_plugin('Auth::Extensible');
+    my $loginpage = $plugin->login_page;
 
-    if ( my $new_password = $dsl->request->param('new_password') ) {
+    if ( my $new_password = $app->request->param('new_password') ) {
         return <<NEWPW;
 <h1>New password</h1>
 <p>
@@ -1586,7 +1595,7 @@ Your new password is $new_password
 NEWPW
     }
 
-    if ( $dsl->request->param('reset_sent') ) {
+    if ( $app->request->param('reset_sent') ) {
         return <<SENT;
 <h1>Request sent</h1>
 <p>A password reset request has been sent. Please check your email.</p>
@@ -1595,7 +1604,7 @@ SENT
 
     # Valid password reset request. Just need to confirm to
     # prevent GET requests by email filters
-    if ( $dsl->request->param('password_code_valid') ) {
+    if ( $app->request->param('password_code_valid') ) {
         return <<VALID;
 <h1>Reset your password</h1>
 <p>
@@ -1608,7 +1617,7 @@ VALID
     }
 
     my $pwreset_html =
-      !$settings->{reset_password_handler}
+      !$plugin->reset_password_handler
       ? ""
       : <<RESETPW;
 <h2>Password reset</h2>
@@ -1617,10 +1626,10 @@ VALID
 <input type="text" name="username_reset" id="username_reset">
 <input type="submit" name="submit_reset" value="Submit">
 RESETPW
-    my $return_url = $dsl->request->params->{return_url} || '';
+    my $return_url = $app->request->params->{return_url} || '';
 
     my $login_fail_message =
-      $dsl->request->vars->{login_failed}
+      $app->request->vars->{login_failed}
       ? "<p>LOGIN FAILED</p>"
       : "";
 
@@ -1648,18 +1657,18 @@ PAGE
 }
 
 sub _default_email_password_reset {
-    my ( $dsl, %options ) = @_;
+    my ( $plugin, %options ) = @_;
 
     my %message;
-    if ( my $password_reset_text = $settings->{password_reset_text} ) {
+    if ( my $password_reset_text = $plugin->password_reset_text ) {
         no strict 'refs';
-        %message = &{$password_reset_text}( $dsl, %options );
+        %message = &{$password_reset_text}( $plugin, %options );
     }
     else {
-        my $site = $dsl->request->uri_base;
-        my $appname = $dsl->config->{appname} || '[unknown]';
+        my $site = $plugin->app->request->uri_base;
+        my $appname = $plugin->app->config->{appname} || '[unknown]';
         $message{subject} = "Password reset request";
-        $message{from}    = $settings->{mail_from};
+        $message{from}    = $plugin->mail_from;
         $message{plain}   = <<__EMAIL;
 A request has been received to reset your password for $appname. If
 you would like to do so, please follow the link below:
@@ -1668,24 +1677,24 @@ $site/login/$options{code}
 __EMAIL
     }
 
-    _send_email( to => $options{email}, %message );
+    $plugin->_send_email( to => $options{email}, %message );
 }
 
 sub _default_welcome_send {
-    my ( $dsl, %options ) = @_;
+    my ( $plugin, %options ) = @_;
 
     my %message;
-    if ( my $welcome_text = $settings->{welcome_text} ) {
+    if ( my $welcome_text = $plugin->welcome_text ) {
         no strict 'refs';
-        %message = &{$welcome_text}( $dsl, %options );
+        %message = &{$welcome_text}( $plugin, %options );
     }
     else {
-        my $site       = $dsl->request->base;
+        my $site       = $plugin->app->request->base;
         my $host       = $site->host;
-        my $appname    = $dsl->config->{appname} || '[unknown]';
+        my $appname    = $plugin->app->config->{appname} || '[unknown]';
         my $reset_link = $site . "login/$options{code}";
         $message{subject} = "Welcome to $host";
-        $message{from}    = $settings->{mail_from};
+        $message{from}    = $plugin->mail_from;
         $message{plain}   = <<__EMAIL;
 An account has been created for you at $host. If you would like
 to accept this, please follow the link below to set a password:
@@ -1694,11 +1703,12 @@ $reset_link
 __EMAIL
     }
 
-    _send_email( to => $options{email}, %message );
+    $plugin->_send_email( to => $options{email}, %message );
 }
 
 sub _send_email {
-    my $mailer = $settings->{mailer}
+    my $plugin = shift;
+    my $mailer = $plugin->mailer
       or die "No mailer configured";
     my $module = $mailer->{module}
       or die "No email module specified for mailer";
@@ -1707,7 +1717,7 @@ sub _send_email {
 
         #        require Mail::Message;
         require Mail::Message::Body::String;
-        return _email_mail_message(@_);
+        return i$plugin->_email_mail_message(@_);
     }
     else {
         die "No support for $module. Please submit a PR!";
@@ -1715,8 +1725,8 @@ sub _send_email {
 }
 
 sub _email_mail_message {
-    my %params = @_;
-    my $mailer_options = $settings->{mailer}->{options} || {};
+    my ( $plugin, %params ) = @_;
+    my $mailer_options = $plugin->mailer->{options} || {};
 
     my @parts;
 
