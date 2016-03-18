@@ -47,12 +47,12 @@ Required.
 
 =cut
 
-has realm_dsl => (
+has plugin => (
     is  => 'ro',
-#    isa => quote_sub(
-#        q{ die "realm_dsl must be a Dancer2::Core::DSL object"
-#           unless $_[0]->$_isa('Dancer2::Core::DSL') }
-#    ),
+    isa => quote_sub(
+        q{ die "plugin arg to provider must be a Dancer2::Plugin object"
+           unless $_[0]->$_isa('Dancer2::Plugin') }
+    ),
     required => 1,
 );
 

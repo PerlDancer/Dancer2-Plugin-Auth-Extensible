@@ -311,7 +311,7 @@ sub auth_provider {
 
     return $plugin->realm_providers->{$realm} = $provider_class->new(
         realm_settings => $realm_settings,
-        realm_dsl      => $plugin,
+        plugin         => $plugin,
     );
 }
 
