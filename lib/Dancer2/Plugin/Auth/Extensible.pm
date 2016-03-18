@@ -1,37 +1,188 @@
 package Dancer2::Plugin::Auth::Extensible;
 
-use warnings;
-use strict;
+our $VERSION = '0.600';
 
 use Carp;
-use Class::Load qw(try_load_class);
+use Module::Runtime qw(use_module);
 use Session::Token;
+use Types::Standard qw(Boolean HashRef Str);
 use Dancer2::Plugin;
 use namespace::clean;
 
-our $VERSION = '0.600';
+has denied_page => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{denied_page} || '/login/denied';
+    },
+);
 
-my $settings;
+has disable_roles => (
+    is      => 'ro',
+    isa     => Boolean,
+    default => sub {
+        $_[0]->config->{disable_roles} || 0;
+    },
+);
 
-my $loginpage;
-my $userhomepage;
-my $logoutpage;
-my $deniedpage;
-my $exitpage;
+has exit_page => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{exit_page} || '/';
+    },
+);
 
-my $load_settings = sub {
-    $settings = plugin_setting;
+has login_page => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{login_page} || '/login';
+    },
+);
 
-    $loginpage = $settings->{login_page} || '/login';
-    $userhomepage = $settings->{user_home_page} || '/';
-    $logoutpage = $settings->{logout_page} || '/logout';
-    $deniedpage = $settings->{denied_page} || '/login/denied';
-    $exitpage = $settings->{exit_page};
-    if (exists $settings->{mailer} && $settings->{mailer} eq 'Mail::Message') {
-        # Attempt to load now, so that it fails at startup if missing
-        require Mail::Message;
-    }
-};
+has login_page_handler => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{login_page_handler} || '_default_login_page';
+    },
+);
+
+has logout_page => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{logout_page} || '/logout';
+    },
+);
+
+has no_login_handler => (
+    is      => 'ro',
+    isa     => Boolean,
+    default => sub {
+        $_[0]->config->{no_login_handler} || 0;
+    },
+);
+
+has mailer => (
+    is        => 'ro',
+    isa       => HashRef,
+    predicate => 1,
+    default   => sub {
+        $_[0]->config->{mailer};
+    },
+);
+
+has mail_from => (
+    is        => 'ro',
+    isa       => Str,
+    predicate => 1,
+    default   => sub {
+        $_[0]->config->{mail_from};
+    },
+);
+
+has no_default_pages => (
+    is      => 'ro',
+    isa     => Boolean,
+    default => sub {
+        $_[0]->config->{no_default_pages} || 0,;
+    },
+);
+
+has password_generator => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config{password_generator} || '_default_password_generator';
+    },
+);
+
+has password_reset_send_email => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{password_reset_send_email}
+          || '_default_email_password_reset';
+    },
+);
+
+has password_reset_text => (
+    is        => 'ro',
+    isa       => Str,
+    predicate => 1,
+    default   => sub {
+        $_[0]->config->{password_reset_text};
+    },
+);
+
+has permission_denied_handler => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{permission_denied_handler}
+          || '_default_permission_denied_handler';
+    },
+);
+
+has permission_denied_page_handler => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config{permission_denied_page_handler}
+          || '_default_permission_denied_page';
+    },
+);
+
+has realms => (
+    is      => 'ro',
+    isa     => HashRef,
+    default => sub {
+        $_[0]->config->{realms} || {};
+    },
+);
+
+has record_lastlogin => (
+    is      => 'ro',
+    isa     => Boolean,
+    default => sub {
+        $_[0]->config->{record_lastlogin} || 0;
+    },
+);
+
+has reset_password_handler => (
+    is      => 'ro',
+    isa     => Boolean,
+    default => sub {
+        $_[0]->config->{reset_password_handler} || 0;
+    },
+);
+
+has user_home_page => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{user_home_page} || '/';
+    },
+);
+
+has welcome_send => (
+    is      => 'ro',
+    isa     => Str,
+    default => sub {
+        $_[0]->config->{welcome_send} || '_default_welcome_send';
+    },
+);
+
+has welcome_text => (
+    is        => 'ro',
+    isa       => Str,
+    predicate => 1,
+    default   => sub {
+        $_[0]->config->{welcome_text};
+    },
+);
 
 =head1 NAME
 
