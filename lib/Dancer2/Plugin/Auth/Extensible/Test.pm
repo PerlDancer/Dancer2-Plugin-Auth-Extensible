@@ -344,8 +344,12 @@ sub _test_base {
 
             my $res = $cb->(POST '/logout', @headers );
 
-            is($res->code, 200, 'Logging out returns 200')
+            is($res->code, 302, 'Logging out returns 302')
                 or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
         }
 
         # Check we can't access protected pages now we logged out:
@@ -455,8 +459,12 @@ sub _test_base {
 
             my $res = $cb->(POST '/logout', @headers );
 
-            is($res->code, 200, 'Logged out again')
+            is($res->code, 302, 'Logging out returns 302')
                 or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
         }
 
         # Now check we can log in as a user whose password is stored hashed:
@@ -531,8 +539,12 @@ sub _test_base {
             $trap->read; # clear logs
 
             my $res = $cb->(POST '/logout', @headers );
-            is $res->code, 200, 'Logged out again'
+            is($res->code, 302, 'Logging out returns 302')
                 or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
         }
 
         # require_login should receive a coderef
