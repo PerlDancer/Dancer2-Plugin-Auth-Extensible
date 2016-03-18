@@ -5,179 +5,155 @@ our $VERSION = '0.600';
 use Carp;
 use Module::Runtime qw(use_module);
 use Session::Token;
-use Types::Standard qw(Boolean HashRef Str);
+use Types::Standard qw(Bool HashRef Str);
 use Dancer2::Plugin;
 use namespace::clean;
 
 has denied_page => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{denied_page} || '/login/denied';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '/login/denied',
 );
 
 has disable_roles => (
-    is      => 'ro',
-    isa     => Boolean,
-    default => sub {
-        $_[0]->config->{disable_roles} || 0;
-    },
+    is          => 'ro',
+    isa         => Bool,
+    from_config => 1,
+    default     => 0,
 );
 
 has exit_page => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{exit_page} || '/';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '/',
 );
 
 has login_page => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{login_page} || '/login';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '/login',
 );
 
 has login_page_handler => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{login_page_handler} || '_default_login_page';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_login_page',
 );
 
 has logout_page => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{logout_page} || '/logout';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '/logout',
 );
 
 has no_login_handler => (
-    is      => 'ro',
-    isa     => Boolean,
-    default => sub {
-        $_[0]->config->{no_login_handler} || 0;
-    },
+    is          => 'ro',
+    isa         => Boolean,
+    from_config => 1,
+    default     => 0,
 );
 
 has mailer => (
-    is        => 'ro',
-    isa       => HashRef,
-    default   => sub {
-        $_[0]->config->{mailer};
-    },
+    is          => 'ro',
+    isa         => HashRef,
+    from_config => 1,
+    default     => '',
 );
 
 has mail_from => (
-    is        => 'ro',
-    isa       => Str,
-    default   => sub {
-        $_[0]->config->{mail_from};
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '',
 );
 
 has no_default_pages => (
-    is      => 'ro',
-    isa     => Boolean,
-    default => sub {
-        $_[0]->config->{no_default_pages} || 0,;
-    },
+    is          => 'ro',
+    isa         => Boolean,
+    from_config => 1,
+    default     => 0,
 );
 
 has password_generator => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config{password_generator} || '_default_password_generator';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_password_generator',
 );
 
 has password_reset_send_email => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{password_reset_send_email}
-          || '_default_email_password_reset';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_email_password_reset',
 );
 
 has password_reset_text => (
-    is        => 'ro',
-    isa       => Str,
-    default   => sub {
-        $_[0]->config->{password_reset_text};
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '',
 );
 
 has permission_denied_handler => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{permission_denied_handler}
-          || '_default_permission_denied_handler';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_permission_denied_handler',
 );
 
 has permission_denied_page_handler => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config{permission_denied_page_handler}
-          || '_default_permission_denied_page';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_permission_denied_page',
 );
 
 has realms => (
-    is      => 'ro',
-    isa     => HashRef,
-    default => sub {
-        $_[0]->config->{realms} || {};
-    },
+    is          => 'ro',
+    isa         => HashRef,
+    from_config => 1,
+    default     => sub { {} },
 );
 
 has record_lastlogin => (
-    is      => 'ro',
-    isa     => Boolean,
-    default => sub {
-        $_[0]->config->{record_lastlogin} || 0;
-    },
+    is          => 'ro',
+    isa         => Bool,
+    from_config => 1,
+    default     => 0,
 );
 
 has reset_password_handler => (
-    is      => 'ro',
-    isa     => Boolean,
-    default => sub {
-        $_[0]->config->{reset_password_handler} || 0;
-    },
+    is          => 'ro',
+    isa         => Bool,
+    from_config => 1,
+    default     => 0,
 );
 
 has user_home_page => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{user_home_page} || '/';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '/',
 );
 
 has welcome_send => (
-    is      => 'ro',
-    isa     => Str,
-    default => sub {
-        $_[0]->config->{welcome_send} || '_default_welcome_send';
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '_default_welcome_send',
 );
 
 has welcome_text => (
-    is        => 'ro',
-    isa       => Str,
-    default   => sub {
-        $_[0]->config->{welcome_text};
-    },
+    is          => 'ro',
+    isa         => Str,
+    from_config => 1,
+    default     => '',
 );
 
 =head1 NAME
