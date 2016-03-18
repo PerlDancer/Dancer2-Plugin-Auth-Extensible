@@ -1591,7 +1591,7 @@ sub _default_email_password_reset {
         my $site          = $dsl->request->uri_base;
         my $appname       = $dsl->config->{appname} || '[unknown]';
         $message{subject} = "Password reset request";
-        $message{from}    = $settings->{mail_from},
+        $message{from}    = $settings->{mail_from};
         $message{plain}   = <<__EMAIL;
 A request has been received to reset your password for $appname. If
 you would like to do so, please follow the link below:
@@ -1616,7 +1616,7 @@ sub _default_welcome_send {
         my $appname       = $dsl->config->{appname} || '[unknown]';
         my $reset_link    = $site."login/$options{code}";
         $message{subject} = "Welcome to $host";
-        $message{from}    = $settings->{mail_from},
+        $message{from}    = $settings->{mail_from};
         $message{plain}   = <<__EMAIL;
 An account has been created for you at $host. If you would like
 to accept this, please follow the link below to set a password:
