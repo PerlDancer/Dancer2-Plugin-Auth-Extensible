@@ -243,7 +243,7 @@ sub BUILD {
                 }
 
                 no strict 'refs';
-                return &{ $plugin->login_page_handler }($app);
+                return &{ $plugin->login_page_handler }($plugin);
             },
         );
 
@@ -255,7 +255,7 @@ sub BUILD {
                 my $plugin = $app->with_plugin('Auth::Extensible');
                 $app->response->status(403);
                 no strict 'refs';
-                return &{ $plugin->permission_denied_page_handler }($app);
+                return &{ $plugin->permission_denied_page_handler }($plugin);
             },
         );
     }
@@ -740,6 +740,196 @@ sub _build_wrapper {
     };
 }
 
+sub _default_email_password_reset {
+    my ( $plugin, %options ) = @_;
+
+    my %message;
+    if ( my $password_reset_text = $plugin->password_reset_text ) {
+        no strict 'refs';
+        %message = &{$password_reset_text}( $plugin, %options );
+    }
+    else {
+        my $site = $plugin->app->request->uri_base;
+        my $appname = $plugin->app->config->{appname} || '[unknown]';
+        $message{subject} = "Password reset request";
+        $message{from}    = $plugin->mail_from;
+        $message{plain}   = <<__EMAIL;
+A request has been received to reset your password for $appname. If
+you would like to do so, please follow the link below:
+
+$site/login/$options{code}
+__EMAIL
+    }
+
+    $plugin->_send_email( to => $options{email}, %message );
+}
+
+sub _default_login_page {
+    my $plugin    = shift;
+    my $app       = $plugin->app;
+    my $loginpage = $plugin->login_page;
+
+    if ( my $new_password = $app->request->param('new_password') ) {
+        return <<NEWPW;
+<h1>New password</h1>
+<p>
+Your new password is $new_password
+</p>
+<a href="$loginpage">Click here to login</a>
+NEWPW
+    }
+
+    if ( $app->request->param('reset_sent') ) {
+        return <<SENT;
+<h1>Request sent</h1>
+<p>A password reset request has been sent. Please check your email.</p>
+SENT
+    }
+
+    # Valid password reset request. Just need to confirm to
+    # prevent GET requests by email filters
+    if ( $app->request->param('password_code_valid') ) {
+        return <<VALID;
+<h1>Reset your password</h1>
+<p>
+Please click the button below to reset your password
+</p>
+<form method="post">
+<input type="submit" name="confirm_reset" value="Reset password">
+</form>
+VALID
+    }
+
+    my $pwreset_html =
+      !$plugin->reset_password_handler
+      ? ""
+      : <<RESETPW;
+<h2>Password reset</h2>
+<p>Enter your username to obtain an email to reset your password</p>
+<label for="username_reset">Username:</label>
+<input type="text" name="username_reset" id="username_reset">
+<input type="submit" name="submit_reset" value="Submit">
+RESETPW
+    my $return_url = $app->request->params->{return_url} || '';
+
+    my $login_fail_message =
+      $app->request->vars->{login_failed}
+      ? "<p>LOGIN FAILED</p>"
+      : "";
+
+    return <<PAGE;
+<h1>Login Required</h1>
+
+<p>
+You need to log in to continue.
+</p>
+
+$login_fail_message
+
+<form method="post">
+<label for="username">Username:</label>
+<input type="text" name="username" id="username">
+<br />
+<label for="password">Password:</label>
+<input type="password" name="password" id="password">
+<br />
+<input type="hidden" name="return_url" value="$return_url">
+<input type="submit" value="Login">
+$pwreset_html
+</form>
+PAGE
+}
+
+sub _default_permission_denied_page {
+    my $plugin = shift;
+    return <<PAGE
+<h1>Permission Denied</h1>
+
+<p>
+Sorry, you're not allowed to access that page.
+</p>
+PAGE
+}
+
+sub _default_welcome_send {
+    my ( $plugin, %options ) = @_;
+
+    my %message;
+    if ( my $welcome_text = $plugin->welcome_text ) {
+        no strict 'refs';
+        %message = &{$welcome_text}( $plugin, %options );
+    }
+    else {
+        my $site       = $plugin->app->request->base;
+        my $host       = $site->host;
+        my $appname    = $plugin->app->config->{appname} || '[unknown]';
+        my $reset_link = $site . "login/$options{code}";
+        $message{subject} = "Welcome to $host";
+        $message{from}    = $plugin->mail_from;
+        $message{plain}   = <<__EMAIL;
+An account has been created for you at $host. If you would like
+to accept this, please follow the link below to set a password:
+
+$reset_link
+__EMAIL
+    }
+
+    $plugin->_send_email( to => $options{email}, %message );
+}
+
+sub _email_mail_message {
+    my ( $plugin, %params ) = @_;
+
+    my $mailer_options = $plugin->mailer->{options} || {};
+
+    my @parts;
+
+    push @parts,
+      Mail::Message::Body::String->new(
+        mime_type   => 'text/plain',
+        disposition => 'inline',
+        data        => $params{plain},
+      ) if ( $params{plain} );
+
+    push @parts,
+      Mail::Message::Body::String->new(
+        mime_type   => 'text/html',
+        disposition => 'inline',
+        data        => $params{html},
+      ) if ( $params{html} );
+
+    @parts or die "No plain or HTML email text supplied";
+
+    my $content_type = @parts > 1 ? 'multipart/alternative' : $parts[0]->type;
+
+    Mail::Message->build(
+        To             => $params{to},
+        Subject        => $params{subject},
+        From           => $params{from},
+        'Content-Type' => $content_type,
+        attach         => \@parts,
+    )->send(%$mailer_options);
+}
+
+sub _send_email {
+    my $plugin = shift;
+
+    my $mailer = $plugin->mailer or die "No mailer configured";
+
+    my $module = $mailer->{module}
+      or die "No email module specified for mailer";
+
+    if ( $module eq 'Mail::Message' ) {
+
+        # require Mail::Message;
+        require Mail::Message::Body::String;
+        return $plugin->_email_mail_message(@_);
+    }
+    else {
+        die "No support for $module. Please submit a PR!";
+    }
+}
+
 # Given a class method name and a set of parameters, try calling that class
 # method for each realm in turn, arranging for each to receive the configuration
 # defined for that realm, until one returns a non-undef, then return the realm
@@ -765,6 +955,27 @@ sub _try_realms {
 #
 # routes
 #
+
+# implementation of logout route
+sub _logout_route {
+    my $app = shift;
+    my $req = $app->request;
+    my $plugin = $app->with_plugin('Auth::Extensible');
+
+    $app->destroy_session;
+
+    if ( $req->params->{return_url} ) {
+        $app->redirect( $req->params->{return_url} );
+    }
+    elsif ($plugin->exit_page) {
+        $app->redirect($plugin->exit_page);
+    }
+    else {
+        # TODO: perhaps make this more configurable, perhaps by attempting to
+        # render a template first.
+        return "OK, logged out successfully.";
+    }
+}
 
 # implementation of post login route
 sub _post_login_route {
@@ -898,7 +1109,6 @@ have no excuse for storing plain-text passwords.  A simple script called
 B<generate-crypted-password> to generate
 RFC2307-style hashed passwords is included, or you can use L<Crypt::SaltedHash>
 yourself to do so, or use the C<slappasswd> utility if you have it installed.
-
 
 =head1 SYNOPSIS
 
@@ -1036,7 +1246,6 @@ Then in your code you might simply use a template:
         template 'account/login';
     }
 
-
 If the user is logged in, but tries to access a route which requires a specific
 role they don't have, they will be redirected to the "permission denied" page
 URL, which defaults to C</login/denied> but may be changed using the
@@ -1067,7 +1276,6 @@ and should do at least the following:
     any '/logout' => sub {
         app->destroy_session;
     };
-    
 
 If you want to use the default C<post '/login'> and C<any '/logout'> routes
 you can configure them. See below.
@@ -1119,7 +1327,6 @@ Returns a hashref of details of the currently logged-in user, if there is one.
 
 The details you get back will depend upon the authentication provider in use.
 
-
 =item get_user_details
 
 Returns a hashref of details of the specified user. The realm can optionally
@@ -1149,7 +1356,6 @@ By default, roles for the currently-logged-in user will be checked;
 alternatively, you may supply a username to check.
 
 Returns a list or arrayref depending on context.
-
 
 =item authenticate_user
 
@@ -1213,7 +1419,6 @@ instead updating the currently logged-in user.
 
 The updated user's details are returned, as per L<logged_in_user>.
 
-
 =item create_user
 
 Creates a new user, if the authentication provider supports it. Optionally
@@ -1267,7 +1472,6 @@ L<welcome_send>, and should return a hash with the same keys as
 L<password_reset_send_email>.
 
 =back
-
 
 =item password_reset_send
 
@@ -1368,7 +1572,6 @@ Here is an example subroutine:
         password_reset_text: MyApp::reset_send
 
 =back
-
 
 =item user_password
 
@@ -1547,216 +1750,6 @@ management within your application.
 Given a realm, returns a configured and ready to use instance of the provider
 specified by that realm's config.
 
-=cut
-
-# implementation of logout route
-sub _logout_route {
-    my $app = shift;
-    my $req = $app->request;
-    my $plugin = $app->with_plugin('Auth::Extensible');
-
-    $app->destroy_session;
-
-    if ( $req->params->{return_url} ) {
-        $app->redirect( $req->params->{return_url} );
-    }
-    elsif ($plugin->exit_page) {
-        $app->redirect($plugin->exit_page);
-    }
-    else {
-        # TODO: perhaps make this more configurable, perhaps by attempting to
-        # render a template first.
-        return "OK, logged out successfully.";
-    }
-}
-
-sub _default_permission_denied_page {
-    return <<PAGE
-<h1>Permission Denied</h1>
-
-<p>
-Sorry, you're not allowed to access that page.
-</p>
-PAGE
-}
-
-sub _default_login_page {
-    my $app = shift;
-    my $plugin = $app->with_plugin('Auth::Extensible');
-    my $loginpage = $plugin->login_page;
-
-    if ( my $new_password = $app->request->param('new_password') ) {
-        return <<NEWPW;
-<h1>New password</h1>
-<p>
-Your new password is $new_password
-</p>
-<a href="$loginpage">Click here to login</a>
-NEWPW
-    }
-
-    if ( $app->request->param('reset_sent') ) {
-        return <<SENT;
-<h1>Request sent</h1>
-<p>A password reset request has been sent. Please check your email.</p>
-SENT
-    }
-
-    # Valid password reset request. Just need to confirm to
-    # prevent GET requests by email filters
-    if ( $app->request->param('password_code_valid') ) {
-        return <<VALID;
-<h1>Reset your password</h1>
-<p>
-Please click the button below to reset your password
-</p>
-<form method="post">
-<input type="submit" name="confirm_reset" value="Reset password">
-</form>
-VALID
-    }
-
-    my $pwreset_html =
-      !$plugin->reset_password_handler
-      ? ""
-      : <<RESETPW;
-<h2>Password reset</h2>
-<p>Enter your username to obtain an email to reset your password</p>
-<label for="username_reset">Username:</label>
-<input type="text" name="username_reset" id="username_reset">
-<input type="submit" name="submit_reset" value="Submit">
-RESETPW
-    my $return_url = $app->request->params->{return_url} || '';
-
-    my $login_fail_message =
-      $app->request->vars->{login_failed}
-      ? "<p>LOGIN FAILED</p>"
-      : "";
-
-    return <<PAGE;
-<h1>Login Required</h1>
-
-<p>
-You need to log in to continue.
-</p>
-
-$login_fail_message
-
-<form method="post">
-<label for="username">Username:</label>
-<input type="text" name="username" id="username">
-<br />
-<label for="password">Password:</label>
-<input type="password" name="password" id="password">
-<br />
-<input type="hidden" name="return_url" value="$return_url">
-<input type="submit" value="Login">
-$pwreset_html
-</form>
-PAGE
-}
-
-sub _default_email_password_reset {
-    my ( $plugin, %options ) = @_;
-
-    my %message;
-    if ( my $password_reset_text = $plugin->password_reset_text ) {
-        no strict 'refs';
-        %message = &{$password_reset_text}( $plugin, %options );
-    }
-    else {
-        my $site = $plugin->app->request->uri_base;
-        my $appname = $plugin->app->config->{appname} || '[unknown]';
-        $message{subject} = "Password reset request";
-        $message{from}    = $plugin->mail_from;
-        $message{plain}   = <<__EMAIL;
-A request has been received to reset your password for $appname. If
-you would like to do so, please follow the link below:
-
-$site/login/$options{code}
-__EMAIL
-    }
-
-    $plugin->_send_email( to => $options{email}, %message );
-}
-
-sub _default_welcome_send {
-    my ( $plugin, %options ) = @_;
-
-    my %message;
-    if ( my $welcome_text = $plugin->welcome_text ) {
-        no strict 'refs';
-        %message = &{$welcome_text}( $plugin, %options );
-    }
-    else {
-        my $site       = $plugin->app->request->base;
-        my $host       = $site->host;
-        my $appname    = $plugin->app->config->{appname} || '[unknown]';
-        my $reset_link = $site . "login/$options{code}";
-        $message{subject} = "Welcome to $host";
-        $message{from}    = $plugin->mail_from;
-        $message{plain}   = <<__EMAIL;
-An account has been created for you at $host. If you would like
-to accept this, please follow the link below to set a password:
-
-$reset_link
-__EMAIL
-    }
-
-    $plugin->_send_email( to => $options{email}, %message );
-}
-
-sub _send_email {
-    my $plugin = shift;
-    my $mailer = $plugin->mailer
-      or die "No mailer configured";
-    my $module = $mailer->{module}
-      or die "No email module specified for mailer";
-
-    if ( $module eq 'Mail::Message' ) {
-
-        #        require Mail::Message;
-        require Mail::Message::Body::String;
-        return i$plugin->_email_mail_message(@_);
-    }
-    else {
-        die "No support for $module. Please submit a PR!";
-    }
-}
-
-sub _email_mail_message {
-    my ( $plugin, %params ) = @_;
-    my $mailer_options = $plugin->mailer->{options} || {};
-
-    my @parts;
-
-    push @parts,
-      Mail::Message::Body::String->new(
-        mime_type   => 'text/plain',
-        disposition => 'inline',
-        data        => $params{plain},
-      ) if ( $params{plain} );
-
-    push @parts,
-      Mail::Message::Body::String->new(
-        mime_type   => 'text/html',
-        disposition => 'inline',
-        data        => $params{html},
-      ) if ( $params{html} );
-
-    @parts or die "No plain or HTML email text supplied";
-
-    my $content_type = @parts > 1 ? 'multipart/alternative' : $parts[0]->type;
-
-    Mail::Message->build(
-        To             => $params{to},
-        Subject        => $params{subject},
-        From           => $params{from},
-        'Content-Type' => $content_type,
-        attach         => \@parts,
-    )->send(%$mailer_options);
-}
-
 =head1 AUTHOR
 
 David Precious, C<< <davidp at preshweb.co.uk> >>
@@ -1765,6 +1758,10 @@ Dancer2 port of Dancer::Plugin::Auth::Extensible by:
 
 Stefan Hornburg (Racke), C<< <racke at linuxia.de> >>
 
+Conversion to Dancer2's new plugin system in 2016 by:
+
+Peter Mottram (SysPete), C<< <peter at sysnix.com> >>
+
 =head1 BUGS / FEATURE REQUESTS
 
 This is an early version; there may still be bugs present or features missing.
@@ -1772,8 +1769,6 @@ This is an early version; there may still be bugs present or features missing.
 This is developed on GitHub - please feel free to raise issues or pull requests
 against the repo at:
 L<https://github.com/PerlDancer/Dancer2-Plugin-Auth-Extensible>
-
-
 
 =head1 ACKNOWLEDGEMENTS
 
@@ -1804,8 +1799,7 @@ Jason Lewis (Unix provider problem).
 
 =head1 LICENSE AND COPYRIGHT
 
-
-Copyright 2012-13 David Precious.
+Copyright 2012-16 David Precious.
 
 This program is free software; you can redistribute it and/or modify it
 under the terms of either: the GNU General Public License as published
@@ -1813,8 +1807,6 @@ by the Free Software Foundation; or the Artistic License.
 
 See http://dev.perl.org/licenses/ for more information.
 
-
 =cut
 
 1;    # End of Dancer2::Plugin::Auth::Extensible
-
