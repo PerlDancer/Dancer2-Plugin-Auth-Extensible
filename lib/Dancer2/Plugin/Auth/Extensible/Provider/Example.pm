@@ -1,6 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Example;
 
 use strict;
+use warnings;
 use base "Dancer2::Plugin::Auth::Extensible::Provider::Base";
 
 our $VERSION = '0.502';
