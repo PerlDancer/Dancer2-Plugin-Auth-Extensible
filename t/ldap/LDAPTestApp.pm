@@ -1,5 +1,6 @@
 package t::ldap::LDAPTestApp;
 
+use strict;
 use Dancer2;
 
 
