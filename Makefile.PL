@@ -8,6 +8,9 @@ WriteMakefile(
     VERSION_FROM        => 'lib/Dancer2/Plugin/Auth/Extensible.pm',
     ABSTRACT_FROM       => 'lib/Dancer2/Plugin/Auth/Extensible.pm',
     ($ExtUtils::MakeMaker::VERSION >= 6.48
+      ? ('MIN_PERL_VERSION'=> '5.6.0')
+      : ()),
+    ($ExtUtils::MakeMaker::VERSION >= 6.48
       ? ('LICENSE'=> 'perl')
       : ()),
     PL_FILES            => {},
