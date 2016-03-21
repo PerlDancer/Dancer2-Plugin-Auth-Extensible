@@ -188,7 +188,6 @@ sub get_user_details {
     my $settings = $self->realm_settings;
 
     # Get our database handle and find out the table and column names:
-    #my $database = $self->realm_dsl->database($settings->{db_connection_name})
     my $database = database($settings->{db_connection_name})
         or die "No database connection";
 
@@ -201,7 +200,7 @@ sub get_user_details {
         $users_table, { $username_column => $username }
     );
     if (!$user) {
-        $self->realm_dsl->debug("No such user $username");
+        $self->plugin->app->log("debug", "No such user $username");
         return;
     } else {
         return $user;
@@ -217,7 +216,6 @@ sub get_user_roles {
 
     my $settings = $self->realm_settings;
     # Get our database handle and find out the table and column names:
-    #my $database = $self->realm_dsl->database($settings->{db_connection_name});
     my $database = database($settings->{db_connection_name});
 
     # Get details of the user first; both to check they exist, and so we have
