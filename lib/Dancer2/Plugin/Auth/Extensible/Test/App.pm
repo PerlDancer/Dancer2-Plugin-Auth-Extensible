@@ -8,6 +8,7 @@ Dancer2::Plugin::Auth::Extensible::Test::App - Dancer2 app for testing providers
 
 our $VERSION = '0.502';
 
+use strict;
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;
 use YAML ();

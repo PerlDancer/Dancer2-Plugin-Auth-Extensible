@@ -1,6 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 
 use strict;
+use warnings;
 use base 'Dancer2::Plugin::Auth::Extensible::Provider::Base';
 use Dancer2;
 use Dancer2::Plugin::Database;

@@ -1,6 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Base;
 
 use strict;
+use warnings;
 use Crypt::SaltedHash;
 
 our $VERSION = '0.502';
