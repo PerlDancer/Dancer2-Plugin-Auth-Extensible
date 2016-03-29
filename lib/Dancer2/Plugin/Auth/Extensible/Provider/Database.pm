@@ -3,8 +3,6 @@ package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
-use Dancer2;
-use Dancer2::Plugin::Database;
 
 our $VERSION = '0.600';
 
@@ -154,6 +152,30 @@ for details, but a table definition using foreign keys could look like:
         UNIQUE KEY user_role (user_id, role_id)
     ) ENGINE=InnoDB;
 
+=head1 ATTRIBUTES
+
+=head2 dancer2_plugin_database
+
+Lazy-loads the correct instance of L<Dancer2::Plugin::Database> which handles
+the following methods:
+
+=over
+
+=item * database
+
+=back
+
+=cut
+
+has dancer2_plugin_database => (
+    is   => 'ro',
+    lazy => 1,
+    default =>
+      sub { $_[0]->plugin->app->with_plugin('Dancer2::Plugin::Database') },
+    handles  => { database => 'database' },
+    init_arg => undef,
+);
+
 =head1 METHODS
 
 =head2 authenticate_user $username, $password
@@ -188,7 +210,7 @@ sub get_user_details {
     my $settings = $self->realm_settings;
 
     # Get our database handle and find out the table and column names:
-    my $database = database($settings->{db_connection_name})
+    my $database = $self->database($settings->{db_connection_name})
         or die "No database connection";
 
     my $users_table     = $settings->{users_table}     || 'users';
@@ -216,7 +238,7 @@ sub get_user_roles {
 
     my $settings = $self->realm_settings;
     # Get our database handle and find out the table and column names:
-    my $database = database($settings->{db_connection_name});
+    my $database = $self->database($settings->{db_connection_name});
 
     # Get details of the user first; both to check they exist, and so we have
     # their ID to use.
