@@ -1,10 +1,8 @@
 use strict;
 use warnings;
 
-use Test::More tests => 12;
+use Test::More;
 use Test::Exception;
-use Dancer2::Core::DSL;
-use Dancer2::Plugin::Auth::Extensible;
 
 throws_ok {
     package BadTestProvider;
@@ -26,35 +24,40 @@ lives_ok {
 }
 "test provider class provides all required methods";
 
-my $password;
+my ( $password, $provider );
 
-ok TestProvider::match_password( undef, 'password', 'password' ),
+lives_ok { $provider = TestProvider->new( plugin => undef ) }
+"TestProvider->new lives";
+
+ok $provider->match_password( 'password', 'password' ),
   "good plain password";
 
-ok TestProvider::match_password( undef, 'password',
+ok $provider->match_password( 'password',
     '{SSHA}ljxuwXYQH3BDNZjg+VXBrkw6Sh6sta3l' ),
   "good SHA password";
 
-ok !TestProvider::match_password( undef, 'bad', 'password' ),
+ok !$provider->match_password( 'bad', 'password' ),
   "bad plain password";
 
-ok !TestProvider::match_password( undef, 'bad',
+ok !$provider->match_password( 'bad',
     '{SSHA}ljxuwXYQH3BDNZjg+VXBrkw6Sh6sta3l' ),
   "bad SHA password";
 
-lives_ok { $password = TestProvider::encrypt_password() }
+lives_ok { $password = $provider->encrypt_password() }
 "encrypt_password(undef)";
 
 like $password, qr/^{SSHA}.+$/, "password looks good";
 
-lives_ok { $password = TestProvider::encrypt_password( undef, 'password' ) }
+lives_ok { $password = $provider->encrypt_password( 'password' ) }
 "encrypt_password('password')";
 
 like $password, qr/^{SSHA}.+$/, "password looks good";
 
 lives_ok {
-    $password = TestProvider::encrypt_password( undef, 'password', 'SHA-1' )
+    $password = $provider->encrypt_password( 'password', 'SHA-1' )
 }
 "encrypt_password('password', 'SHA-1')";
 
 like $password, qr/^{SSHA}.+$/, "password looks good";
+
+done_testing;

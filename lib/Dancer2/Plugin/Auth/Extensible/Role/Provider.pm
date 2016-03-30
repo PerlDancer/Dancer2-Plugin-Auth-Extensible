@@ -1,7 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
 use Crypt::SaltedHash;
-use Dancer2::Core::Types qw/InstanceOf/;
 use Moo::Role;
 requires qw(authenticate_user get_user_details get_user_roles);
 
@@ -30,13 +29,25 @@ Required.
 
 has plugin => (
     is       => 'ro',
-    isa      => InstanceOf ['Dancer2::Plugin::Auth::Extensible'],
     required => 1,
+);
+
+=head2 encryption_algorithm
+
+The encryption_algorithm used by L</encrypt_password>.
+
+Defaults to 'SHA-1';
+
+=cut
+
+has encryption_algorithm => (
+    is      => 'ro',
+    default => 'SHA-1',
 );
 
 =head1 METHODS
 
-=head2 match_password($given, $correct)
+=head2 match_password $given, $correct
 
 Matches C<$given> password with the C<$correct> one.
 
@@ -68,17 +79,17 @@ sub match_password {
     }
 }
 
-=head2 encrypt_password($password, $algorithm)
+=head2 encrypt_password $password
 
-Encrypts password C<$password> with C<$algorithm> which defaults to SHA-1
+Encrypts password C<$password> with L</encryption_algorithm>
 and returns the encrypted password.
 
 =cut
 
 sub encrypt_password {
-    my ( $self, $password, $algorithm ) = @_;
-    $algorithm ||= 'SHA-1';
-    my $crypt = Crypt::SaltedHash->new( algorithm => $algorithm );
+    my ( $self, $password ) = @_;
+    my $crypt =
+      Crypt::SaltedHash->new( algorithm => $self->encryption_algorithm );
     $crypt->add($password);
     $crypt->generate;
 }
