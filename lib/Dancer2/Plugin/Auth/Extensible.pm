@@ -5,9 +5,10 @@ our $VERSION = '0.600';
 use strict;
 use warnings;
 use Carp;
+use Dancer2::Core::Types qw(Bool HashRef Str);
 use Module::Runtime qw(use_module);
 use Session::Token;
-use Types::Standard qw(Bool HashRef Str);
+use Try::Tiny;
 use Dancer2::Plugin;
 
 #
@@ -308,12 +309,12 @@ sub auth_provider {
     if ( $provider_class !~ /::/ ) {
         $provider_class = __PACKAGE__ . "::Provider::$provider_class";
     }
-    use_module($provider_class);
 
-    return $plugin->realm_providers->{$realm} = $provider_class->new(
+    return $plugin->realm_providers->{$realm} =
+      use_module($provider_class)->new(
         plugin => $plugin,
         %$realm_settings,
-    );
+      );
 }
 
 sub authenticate_user {
@@ -429,7 +430,7 @@ sub logged_in_user_password_expired {
 sub password_reset_send {
     my ( $plugin, %options ) = @_;
 
-    my $result;
+    my $result = 0;
 
     my @realms_to_check =
       $options{realm}
@@ -448,18 +449,14 @@ sub password_reset_send {
 
         # Generate random string for the password reset URL
         my $code = _reset_code();
-        my $user;
-        eval {
-            $user =
-              $provider->set_user_details( $username, pw_reset_code => $code );
-        };
-        if ($@) {
-            $plugin->app->log(
-                debug => "Failed to set_user_details with $realm: $@" );
-            next;
+        my $user = try {
+            $provider->set_user_details( $username, pw_reset_code => $code );
         }
+        catch {
+            $plugin->app->log(
+                debug => "Failed to set_user_details with $realm: $_" );
+        };
         if ($user) {
-            $this_result = 1;
 
             # Okay, so email key is hard-coded, and therefore relies on the
             # provider returning that key. The alternative is to have a
@@ -469,16 +466,11 @@ sub password_reset_send {
             my %options = ( code => $code, email => $user->{email} );
 
             no strict 'refs';
-            $this_result = undef
-              unless &{ $plugin->password_reset_send_email }
-              ( $plugin, %options );
+            $result++
+              if &{ $plugin->password_reset_send_email }( $plugin, %options );
         }
-        else {
-            $this_result = 0;
-        }
-        $result = $this_result unless $result;
     }
-    $result;    # 1 if at least one send was successful
+    $result ? 1 : 0;    # 1 if at least one send was successful
 }
 
 sub require_all_roles {
@@ -594,14 +586,20 @@ sub user_password {
             my $provider = $plugin->auth_provider($realm_check);
 
             # Realm may not support get_user_by_code
-            my $ret = eval { $username = $provider->get_user_by_code($code) };
-            unless ($ret) {
-                $plugin->app->log(
-                    debug => "Failed to check for code with $realm_check: $@" );
+            my $username = try {
+                $provider->get_user_by_code($code);
             }
+            catch {
+                $plugin->app->log( 'debug',
+                    "Failed to check for code with $realm_check: $_" );
+            };
             if ($username) {
                 $realm = $realm_check;
                 last;
+            }
+            else {
+                $plugin->app->log( 'debug',
+                    "No user found in realm $realm_check with code $code" );
             }
         }
         return unless $username;

@@ -70,7 +70,7 @@ sub testme {
 
     foreach my $name (
         qw/ create_user update_user password_reset user_password
-        lastlogin expired/
+        lastlogin expired reset_code/
       )
     {
         if ( delete $args{$name} ) {
@@ -754,9 +754,7 @@ sub _test_create_user {
 };
 
 sub _test_no_create_user {
-
-    note "test no create_user";
-
+    note "NOTE: not testing create_user";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -766,6 +764,9 @@ sub _test_no_create_user {
 # update_user
 
 sub _test_update_user {
+
+    note "test update_user";
+
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -884,6 +885,7 @@ sub _test_update_user {
 };
 
 sub _test_no_update_user {
+    note "NOTE: not testing update_user";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -893,6 +895,7 @@ sub _test_no_update_user {
 # password_reset
 
 sub _test_password_reset {
+    die "FIXME: no password_reset tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -900,6 +903,7 @@ sub _test_password_reset {
 };
 
 sub _test_no_password_reset {
+    note "NOTE: not testing password_reset";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -909,6 +913,7 @@ sub _test_no_password_reset {
 # user_password
 
 sub _test_user_password {
+    die "FIXME: no user_password tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -916,6 +921,7 @@ sub _test_user_password {
 };
 
 sub _test_no_user_password {
+    note "NOTE: not testing user_password";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -925,6 +931,7 @@ sub _test_no_user_password {
 # lastlogin
 
 sub _test_lastlogin {
+    die "FIXME: no lastlogin tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -932,6 +939,7 @@ sub _test_lastlogin {
 };
 
 sub _test_no_lastlogin {
+    note "NOTE: not testing lastlogin";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -941,6 +949,7 @@ sub _test_no_lastlogin {
 # expired
 
 sub _test_expired {
+    die "FIXME: no expired tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -948,14 +957,19 @@ sub _test_expired {
 };
 
 sub _test_no_expired {
+    note "NOTE: not testing expired";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
     }
 };
 
-#########
+# reset code
+
 sub _test_reset_code {
+
+    note "test reset_code";
+
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -981,8 +995,8 @@ sub _test_reset_code {
             my $logs = $trap->read;
             is $logs->[0]->{level}, 'debug', "we got a debug log message";
             like $logs->[0]->{message},
-              qr/^Failed to check for code with config.+fooget_user_by_code/,
-              "message is: Failed to check for code with config...";
+              qr/^No user found in realm config\d with code beer$/,
+              "message is: No user found in realm configX with code beer";
         }
         {
             $trap->read; # clear logs
@@ -993,8 +1007,8 @@ sub _test_reset_code {
             my $logs = $trap->read;
             is $logs->[0]->{level}, 'error', "we got a debug log message";
             like $logs->[0]->{message},
-              qr/^Route exception: set_user_password was not implemented/,
-              "message is: 'Route exception: set_user_password was not implemented...'";
+              qr/^Route exception: No username specified and no logged-in user/,
+              "message is: 'Route exception: No username specified and no logged-in user'";
         }
         {
             $trap->read; # clear logs
@@ -1008,6 +1022,14 @@ sub _test_reset_code {
               qr/^Route exception: set_user_password was not implemented/,
               "message is: 'Route exception: set_user_password was not implemented...'";
         }
+    }
+};
+
+sub _test_no_reset_code {
+    note "NOTE: not testing reset_code";
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
     }
 };
 

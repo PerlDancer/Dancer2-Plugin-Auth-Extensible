@@ -16,6 +16,5 @@ matrix:
 before_install:
   - eval $(curl https://travis-perl.github.io/init) --auto
 install:
-  - cpanm --quiet --notest git://github.com/PerlDancer/Dancer2.git git://github.com/bigpresh/Dancer-Plugin-Database.git
   - cpanm DBD::SQLite Dancer2::Plugin::Database Test::CheckManifest --quiet --notest
   - cpanm --quiet --installdeps --notest .
