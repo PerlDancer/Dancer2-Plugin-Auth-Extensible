@@ -27,6 +27,7 @@ WriteMakefile(
         'Safe::Isa'         => 0,
         'Session::Token'    => 0,
         'Sub::Quote'        => 0,
+        'Try::Tiny'         => 0,
     },
     EXE_FILES => [ 'bin/generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
