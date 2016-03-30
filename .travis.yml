@@ -1,7 +1,6 @@
-language: perl
+sudo: false
 env: RELEASE_TESTING=1
 language: perl
-
 perl:
     - "5.22"
     - "5.20"
@@ -10,7 +9,13 @@ perl:
     - "5.14"
     - "5.12"
     - "5.10"
-
+matrix:
+    include:
+        - perl: 5.22
+        env: COVERAGE=1
+before_install:
+    - eval $(curl https://travis-perl.github.io/init) --auto
 install:
+    - cpanm --quiet --notest git://github.com/PerlDancer/Dancer2.git git://github.com/bigpresh/Dancer-Plugin-Database.git
     - cpanm DBD::SQLite Dancer2::Plugin::Database Test::CheckManifest --quiet --notest
     - cpanm --quiet --installdeps --notest .
