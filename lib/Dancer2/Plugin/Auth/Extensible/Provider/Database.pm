@@ -1,5 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Database;
 
+use Carp;
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
@@ -329,8 +330,30 @@ sub authenticate_user {
     # OK, we found a user, let match_password (from our base class) take care of
     # working out if the password is correct
 
-    return $self->match_password( $password,
-        $user->{ $self->users_password_column } );
+    my $correct = $user->{ $self->users_password_column };
+
+    # do NOT authenticate when password is empty/undef
+    return undef unless ( defined $correct && $correct ne '' );
+
+    return $self->match_password( $password, $correct );
+}
+
+=head2 create_user
+
+=cut
+
+sub create_user {
+    my ( $self, %options ) = @_;
+
+    # Prevent attempt to update wrong key
+    my $username = delete $options{username}
+      or croak "username needs to be specified for create_user";
+
+    # password column might not be nullable so set to empty since we fail
+    # auth attempts for empty passwords anyway
+    $self->database->quick_insert( $self->users_table,
+        { $self->users_username_column => $username, password => '', %options }
+    );
 }
 
 =head2 get_user_details $username
@@ -416,7 +439,7 @@ WHERE $user_roles_table.$user_roles_user_id_column = ?
 QUERY
 
     my $sth = $database->prepare($sql)
-        or die "Failed to prepare query - error: " . $database->err_str;
+        or croak "Failed to prepare query - error: " . $database->err_str;
 
     $sth->execute($user->{$self->users_id_column});
 
@@ -434,6 +457,19 @@ QUERY
     # refactor it and use Template::Tiny or something on it.  Or Acme::Bleach.
 }
 
+=head2 set_user_password
 
+=cut
+
+sub set_user_password {
+    my ( $self, $username, $password ) = @_;
+    my $encrypted = $self->encrypt_password($password);
+    my %update = ( $self->users_password_column => $encrypted );
+#    if ( my $pwchanged = $self->users_pwchanged_column ) {
+#        $update{$pwchanged} = DateTime->now;
+#    }
+    $self->database->quick_update( $self->users_table,
+        { $self->users_username_column => $username }, \%update );
+};
 
 1;
