@@ -1,5 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
+use Dancer2::Core::Types qw/ArrayRef/;
+
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
@@ -50,6 +52,20 @@ passwords, RFC2307-style, not plain text (although plain text *is* supported,
 but really not a good idea), and the roles for each user (if you're
 not planning to use roles, omit the roles section from each user entirely).
 
+=head1 ATTRIBUTES
+
+=head2 users
+
+Array reference containing users from configuration.
+
+=cut
+
+has users => (
+    is       => 'ro',
+    isa      => ArrayRef,
+    required => 1,
+);
+
 =head1 METHODS
 
 =head2 authenticate_user $username, $password
@@ -72,7 +88,7 @@ sub get_user_details {
     my ($self, $username) = @_;
     my ($user) = grep {
         $_->{user} eq $username 
-    } @{ $self->realm_settings->{users} };
+    } @{ $self->users };
     return $user;
 }
 
@@ -88,4 +104,3 @@ sub get_user_roles {
 }
 
 1;
-

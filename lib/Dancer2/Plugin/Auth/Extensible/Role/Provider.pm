@@ -1,8 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
 use Crypt::SaltedHash;
-use Safe::Isa;
-use Sub::Quote 'quote_sub';
+use Dancer2::Core::Types qw/InstanceOf/;
 use Moo::Role;
 requires qw(authenticate_user get_user_details get_user_roles);
 
@@ -21,38 +20,17 @@ passwords via Crypt::SaltedHash.
 
 =head1 ATTRIBUTES
 
-=head2 realm_settings
+=head2 plugin
 
-Hash reference containing realm settings.
-
-Required.
-
-=cut
-
-has realm_settings => (
-    is  => 'ro',
-    isa => quote_sub(
-        q{ die "realm_settings must be a hash reference"
-           unless ref( $_[0] ) eq 'HASH' }
-    ),
-    default  => sub { {} },
-    required => 1,
-);
-
-=head2 realm_dsl
-
-Realm DSL object.
+The calling L<Dancer2::Plugin::Auth::Extensible> object.
 
 Required.
 
 =cut
 
 has plugin => (
-    is  => 'ro',
-    isa => quote_sub(
-        q{ die "plugin arg to provider must be a Dancer2::Plugin object"
-           unless $_[0]->$_isa('Dancer2::Plugin') }
-    ),
+    is       => 'ro',
+    isa      => InstanceOf ['Dancer2::Plugin::Auth::Extensible'],
     required => 1,
 );
 

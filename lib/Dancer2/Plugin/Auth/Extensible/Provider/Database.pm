@@ -161,7 +161,9 @@ the following methods:
 
 =over
 
-=item * database
+=item * plugin_database
+
+This corresponds to the C<database> keyword from L<Dancer2::Plugin::Database>.
 
 =back
 
@@ -172,8 +174,143 @@ has dancer2_plugin_database => (
     lazy => 1,
     default =>
       sub { $_[0]->plugin->app->with_plugin('Dancer2::Plugin::Database') },
-    handles  => { database => 'database' },
+    handles  => { plugin_database => 'database' },
     init_arg => undef,
+);
+
+=head2 database
+
+The connected L</plugin_database> using L</db_connection_name>.
+
+=cut
+
+has database => (
+    is => 'ro',
+    lazy => 1,
+    default => sub {
+        my $self = shift;
+        $self->plugin_database($self->db_connection_name);
+    },
+);
+
+=head2 db_connection_name
+
+Optional.
+
+=cut
+
+has db_connection_name => (
+    is => 'ro',
+);
+
+=head2 users_table
+
+Defaults to 'users'.
+
+=cut
+
+has users_table => (
+    is      => 'ro',
+    default => 'users',
+);
+
+=head2 users_id_column
+
+Defaults to 'id'.
+
+=cut
+
+has users_id_column => (
+    is      => 'ro',
+    default => 'id',
+);
+
+=head2 users_username_column
+
+Defaults to 'username'.
+
+=cut
+
+has users_username_column => (
+    is      => 'ro',
+    default => 'username',
+);
+
+=head2 users_password_column
+
+Defaults to 'password'.
+
+=cut
+
+has users_password_column => (
+    is      => 'ro',
+    default => 'password',
+);
+
+=head2 roles_table
+
+Defaults to 'roles'.
+
+=cut
+
+has roles_table => (
+    is      => 'ro',
+    default => 'roles',
+);
+
+=head2 roles_id_column
+
+Defaults to 'id'.
+
+=cut
+
+has roles_id_column => (
+    is      => 'ro',
+    default => 'id',
+);
+
+=head2 roles_role_column
+
+Defaults to 'role'.
+
+=cut
+
+has roles_role_column => (
+    is      => 'ro',
+    default => 'role',
+);
+
+=head2 user_roles_table
+
+Defaults to 'user_roles'.
+
+=cut
+
+has user_roles_table => (
+    is      => 'ro',
+    default => 'user_roles',
+);
+
+=head2 user_roles_user_id_column
+
+Defaults to 'user_id'.
+
+=cut
+
+has user_roles_user_id_column => (
+    is      => 'ro',
+    default => 'user_id',
+);
+
+=head2 user_roles_role_id_column
+
+Defaults to 'role_id'.
+
+=cut
+
+has user_roles_role_id_column => (
+    is      => 'ro',
+    default => 'role_id',
 );
 
 =head1 METHODS
@@ -192,9 +329,8 @@ sub authenticate_user {
     # OK, we found a user, let match_password (from our base class) take care of
     # working out if the password is correct
 
-    my $settings = $self->realm_settings;
-    my $password_column = $settings->{users_password_column} || 'password';
-    return $self->match_password($password, $user->{$password_column});
+    return $self->match_password( $password,
+        $user->{ $self->users_password_column } );
 }
 
 =head2 get_user_details $username
@@ -207,19 +343,12 @@ sub get_user_details {
     my ($self, $username) = @_;
     return unless defined $username;
 
-    my $settings = $self->realm_settings;
-
     # Get our database handle and find out the table and column names:
-    my $database = $self->database($settings->{db_connection_name})
-        or die "No database connection";
-
-    my $users_table     = $settings->{users_table}     || 'users';
-    my $username_column = $settings->{users_username_column} || 'username';
-    my $password_column = $settings->{users_password_column} || 'password';
+    my $database = $self->database;
 
     # Look up the user, 
     my $user = $database->quick_select(
-        $users_table, { $username_column => $username }
+        $self->users_table, { $self->users_username_column => $username }
     );
     if (!$user) {
         $self->plugin->app->log("debug", "No such user $username");
@@ -236,9 +365,7 @@ sub get_user_details {
 sub get_user_roles {
     my ($self, $username) = @_;
 
-    my $settings = $self->realm_settings;
-    # Get our database handle and find out the table and column names:
-    my $database = $self->database($settings->{db_connection_name});
+    my $database = $self->database;
 
     # Get details of the user first; both to check they exist, and so we have
     # their ID to use.
@@ -257,24 +384,23 @@ sub get_user_roles {
 
 
     my $roles_table = $database->quote_identifier(
-        $settings->{roles_table} || 'roles'
+        $self->roles_table
     );
     my $roles_role_id_column = $database->quote_identifier(
-        $settings->{roles_id_column} || 'id'
+        $self->roles_id_column
     );
     my $roles_role_column = $database->quote_identifier(
-        $settings->{roles_role_column} || 'role'
+        $self->roles_role_column
     );
-
 
     my $user_roles_table = $database->quote_identifier(
-        $settings->{user_roles_table} || 'user_roles'
+        $self->user_roles_table
     );
     my $user_roles_user_id_column = $database->quote_identifier(
-        $settings->{user_roles_user_id_column} || 'user_id'
+        $self->user_roles_user_id_column
     );
     my $user_roles_role_id_column = $database->quote_identifier(
-        $settings->{user_roles_role_id_column} || 'role_id'
+        $self->user_roles_role_id_column
     );
 
     # Yes, there's SQL interpolation here; yes, it makes me throw up a little.
@@ -292,7 +418,7 @@ QUERY
     my $sth = $database->prepare($sql)
         or die "Failed to prepare query - error: " . $database->err_str;
 
-    $sth->execute($user->{$settings->{users_id_column} || 'id'});
+    $sth->execute($user->{$self->users_id_column});
 
     my @roles;
     while (my($role) = $sth->fetchrow_array) {

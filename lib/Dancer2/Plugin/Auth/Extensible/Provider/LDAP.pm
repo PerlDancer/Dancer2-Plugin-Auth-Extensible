@@ -27,32 +27,74 @@ This provider requires the following parameters in it's config file:
 
 The LDAP server url. 
 
+=cut
+
+has server => (
+    is => 'ro',
+    required => 1,
+);
+
 =item * basedn
 
 The base dn user for all search queries (e.g. 'dc=ofosos,dc=org').
+
+=cut
+
+has basedn => (
+    is => 'ro',
+    required => 1,
+);
 
 =item * authdn
 
 This must be the distinguished name of a user capable of binding to
 and reading the directory (e.g. 'cn=Administrator,cn=users,dc=ofosos,dc=org').
 
+=cut
+
+has authdn => (
+    is => 'ro',
+    required => 1,
+);
+
 =item * password
 
 The password of above named user
+
+=cut
+
+has password => (
+    is => 'ro',
+    required => 1,
+);
 
 =item * usergroup
 
 The group where users are to be found (e.g. 'cn=users,dc=ofosos,dc=org')
 
+=cut
+
+has usergroup => (
+    is => 'ro',
+    required => 1,
+);
+
 =item * roles
 
 This is a comma separated list of LDAP group objects that are to be queried.
+
+=cut
+
+has roles => (
+    is => 'ro',
+    required => 1,
+);
 
 =back
 
 =cut
 
-=head1 Class methods
+=head1 Class Methods
 
 =over
 
@@ -66,12 +108,10 @@ authenticated, or false if not.
 sub authenticate_user {
     my ($self, $username, $password) = @_;
 
-    my $settings = $self->realm_settings;
-
-    my $ldap = Net::LDAP->new($settings->{server}) or die "$!";
+    my $ldap = Net::LDAP->new($self->server) or die "$!";
 
     my $mesg = $ldap->bind(
-        "cn=" . $username . "," . $settings->{usergroup},
+        "cn=" . $username . "," . $self->usergroup,
         password => $password);
 
     $ldap->unbind;
@@ -90,25 +130,23 @@ user principal name (userPrincipalName) in a hash ref.
 sub get_user_details {
     my ($self, $username) = @_;
 
-    my $settings = $self->realm_settings;
-
-    my $ldap = Net::LDAP->new($settings->{server}) or die "$@";
+    my $ldap = Net::LDAP->new($self->server) or die "$@";
 
     my $mesg = $ldap->bind(
-        $settings->{authdn},
-        password => $settings->{password});
+        $self->authdn,
+        password => $self->password);
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->plugin->app->warning($mesg->error);
     }
 
     $mesg = $ldap->search(
-        base => $settings->{basedn},
+        base => $self->basedn,
         filter => "(&(objectClass=user)(sAMAccountName=" . $username . "))",
         );
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->plugin->app->warning($mesg->error);
     }
 
     my @extract = qw(cn dn name userPrincipalName sAMAccountName);
@@ -119,7 +157,7 @@ sub get_user_details {
             $props{$ex} = $mesg->entry(0)->get_value($ex);
         }
     } else {
-        warning("Error finding user details.");
+        $self->plugin->app->warning("Error finding user details.");
     } 
 
     $ldap->unbind;
@@ -137,28 +175,26 @@ Given a sAMAccountName, return a list of roles that user has.
 sub get_user_roles {
     my ($self, $username) = @_;
 
-    my $settings = $self->realm_settings;
-
-    my $ldap = Net::LDAP->new($settings->{server}) or die "$@";
+    my $ldap = Net::LDAP->new($self->server) or die "$@";
 
     my $mesg = $ldap->bind(
-        $settings->{authdn},
-        password => $settings->{password});
+        $self->authdn,
+        password => $self->password);
 
     if ($mesg->is_error) {
-        warning($mesg->error);
+        $self->plugin->app->warning($mesg->error);
     }
 
-    my @relevantroles = split /,/, $settings->{roles};
+    my @relevantroles = split /,/, $self->roles;
     my @roles = ();
 
     foreach my $role (@relevantroles) {
         $mesg = $ldap->search(
-            base => $settings->{basedn},
-            filter => "(&(objectClass=user)(sAMAccountName=" . $username . ")(memberof=cn=". $role . "," . $settings->{usergroup} . "))",
+            base => $self->basedn,
+            filter => "(&(objectClass=user)(sAMAccountName=" . $username . ")(memberof=cn=". $role . "," . $self->usergroup . "))",
             );
         if ($mesg->is_error) {
-            warning($mesg->error);
+            $self->plugin->app->warning($mesg->error);
         }
         if ($mesg->entries > 0) {
             push @roles, $role;
@@ -169,7 +205,7 @@ sub get_user_roles {
     $ldap->disconnect;
 
     if (@roles == 0) {
-        warning($settings->{roles});
+        $self->plugin->app->warning($settings->{roles});
     }
 
     return \@roles;

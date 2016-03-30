@@ -298,8 +298,9 @@ sub auth_provider {
 
     # OK, we need to find out what provider this realm uses, and get an instance
     # of that provider, configured with the settings from the realm.
-      my $realm_settings = $plugin->realms->{$realm}
+    my $realm_settings = $plugin->realms->{$realm}
       or die "Invalid realm $realm";
+
     my $provider_class = $realm_settings->{provider}
       or die "No provider configured - consult documentation for "
       . __PACKAGE__;
@@ -310,8 +311,8 @@ sub auth_provider {
     use_module($provider_class);
 
     return $plugin->realm_providers->{$realm} = $provider_class->new(
-        realm_settings => $realm_settings,
-        plugin         => $plugin,
+        plugin => $plugin,
+        %$realm_settings,
     );
 }
 
