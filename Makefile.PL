@@ -13,7 +13,6 @@ WriteMakefile(
     PL_FILES            => {},
     BUILD_REQUIRES => {
         'HTTP::Request::Common' => 0,
-        'Module::Load::Conditional' => 0,
         'Path::Tiny' => '0.016',
         'Plack::Test' => 0,
         'Test::Deep' => 0,
