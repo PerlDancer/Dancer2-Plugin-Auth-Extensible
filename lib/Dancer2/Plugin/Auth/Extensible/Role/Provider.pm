@@ -32,6 +32,18 @@ has plugin => (
     required => 1,
 );
 
+=head2 disable_roles
+
+Defaults to the value of L<Dancer2::Plugin::Auth::Extensible/disable_roles>.
+
+=cut
+
+has disable_roles => (
+    is      => 'ro',
+    lazy    => 1,
+    default => sub { $_[0]->plugin->disable_roles },
+);
+
 =head2 encryption_algorithm
 
 The encryption_algorithm used by L</encrypt_password>.
