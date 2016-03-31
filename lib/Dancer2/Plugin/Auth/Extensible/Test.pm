@@ -69,7 +69,7 @@ sub testme {
     test_psgi $app, _test_base();
 
     foreach my $name (
-        qw/ create_user update_user password_reset user_password
+        qw/ create_user update_user update_roles password_reset user_password
         lastlogin expired reset_code/
       )
     {
@@ -814,6 +814,32 @@ sub _test_update_user {
                     "Name is now Wiltshire Apples $realm"
                 );
             }
+        }
+    }
+};
+
+sub _test_no_update_user {
+    note "NOTE: not testing update_user";
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+    }
+};
+
+
+# update_roles
+# This is pretty much DBIC provider at the moment until D2PAE itself defines
+# how role changes can be performed.
+
+sub _test_update_roles {
+
+    note "test update_user";
+
+    my $sub = sub {
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+        my $cb = shift;
+
+        for my $realm (qw/config1 config2/) {
 
             # Now we're going to update the current user and add a role
 
@@ -865,12 +891,12 @@ sub _test_update_user {
                 is( $res->code, 302,
                     "[GET /cider] Correct code for realm $realm" );
 
-                $trap->read; # clear logs
+                diag explain $trap->read; # clear logs
 
                 # Now add the role
                 $res = $cb->( GET "/update_user_role/$realm" );
 
-                $trap->read; # clear logs
+                diag explain $trap->read; # clear logs
 
                 # And see whether we're now allowed access
                 $res = $cb->( GET '/cider', @headers );
@@ -884,8 +910,8 @@ sub _test_update_user {
     }
 };
 
-sub _test_no_update_user {
-    note "NOTE: not testing update_user";
+sub _test_no_update_roles {
+    note "NOTE: not testing update_roles";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
