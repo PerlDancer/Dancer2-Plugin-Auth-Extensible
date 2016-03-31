@@ -2,20 +2,19 @@ use strict;
 use warnings;
 
 use Test::More;
-use Module::Load::Conditional 'check_install';
 use Dancer2::Plugin::Auth::Extensible::Test;
 
 BEGIN {
     $ENV{DANCER_CONFDIR}     = 't/lib';
     $ENV{DANCER_ENVIRONMENT} = 'provider-database';
-    foreach my $module (qw/DBD::SQLite Dancer2::Plugin::Database/) {
-        my $check = check_install( module => $module );
-        if ( !$check ) {
-            my $msg = "$module required to run these tests";
-            die $msg if $ENV{RELEASE_TESTING};
-            plan skip_all => $msg;
-        }
-    }
+
+    eval "use Dancer2::Plugin::Database 2.16";
+    plan skip_all =>
+      "Dancer2::Plugin::Database 2.16 required to run these tests"
+      if $@;
+
+    eval "use DBD::SQLite";
+    plan skip_all => "DBD::SQLite required to run these tests" if $@;
 }
 
 {
@@ -43,6 +42,7 @@ BEGIN {
 my $app = Dancer2->runner->psgi_app;
 is( ref $app, 'CODE', 'Got app' );
 
-Dancer2::Plugin::Auth::Extensible::Test::testme( $app, 'base', 'create_user' );
+Dancer2::Plugin::Auth::Extensible::Test::testme( $app, 'base', 'create_user',
+    'update_user' );
 
 done_testing;

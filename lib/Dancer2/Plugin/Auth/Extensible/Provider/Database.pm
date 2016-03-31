@@ -457,6 +457,21 @@ QUERY
     # refactor it and use Template::Tiny or something on it.  Or Acme::Bleach.
 }
 
+=head2 set_user_details
+
+=cut
+
+sub set_user_details {
+    my ($self, $username, %update) = @_;
+
+    croak "Username to update needs to be specified" unless $username;
+
+    my $user = $self->get_user_details($username) or return;
+
+    $self->database->quick_update( $self->users_table,
+        { $self->users_username_column => $username }, \%update );
+}
+
 =head2 set_user_password
 
 =cut
@@ -465,11 +480,7 @@ sub set_user_password {
     my ( $self, $username, $password ) = @_;
     my $encrypted = $self->encrypt_password($password);
     my %update = ( $self->users_password_column => $encrypted );
-#    if ( my $pwchanged = $self->users_pwchanged_column ) {
-#        $update{$pwchanged} = DateTime->now;
-#    }
-    $self->database->quick_update( $self->users_table,
-        { $self->users_username_column => $username }, \%update );
+    $self->set_user_details( $username, %update );
 };
 
 1;
