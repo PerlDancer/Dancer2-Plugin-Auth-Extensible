@@ -439,19 +439,6 @@ sub _test_base {
                 'Correct roles for other user in current realm' );
         }
 
-        # check roles: this user has no roles
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/roles', @headers );
-
-            is($res->code, 200, 'get /roles is 200 - this user has no roles')
-                or diag explain $trap->read;
-
-            is ($res->content, '', 'Correct roles for logged in user');
-        }
-
         # Now, log out again
 
         {
