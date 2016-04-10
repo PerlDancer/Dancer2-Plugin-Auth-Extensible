@@ -21,7 +21,7 @@ WriteMakefile(
     },
     PREREQ_PM => {
         'Carp'              => 0,
-        'Dancer2'           => 0.15,
+        'Dancer2'           => '0.166002',
         'Dancer2::Core::Types' => 0,
         'Dancer2::Plugin'   => 0,
         'Module::Runtime'   => 0,
