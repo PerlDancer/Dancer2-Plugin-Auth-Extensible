@@ -1,8 +1,8 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
-0.600 Sat  9 Apr 17:57:59 CEST 2016
+0.600 Tue May 31 15:38:56 2016 CEST
 
-	[ENHANCEMENTS]
+    [ENHANCEMENTS]
 
     * Major update for compatibility with plugin2 (Peter Mottram).
       For plugin2 details see: https://github.com/PerlDancer/Dancer2/pull/1010
