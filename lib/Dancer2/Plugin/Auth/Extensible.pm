@@ -18,43 +18,37 @@ use Dancer2::Plugin;
 has denied_page => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '/login/denied' },
+    from_config => sub { '/login/denied' },
 );
 
 has disable_roles => (
     is          => 'ro',
     isa         => Bool,
-    from_config => 1,
-    default     => sub { 0 },
+    from_config => sub { 0 },
 );
 
 has exit_page => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '/' },
+    from_config => sub { '/' },
 );
 
 has login_page => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '/login' },
+    from_config => sub { '/login' },
 );
 
 has login_page_handler => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_login_page' },
+    from_config => sub { '_default_login_page' },
 );
 
 has logout_page => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '/logout' },
+    from_config => sub { '/logout' },
 );
 
 has no_login_handler => (
@@ -67,100 +61,86 @@ has no_login_handler => (
 has mailer => (
     is          => 'ro',
     isa         => HashRef,
-    from_config => 1,
-    default     => sub { '' },
+    from_config => sub { '' },
 );
 
 has mail_from => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '' },
+    from_config => sub { '' },
 );
 
 has no_default_pages => (
     is          => 'ro',
     isa         => Bool,
-    from_config => 1,
-    default     => sub { 0 },
+    from_config => sub { 0 },
 );
 
 has password_generator => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_password_generator' },
+    from_config => sub { '_default_password_generator' },
 );
 
 has password_reset_send_email => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_email_password_reset' },
+    from_config => sub { '_default_email_password_reset' },
 );
 
 has password_reset_text => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '' },
+    from_config => sub { '' },
 );
 
 has permission_denied_handler => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_permission_denied_handler' },
+    from_config => sub { '_default_permission_denied_handler' },
 );
 
 has permission_denied_page_handler => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_permission_denied_page' },
+    from_config => sub { '_default_permission_denied_page' },
 );
 
 has realms => (
     is          => 'ro',
     isa         => HashRef,
-    from_config => 1,
-    default     => sub { {} },
+    from_config => sub { {} },
 );
 
 has record_lastlogin => (
     is          => 'ro',
     isa         => Bool,
-    from_config => 1,
-    default     => sub { 0 },
+    from_config => sub { 0 },
 );
 
 has reset_password_handler => (
     is          => 'ro',
     isa         => Bool,
-    from_config => 1,
-    default     => sub { 0 },
+    from_config => sub { 0 },
     plugin_keyword => 1,
 );
 
 has user_home_page => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '/' },
+    from_config => sub { '/' },
 );
 
 has welcome_send => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '_default_welcome_send' },
+    from_config => sub { '_default_welcome_send' },
 );
 
 has welcome_text => (
     is          => 'ro',
     isa         => Str,
-    from_config => 1,
-    default     => sub { '' },
+    from_config => sub { '' },
 );
 
 #
