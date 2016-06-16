@@ -224,7 +224,6 @@ sub BUILD {
             regexp => qr!^$login_page/?([\w]{32})?$!,
             code   => sub {
                 my $app = shift;
-                my $plugin = $app->with_plugin('Auth::Extensible');
 
                 if ( $plugin->logged_in_user ) {
                     $app->redirect( $app->request->params->{return_url}
@@ -253,7 +252,6 @@ sub BUILD {
             regexp => qr!^$denied_page$!,
             code   => sub {
                 my $app = shift;
-                my $plugin = $app->with_plugin('Auth::Extensible');
                 $app->response->status(403);
                 no strict 'refs';
                 return &{ $plugin->permission_denied_page_handler }($plugin);
