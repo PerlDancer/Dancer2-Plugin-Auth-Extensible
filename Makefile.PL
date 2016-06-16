@@ -36,7 +36,7 @@ WriteMakefile(
         'Session::Token'    => 0,
         'Try::Tiny'         => 0,
     },
-    EXE_FILES => [ 'bin/generate-crypted-password' ],
+    EXE_FILES => [ 'bin/dancer2-generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
     clean               => { FILES => 'Dancer2-Plugin-Auth-Extensible-*' },
     META_MERGE => {
