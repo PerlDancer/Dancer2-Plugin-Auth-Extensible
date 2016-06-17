@@ -8,6 +8,21 @@ use namespace::clean;
 
 our $VERSION = '0.613';
 
+{
+    package User;
+    use Moo;
+    with "Dancer2::Plugin::Auth::Extensible::Role::User";
+    use namespace::clean;
+
+    has '+username' => (
+        init_arg => 'user',
+    );
+
+    has '+password' => (
+        init_arg => 'pass',
+    );
+}
+
 =head1 NAME 
 
 Dancer2::Plugin::Auth::Extensible::Provider::Config - example auth provider using app config
@@ -64,6 +79,9 @@ has users => (
     is       => 'ro',
     isa      => ArrayRef,
     required => 1,
+    coerce   => sub {
+        [ map { User->new($_) } @{ $_[0] } ];
+    },
 );
 
 =head1 METHODS
@@ -74,8 +92,8 @@ has users => (
 
 sub authenticate_user {
     my ($self, $username, $password) = @_;
-    my $user_details = $self->get_user_details($username) or return;
-    return $self->match_password($password, $user_details->{pass});
+    my $user = $self->get_user_details($username) or return;
+    return $user->check_password($password);
 }
 
 =head2 get_user_details $username
@@ -87,7 +105,7 @@ sub authenticate_user {
 sub get_user_details {
     my ($self, $username) = @_;
     my ($user) = grep {
-        $_->{user} eq $username 
+        $_->username eq $username 
     } @{ $self->users };
     return $user;
 }
@@ -99,8 +117,8 @@ sub get_user_details {
 sub get_user_roles {
     my ($self, $username) = @_;
 
-    my $user_details = $self->get_user_details($username) or return;
-    return $user_details->{roles};
+    my $user = $self->get_user_details($username) or return;
+    return $user->roles;
 }
 
 1;
