@@ -3,9 +3,10 @@ package    # hide from PAUSE
 
 use strict;
 use warnings;
+use Carp;
 
 our $VERSION = '0.600';
 
-die "Your Dancer2::Plugin::Auth::Extensible provider needs to be upgraded.\nPlease upgrade to a provider that requires Dancer2::Plugin::Auth::Extensible v0.6 or greater.\n";
+croak "Your Dancer2::Plugin::Auth::Extensible provider needs to be upgraded.\nPlease upgrade to a provider that requires Dancer2::Plugin::Auth::Extensible v0.6 or greater.\n";
 
 1;

@@ -278,10 +278,10 @@ sub auth_provider {
     # OK, we need to find out what provider this realm uses, and get an instance
     # of that provider, configured with the settings from the realm.
     my $realm_settings = $plugin->realms->{$realm}
-      or die "Invalid realm $realm";
+      or croak "Invalid realm $realm";
 
     my $provider_class = $realm_settings->{provider}
-      or die "No provider configured - consult documentation for "
+      or croak "No provider configured - consult documentation for "
       . __PACKAGE__;
 
     if ( $provider_class !~ /::/ ) {
@@ -328,7 +328,7 @@ sub create_user {
     my %options = @_;
 
     my @all_realms = keys %{ $plugin->realms };
-    die "Realm must be specified when more than one realm configured"
+    croak "Realm must be specified when more than one realm configured"
       if !$options{realm} && @all_realms > 1;
 
     my $realm = delete $options{realm} || $all_realms[0];
@@ -416,7 +416,7 @@ sub password_reset_send {
       : ( keys %{ $plugin->realms } );
 
     my $username = $options{username}
-      or die "username must be passed to password_reset_send";
+      or croak "username must be passed to password_reset_send";
 
     foreach my $realm (@realms_to_check) {
         my $this_result;
@@ -510,7 +510,7 @@ sub update_user {
     my $session = $plugin->app->session;
 
     my @all_realms = keys %{ $plugin->realms };
-    die "Realm must be specified when more than one realm configured"
+    croak "Realm must be specified when more than one realm configured"
       if !$update{realm} && @all_realms > 1;
 
     my $realm    = delete $update{realm} || $all_realms[0];
@@ -585,7 +585,7 @@ sub user_password {
     else {
         if ( !$params{username} ) {
             $username = $plugin->app->session->read('logged_in_user')
-              or die "No username specified and no logged-in user";
+              or croak "No username specified and no logged-in user";
             $realm = $plugin->app->session->read('logged_in_user_realm');
         }
         else {
@@ -875,7 +875,7 @@ sub _email_mail_message {
         data        => $params{html},
       ) if ( $params{html} );
 
-    @parts or die "No plain or HTML email text supplied";
+    @parts or croak "No plain or HTML email text supplied";
 
     my $content_type = @parts > 1 ? 'multipart/alternative' : $parts[0]->type;
 
@@ -891,10 +891,10 @@ sub _email_mail_message {
 sub _send_email {
     my $plugin = shift;
 
-    my $mailer = $plugin->mailer or die "No mailer configured";
+    my $mailer = $plugin->mailer or croak "No mailer configured";
 
     my $module = $mailer->{module}
-      or die "No email module specified for mailer";
+      or croak "No email module specified for mailer";
 
     if ( $module eq 'Mail::Message' ) {
 
@@ -903,7 +903,7 @@ sub _send_email {
         return $plugin->_email_mail_message(@_);
     }
     else {
-        die "No support for $module. Please submit a PR!";
+        croak "No support for $module. Please submit a PR!";
     }
 }
 
@@ -920,7 +920,7 @@ sub _try_realms {
     for my $realm ( keys %{ $plugin->realms } ) {
         my $provider = $plugin->auth_provider($realm);
         if ( !$provider->can($method) ) {
-            die "Provider $provider does not provide a $method method!";
+            croak "Provider $provider does not provide a $method method!";
         }
         if ( defined( my $result = $provider->$method(@args) ) ) {
             return $result;
@@ -964,7 +964,7 @@ sub _post_login_route {
         && $app->request->param('submit_reset') )
     {
         my $username = $app->request->param('username_reset');
-        die "Attempt to pass reference to reset blocked" if ref $username;
+        croak "Attempt to pass reference to reset blocked" if ref $username;
         $app->password_reset_send( username => $username );
         $app->forward(
             $plugin->login_page,
@@ -1008,7 +1008,7 @@ sub _post_login_route {
         if ( ref $_ ) {
 
             # TODO: handle more cleanly
-            die "Attempt to pass a reference as username/password blocked";
+            croak "Attempt to pass a reference as username/password blocked";
         }
     }
 

@@ -11,6 +11,7 @@ Dancer2::Plugin::Auth::Extensible::Test - test suite for Auth::Extensible plugin
 use warnings;
 use strict;
 
+use Carp;
 use Test::More;
 use Test::Deep;
 use Plack::Test;
@@ -908,7 +909,7 @@ sub _test_no_update_roles {
 # password_reset
 
 sub _test_password_reset {
-    die "FIXME: no password_reset tests";
+    croak "FIXME: no password_reset tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -926,7 +927,7 @@ sub _test_no_password_reset {
 # user_password
 
 sub _test_user_password {
-    die "FIXME: no user_password tests";
+    croak "FIXME: no user_password tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -944,7 +945,7 @@ sub _test_no_user_password {
 # lastlogin
 
 sub _test_lastlogin {
-    die "FIXME: no lastlogin tests";
+    croak "FIXME: no lastlogin tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;
@@ -962,7 +963,7 @@ sub _test_no_lastlogin {
 # expired
 
 sub _test_expired {
-    die "FIXME: no expired tests";
+    croak "FIXME: no expired tests";
     my $sub = sub {
         my $trap = TestApp->dancer_app->logger_engine->trapper;
         my $cb = shift;

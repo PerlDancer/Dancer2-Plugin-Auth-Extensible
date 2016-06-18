@@ -1,5 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::LDAP;
 
+use Carp;
 use Net::LDAP;
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
@@ -108,7 +109,7 @@ authenticated, or false if not.
 sub authenticate_user {
     my ($self, $username, $password) = @_;
 
-    my $ldap = Net::LDAP->new($self->server) or die "$!";
+    my $ldap = Net::LDAP->new($self->server) or croak "$!";
 
     my $mesg = $ldap->bind(
         "cn=" . $username . "," . $self->usergroup,
@@ -130,7 +131,7 @@ user principal name (userPrincipalName) in a hash ref.
 sub get_user_details {
     my ($self, $username) = @_;
 
-    my $ldap = Net::LDAP->new($self->server) or die "$@";
+    my $ldap = Net::LDAP->new($self->server) or croak "$@";
 
     my $mesg = $ldap->bind(
         $self->authdn,
@@ -175,7 +176,7 @@ Given a sAMAccountName, return a list of roles that user has.
 sub get_user_roles {
     my ($self, $username) = @_;
 
-    my $ldap = Net::LDAP->new($self->server) or die "$@";
+    my $ldap = Net::LDAP->new($self->server) or croak "$@";
 
     my $mesg = $ldap->bind(
         $self->authdn,
