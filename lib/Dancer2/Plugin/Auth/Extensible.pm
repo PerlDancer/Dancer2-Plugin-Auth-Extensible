@@ -965,7 +965,7 @@ sub _post_login_route {
     {
         my $username = $app->request->param('username_reset');
         croak "Attempt to pass reference to reset blocked" if ref $username;
-        $app->password_reset_send( username => $username );
+        $plugin->password_reset_send( username => $username );
         $app->forward(
             $plugin->login_page,
             { reset_sent => 1 },
