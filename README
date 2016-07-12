@@ -73,17 +73,19 @@ AUTHENTICATION PROVIDERS
 
       Authenticates users stored in a database table
 
+    Dancer2::Plugin::Auth::Extensible::Provider::Config
+
+      Authenticates users stored in the app's config
+
+    The following external providers are also available on the CPAN:
+
     Dancer2::Plugin::Auth::Extensible::Provider::DBIC
 
       Authenticates users stored in a database table using
       Dancer2::Plugin::DBIC
 
-    Dancer2::Plugin::Auth::Extensible::Provider::Config
-
-      Authenticates users stored in the app's config
-
-    Need to write your own? Just subclass
-    Dancer2::Plugin::Auth::Extensible::Provider::Base and implement the
+    Need to write your own? Just create a new provider class which consumes
+    Dancer2::Plugin::Auth::Extensible::Role::Provider and implements the
     required methods, and you're good to go!
 
 CONTROLLING ACCESS TO ROUTES
@@ -180,9 +182,8 @@ CONTROLLING ACCESS TO ROUTES
         };
         
         any '/logout' => sub {
-            session->destroy;
+            app->destroy_session;
         };
-        
 
     If you want to use the default post '/login' and any '/logout' routes
     you can configure them. See below.
@@ -307,7 +308,8 @@ CONTROLLING ACCESS TO ROUTES
       with the username to be updated, followed by a hash of the values to
       be updated. Note that whilst the password can be updated using this
       method, any new value will be stored directly into the provider
-      as-is, not encrypted. It is recommended to use user_password instead.
+      as-is, not encrypted. It is recommended to use "user_password"
+      instead.
 
       If only one realm is configured then this will be used to search for
       the user. Otherwise, the realm must be specified with the realm key.
@@ -384,8 +386,9 @@ CONTROLLING ACCESS TO ROUTES
 
     password_reset_send
 
-      password_reset_send sends a user an email with a password reset link.
-      Along with user_password, it allows a user to reset their password.
+      "password_reset_send" sends a user an email with a password reset
+      link. Along with "user_password", it allows a user to reset their
+      password.
 
       The function must be called with the key username and a value that is
       the username. The username specified will be sent an email with a
@@ -667,6 +670,10 @@ AUTHOR
 
     Stefan Hornburg (Racke), <racke at linuxia.de>
 
+    Conversion to Dancer2's new plugin system in 2016 by:
+
+    Peter Mottram (SysPete), <peter at sysnix.com>
+
 BUGS / FEATURE REQUESTS
 
     This is an early version; there may still be bugs present or features
@@ -701,9 +708,11 @@ ACKNOWLEDGEMENTS
 
     Evan Brown (GH #20, #32).
 
+    Jason Lewis (Unix provider problem).
+
 LICENSE AND COPYRIGHT
 
-    Copyright 2012-13 David Precious.
+    Copyright 2012-16 David Precious.
 
     This program is free software; you can redistribute it and/or modify it
     under the terms of either: the GNU General Public License as published

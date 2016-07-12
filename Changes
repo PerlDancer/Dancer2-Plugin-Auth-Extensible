@@ -1,5 +1,23 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.601 Tue Jul 12 16:23:22 2016 CEST
+
+    [BUG FIXES]
+
+    * Don't localise $username in user_password when checking reset code.
+      This caused user_password( code => '...') to always fail (Peter Mottram).
+    * Use $plugin instead of $app to call password_reset_send method
+      (Roman Studenikin, Peter Mottram, GH #50).
+    * Rename generate-crypted-password (Henk van Oers, Peter Mottram, GH #30).
+
+    [ENHANCEMENTS]
+
+    * Use Carp::croak instead of die for better stack traces (Peter Mottram).
+    * Added `use strict` for CPANTS Kwalitee score (Guillermo O. Freschi).
+    * Added MIN_PERL_VERSION to Makefile.PL (Guillermo O. Freschi).
+    * Simplify use of from_config and default in plugin attributes (Peter Mottram).
+    * Use current plugin in route setup (Peter Mottram).
+
 0.600 Tue May 31 15:38:56 2016 CEST
 
     [ENHANCEMENTS]
