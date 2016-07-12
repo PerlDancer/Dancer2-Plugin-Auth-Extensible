@@ -564,7 +564,7 @@ sub user_password {
             my $provider = $plugin->auth_provider($realm_check);
 
             # Realm may not support get_user_by_code
-            my $username = try {
+            $username = try {
                 $provider->get_user_by_code($code);
             }
             catch {
