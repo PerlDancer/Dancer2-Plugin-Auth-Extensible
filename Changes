@@ -1,5 +1,24 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+
+    [ENHANCEMENTS]
+
+    * Call Dancer2's change_session_id on successful login. This method has
+      not yet been merged into Dancer2 core but we want to be ready for it
+      (Peter Mottram).
+
+    [BUG FIXES]
+
+    * Avoid memory leaks in BUILD by passing weakened ref to plugin into
+      add_route callbacks (Peter Mottram).
+    * Call $app->session instead of $app->app->session in _post_login_route
+      (Peter Mottram).
+
+    [MISC]
+
+    * Creation of temp lexical vars adds overhead so remove some where not
+      needed (Peter Mottram).
+
 0.601 Tue Jul 12 16:23:22 2016 CEST
 
     [BUG FIXES]
