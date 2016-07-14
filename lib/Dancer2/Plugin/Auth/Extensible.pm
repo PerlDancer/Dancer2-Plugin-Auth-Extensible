@@ -7,6 +7,7 @@ use warnings;
 use Carp;
 use Dancer2::Core::Types qw(Bool HashRef Str);
 use Module::Runtime qw(use_module);
+use Scalar::Util;
 use Session::Token;
 use Try::Tiny;
 use Dancer2::Plugin;
@@ -198,6 +199,8 @@ sub BUILD {
         my $login_page  = $plugin->login_page;
         my $denied_page = $plugin->denied_page;
 
+        Scalar::Util::weaken( my $weak_plugin = $plugin );
+
         # Match optional reset code, but not "denied"
         $app->add_route(
             method => 'get',
@@ -205,16 +208,16 @@ sub BUILD {
             code   => sub {
                 my $app = shift;
 
-                if ( $plugin->logged_in_user ) {
+                if ( $weak_plugin->logged_in_user ) {
                     $app->redirect( $app->request->params->{return_url}
-                          || $plugin->user_home_page );
+                          || $weak_plugin->user_home_page );
                 }
 
                 # Reset password code submitted?
                 my ($code) = $app->request->splat;
 
-                if (   $plugin->reset_password_handler
-                    && $plugin->user_password(code => $code ) )
+                if (   $weak_plugin->reset_password_handler
+                    && $weak_plugin->user_password(code => $code ) )
                 {
                     $app->request->params->{password_code_valid} = 1;
                 }
@@ -223,7 +226,7 @@ sub BUILD {
                 }
 
                 no strict 'refs';
-                return &{ $plugin->login_page_handler }($plugin);
+                return &{ $weak_plugin->login_page_handler }($weak_plugin);
             },
         );
 
@@ -234,7 +237,7 @@ sub BUILD {
                 my $app = shift;
                 $app->response->status(403);
                 no strict 'refs';
-                return &{ $plugin->permission_denied_page_handler }($plugin);
+                return &{ $weak_plugin->permission_denied_page_handler }($weak_plugin);
             },
         );
     }
@@ -1022,8 +1025,8 @@ sub _post_login_route {
       $plugin->authenticate_user( $username, $password, $auth_realm );
 
     if ($success) {
-        $app->app->session->write( logged_in_user       => $username );
-        $app->app->session->write( logged_in_user_realm => $realm );
+        $app->session->write( logged_in_user       => $username );
+        $app->session->write( logged_in_user_realm => $realm );
         $app->log( core => "Realm is $realm" );
         $app->redirect( $app->request->params->{return_url}
               || $plugin->user_home_page );
