@@ -509,9 +509,6 @@ sub update_current_user {
 sub update_user {
     my ( $plugin, $username, %update ) = @_;
 
-    my $request = $plugin->app->request;
-    my $session = $plugin->app->session;
-
     my @all_realms = keys %{ $plugin->realms };
     croak "Realm must be specified when more than one realm configured"
       if !$update{realm} && @all_realms > 1;
@@ -519,8 +516,8 @@ sub update_user {
     my $realm    = delete $update{realm} || $all_realms[0];
     my $provider = $plugin->auth_provider($realm);
     my $updated  = $provider->set_user_details( $username, %update );
-    my $cur_user = $session->read('logged_in_user');
-    $request->vars->{logged_in_user_hash} = $updated
+    my $cur_user = $plugin->app->session->read('logged_in_user');
+    $plugin->app->request->vars->{logged_in_user_hash} = $updated
       if $cur_user && $cur_user eq $username;
     $updated;
 }
@@ -528,14 +525,12 @@ sub update_user {
 sub user_has_role {
     my $plugin = shift;
 
-    my $session = $plugin->app->session;
-
     my ( $username, $want_role );
     if ( @_ == 2 ) {
         ( $username, $want_role ) = @_;
     }
     else {
-        $username  = $session->read('logged_in_user');
+        $username  = $plugin->app->session->read('logged_in_user');
         $want_role = shift;
     }
 
@@ -635,9 +630,9 @@ sub user_password {
 
 sub user_roles {
     my ( $plugin, $username, $realm ) = @_;
-    my $session = $plugin->app->session;
 
-    $username = $session->read('logged_in_user') unless defined $username;
+    $username = $plugin->app->session->read('logged_in_user')
+      unless defined $username;
 
     my $search_realm = ( $realm ? $realm : '' );
 
