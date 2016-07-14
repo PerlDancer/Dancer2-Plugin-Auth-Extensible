@@ -1020,6 +1020,11 @@ sub _post_login_route {
       $plugin->authenticate_user( $username, $password, $auth_realm );
 
     if ($success) {
+
+        # change session ID if we have a new enough D2 version with support
+        $plugin->app->change_session_id
+          if $plugin->app->can('change_session_id');
+
         $app->session->write( logged_in_user       => $username );
         $app->session->write( logged_in_user_realm => $realm );
         $app->log( core => "Realm is $realm" );
