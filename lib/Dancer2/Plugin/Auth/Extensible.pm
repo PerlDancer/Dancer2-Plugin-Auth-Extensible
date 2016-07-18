@@ -5,7 +5,7 @@ our $VERSION = '0.613';
 use strict;
 use warnings;
 use Carp;
-use Dancer2::Core::Types qw(Bool HashRef Str);
+use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
 use Module::Runtime qw(use_module);
 use Scalar::Util;
 use Session::Token;
@@ -108,10 +108,39 @@ has permission_denied_page_handler => (
 );
 
 has realms => (
-    is          => 'ro',
-    isa         => HashRef,
-    from_config => sub { {} },
+    is      => 'ro',
+    isa     => ArrayRef,
+    default => sub {
+        my @realms;
+        while ( my ( $name, $realm ) = each %{ $_[0]->config->{realms} } ) {
+            $realm->{priority} ||= 0;
+            push @realms, { name => $name, %$realm };
+        };
+        return [ sort { $b->{priority} <=> $a->{priority} } @realms ];
+    },
 );
+
+has realm_names => (
+    is      => 'lazy',
+    isa     => ArrayRef,
+    default => sub {
+        return [ map { $_->{name} } @{ $_[0]->realms } ];
+    },
+);
+
+has realm_count => (
+    is      => 'lazy',
+    isa     => Int,
+    default => sub { return scalar @{ $_[0]->realms } },
+);
+
+# return realm config hash reference by name
+sub realm {
+    my ( $self, $name ) = @_;
+    croak "realm name not provided" unless $name;
+    my ($realm) = grep { $_->{name} eq $name } @{ $self->realms };
+    return $realm;
+}
 
 has record_lastlogin => (
     is          => 'ro',
@@ -184,15 +213,14 @@ sub BUILD {
     my $plugin = shift;
     my $app    = $plugin->app;
 
-    my @realms = keys %{ $plugin->realms }
-      or warn
-      "No Auth::Extensible realms configured with which to authenticate user";
+    warn "No Auth::Extensible realms configured with which to authenticate user"
+      unless $plugin->realm_count;
 
     # Force all providers to load whilst we have access to the full dsl.
     # If we try and load later, then if the provider is using other
     # keywords (such as schema) they will not be available from the dsl.
-    for my $realm (@realms) {
-        $plugin->auth_provider($realm);
+    for my $realm ( @{ $plugin->realm_names } ) {
+        $plugin->auth_provider( $realm );
     }
 
     if ( !$plugin->no_default_pages ) {
@@ -281,7 +309,7 @@ sub auth_provider {
 
     # OK, we need to find out what provider this realm uses, and get an instance
     # of that provider, configured with the settings from the realm.
-    my $realm_settings = $plugin->realms->{$realm}
+    my $realm_settings = $plugin->realm($realm)
       or croak "Invalid realm $realm";
 
     my $provider_class = $realm_settings->{provider}
@@ -305,7 +333,7 @@ sub authenticate_user {
     $plugin->execute_plugin_hook( 'before_authenticate_user',
         { username => $username, password => $password, realm => $realm } );
 
-    my @realms_to_check = $realm ? ($realm) : ( keys %{ $plugin->realms } );
+    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
     for my $realm (@realms_to_check) {
         $plugin->app->log( debug =>
@@ -334,11 +362,10 @@ sub create_user {
     my $plugin  = shift;
     my %options = @_;
 
-    my @all_realms = keys %{ $plugin->realms };
     croak "Realm must be specified when more than one realm configured"
-      if !$options{realm} && @all_realms > 1;
+      if !$options{realm} && $plugin->realm_count > 1;
 
-    my $realm = delete $options{realm} || $all_realms[0];
+    my $realm = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
 
     my $provider = $plugin->auth_provider($realm);
@@ -370,7 +397,7 @@ sub create_user {
 sub get_user_details {
     my ( $plugin, $username, $realm ) = @_;
 
-    my @realms_to_check = $realm ? ($realm) : ( keys %{ $plugin->realms } );
+    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
     for my $realm (@realms_to_check) {
         $plugin->app->log(
@@ -420,7 +447,7 @@ sub password_reset_send {
     my @realms_to_check =
       $options{realm}
       ? ( $options{realm} )
-      : ( keys %{ $plugin->realms } );
+      : @{ $plugin->realm_names };
 
     my $username = $options{username}
       or croak "username must be passed to password_reset_send";
@@ -513,11 +540,10 @@ sub update_current_user {
 sub update_user {
     my ( $plugin, $username, %update ) = @_;
 
-    my @all_realms = keys %{ $plugin->realms };
     croak "Realm must be specified when more than one realm configured"
-      if !$update{realm} && @all_realms > 1;
+      if !$update{realm} && $plugin->realm_count > 1;
 
-    my $realm    = delete $update{realm} || $all_realms[0];
+    my $realm    = delete $update{realm} || $plugin->realm_name->[0];
     my $provider = $plugin->auth_provider($realm);
     my $updated  = $provider->set_user_details( $username, %update );
     my $cur_user = $plugin->app->session->read('logged_in_user');
@@ -557,7 +583,7 @@ sub user_password {
     my @realms_to_check =
       $params{realm}
       ? ( $params{realm} )
-      : ( keys %{ $plugin->realms } );
+      : @{ $plugin->realm_names };
 
     # Expect either a code, username or nothing (for logged-in user)
     if ( exists $params{code} ) {
@@ -919,7 +945,7 @@ sub _send_email {
 # FIXME: this is not used anywhere - what is it for?
 sub _try_realms {
     my ( $plugin, $method, @args );
-    for my $realm ( keys %{ $plugin->realms } ) {
+    for my $realm ( @{ $plugin->realm_names } ) {
         my $provider = $plugin->auth_provider($realm);
         if ( !$provider->can($method) ) {
             croak "Provider $provider does not provide a $method method!";
@@ -1727,8 +1753,12 @@ In your application's configuation file:
             # you wish to use)
             realms:
                 realm_one:
+                    priority: 3 # Defaults to 0. Realms are checked in descending order
                     provider: Database
                         db_connection_name: 'foo'
+                realm_two:
+                    priority: 0 # Will be checked after realm_one
+                    provider: Config
 
 B<Please note> that you B<must> have a session provider configured.  The 
 authentication framework requires sessions in order to track information about 

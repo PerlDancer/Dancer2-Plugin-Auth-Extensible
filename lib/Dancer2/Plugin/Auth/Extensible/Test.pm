@@ -165,6 +165,38 @@ sub _test_base {
               or diag explain $trap->read;
         }
 
+        SKIP: {
+            skip "priorities not defined for this provider test", 1
+              if !defined $ENV{DANCER_ENVIRONMENT}
+              || $ENV{DANCER_ENVIRONMENT} ne 'provider-config';
+
+            # test realm priority
+            # TODO: find out if we can run these tests by poking the 
+            # provider rather than having it hard-coded.
+            my $logs = $trap->read;
+            cmp_deeply(
+                $logs,
+                [
+                    {
+                        formatted => ignore(),
+                        level     => 'debug',
+                        message   => re(qr/realm config2/)
+                    },
+                    {
+                        formatted => ignore(),
+                        level     => 'debug',
+                        message   => re(qr/realm config3/)
+                    },
+                    {
+                        formatted => ignore(),
+                        level     => 'debug',
+                        message   => re(qr/realm config1/)
+                    },
+                ],
+                "Realms checked in the correct order"
+            ) or diag explain $logs;
+        }
+
         my @headers;
 
         # ... and that we can log in with real details

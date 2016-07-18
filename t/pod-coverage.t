@@ -27,7 +27,7 @@ pod_coverage_ok(
             qw/
               BUILDARGS BUILD ClassHooks PluginKeyword dancer_app
               execute_plugin_hook hook keywords on_plugin_import plugin_args
-              plugin_setting realm_providers register register_hook
+              plugin_setting realms realm realm_providers register register_hook
               register_plugin request var
               /
         ]

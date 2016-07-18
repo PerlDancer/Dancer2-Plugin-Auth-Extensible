@@ -17,8 +17,15 @@ plugins:
                           - CiderDrinker
             config2:
                 provider: Config
+                priority: 10
                 users:
                     - user: burt
                       pass: bacharach
                     - user: hashedpassword
                       pass: "{SSHA}+2u1HpOU7ak6iBR6JlpICpAUvSpA/zBM"
+            config3:
+                provider: Config
+                priority: 2
+                users:
+                    - user: bananarepublic
+                      pass: whatever
