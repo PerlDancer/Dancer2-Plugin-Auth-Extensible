@@ -980,7 +980,7 @@ sub _post_login_route {
     if ($code) {
         no strict 'refs';
         my $randompw = &{ $plugin->password_generator };
-        if ( $app->user_password( code => $code, new_password => $randompw ) ) {
+        if ( $plugin->user_password( code => $code, new_password => $randompw ) ) {
             $app->forward(
                 $plugin->login_page,
                 { new_password => $randompw },
