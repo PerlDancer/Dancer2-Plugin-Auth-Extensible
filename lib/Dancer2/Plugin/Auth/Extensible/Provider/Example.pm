@@ -4,7 +4,7 @@ use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
 
-our $VERSION = '0.601';
+our $VERSION = '0.610';
 
 # A more sensible provider would be likely to get this information from e.g. a
 # database (or LDAP, or...) rather than hardcoding it.  This, however, is an
