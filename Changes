@@ -1,5 +1,6 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.610 Mon Aug 15 08:17:46 2016 CEST
 
     [ENHANCEMENTS]
 
@@ -9,6 +10,8 @@ Revision history for Dancer2-Plugin-Auth-Extensible
 
     [BUG FIXES]
 
+    * Incorrect call to user_password from app not plugin
+      (Andrew Beverly, GH #53).
     * Avoid memory leaks in BUILD by passing weakened ref to plugin into
       add_route callbacks (Peter Mottram).
     * Call $app->session instead of $app->app->session in _post_login_route
