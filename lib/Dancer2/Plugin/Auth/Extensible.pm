@@ -159,7 +159,7 @@ has realm_providers => (
 # hooks
 #
 
-plugin_hooks qw(login_required permission_denied);
+plugin_hooks qw(login_required permission_denied after_login_success);
 
 #
 # keywords
@@ -1028,6 +1028,7 @@ sub _post_login_route {
         $app->session->write( logged_in_user       => $username );
         $app->session->write( logged_in_user_realm => $realm );
         $app->log( core => "Realm is $realm" );
+        $plugin->execute_plugin_hook( 'after_login_success' );
         $app->redirect( $app->request->params->{return_url}
               || $plugin->user_home_page );
     }
@@ -1729,6 +1730,18 @@ management within your application.
 
 Given a realm, returns a configured and ready to use instance of the provider
 specified by that realm's config.
+
+=head1 HOOKS
+
+This plugin provides the following hooks:
+
+=head2 login_required
+
+=head2 permission_denied
+
+=head2 after_login_success
+
+Called after successful login just before redirect is called.
 
 =head1 AUTHOR
 
