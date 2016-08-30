@@ -1,5 +1,11 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.611 Tue Aug 30 16:59:49 2016 CEST
+
+    [ENHANCEMENTS]
+
+    * Add 'after_login_success' hook (Peter Mottram).
+
 0.610 Mon Aug 15 08:17:46 2016 CEST
 
     [ENHANCEMENTS]
