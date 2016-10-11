@@ -159,7 +159,8 @@ has realm_providers => (
 # hooks
 #
 
-plugin_hooks qw(login_required permission_denied after_login_success);
+plugin_hooks qw(before_authenticate_user login_required permission_denied
+  after_login_success);
 
 #
 # keywords
@@ -300,6 +301,9 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
+
+    $plugin->execute_plugin_hook( 'before_authenticate_user',
+        { username => $username, password => $password, realm => $realm } );
 
     my @realms_to_check = $realm ? ($realm) : ( keys %{ $plugin->realms } );
 
@@ -1738,6 +1742,12 @@ specified by that realm's config.
 =head1 HOOKS
 
 This plugin provides the following hooks:
+
+=head2 before_authenticate_user
+
+Called at the start of L</authenticate_user>.
+
+Receives a hash reference of username, password and realm.
 
 =head2 login_required
 
