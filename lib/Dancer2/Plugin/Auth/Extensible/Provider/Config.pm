@@ -1,47 +1,14 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
 use Dancer2::Core::Types qw/ArrayRef/;
+use List::Util qw/first/;
+use aliased 'Dancer2::Plugin::Auth::Extensible::Provider::Config::User';
 
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
 
 our $VERSION = '0.613';
-
-{
-    package User;
-    use Dancer2::Core::Types qw/Str/;
-    use Moo;
-    with "Dancer2::Plugin::Auth::Extensible::Role::User";
-    use namespace::clean;
-
-    # We need the underlying hash to have user/pass for backward-compatibility
-    # with code that expects these two rather than username/password of
-    # a normal User object. At some point we'll add deprecation via
-    # a warning in BUILD.
-
-    has user => (
-        is       => 'ro',
-        isa      => Str,
-        required => 1,
-    );
-
-    has '+username' => (
-        lazy => 1,
-        default => sub { $_[0]->user },
-    );
-
-    has pass => (
-        is       => 'ro',
-        isa      => Str,
-        required => 1,
-    );
-
-    has '+password' => (
-        lazy => 1,
-        default => sub { $_[0]->pass },
-    );
-}
 
 =head1 NAME 
 
@@ -111,7 +78,7 @@ has users => (
 =cut
 
 sub authenticate_user {
-    my ($self, $username, $password) = @_;
+    my ( $self, $username, $password ) = @_;
     my $user = $self->get_user_details($username) or return;
     return $user->check_password($password);
 }
@@ -120,14 +87,9 @@ sub authenticate_user {
 
 =cut
 
-# Just return the whole user definition from the config; this way any additional
-# fields defined for users will just get passed through.
 sub get_user_details {
-    my ($self, $username) = @_;
-    my ($user) = grep {
-        $_->username eq $username 
-    } @{ $self->users };
-    return $user;
+    my ( $self, $username ) = @_;
+    return first { $_->username eq $username } @{ $self->users };
 }
 
 =head2 get_user_roles $username
@@ -135,7 +97,7 @@ sub get_user_details {
 =cut
 
 sub get_user_roles {
-    my ($self, $username) = @_;
+    my ( $self, $username ) = @_;
 
     my $user = $self->get_user_details($username) or return;
     return $user->roles;

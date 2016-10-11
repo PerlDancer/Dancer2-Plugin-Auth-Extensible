@@ -7,6 +7,7 @@ Dancer2::Plugin::Auth::Extensible::Role::User
 =cut
 
 use Dancer2::Core::Types qw/ArrayRef Str/;
+use List::Util qw/any/;
 use Moo::Role;
 
 =head1 ATTRIBUTES
@@ -62,7 +63,7 @@ An array reference of C<Role> objects.
 =cut
 
 has roles => (
-    is      => 'lazy',
+    is      => 'ro',
     isa     => ArrayRef,
     default => sub { [] },
 );
@@ -105,6 +106,17 @@ sub check_password {
         # Straightforward comparison, then:
         return $given eq $self->password;
     }
+}
+
+=head2 has_role $role
+
+Returns true if user has the role C<$role>.
+
+=cut
+
+sub has_role {
+    my ( $self, $role ) = @_;
+    return any { $_ eq $role } @{ $self->roles };
 }
 
 1;
