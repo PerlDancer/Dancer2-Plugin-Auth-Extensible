@@ -158,6 +158,10 @@ CONTROLLING ACCESS TO ROUTES
                 params->{username}, params->{password}
             );
             if ($success) {
+                # change session ID if we have a new enough D2 version with support
+                # (security best practice on privilege level change)
+                app->change_session_id
+                    if app->can('change_session_id');
                 session logged_in_user => params->{username};
                 session logged_in_user_realm => $realm;
                 # other code here
@@ -620,6 +624,11 @@ FUNCTIONS
 HOOKS
     This plugin provides the following hooks:
 
+  before_authenticate_user
+    Called at the start of "authenticate_user".
+
+    Receives a hash reference of username, password and realm.
+
   login_required
   permission_denied
   after_login_success
@@ -661,8 +670,9 @@ ACKNOWLEDGEMENTS
 
     Henk van Oers (GH #8, #13).
 
-    Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26). This includes
-    support for creating and editing users and manage user passwords.
+    Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26, #54). This
+    includes support for creating and editing users and manage user
+    passwords.
 
     Gabor Szabo (GH #11, #16, #18).
 

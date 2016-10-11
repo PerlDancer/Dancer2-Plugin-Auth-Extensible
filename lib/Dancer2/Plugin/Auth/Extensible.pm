@@ -1,6 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible;
 
-our $VERSION = '0.611';
+our $VERSION = '0.612';
 
 use strict;
 use warnings;
@@ -1795,7 +1795,7 @@ Documentation fix by Vince Willems.
 
 Henk van Oers (GH #8, #13).
 
-Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26).
+Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26, #54).
 This includes support for creating and editing users and manage user passwords.
 
 Gabor Szabo (GH #11, #16, #18).
