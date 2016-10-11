@@ -1246,6 +1246,10 @@ and should do at least the following:
             params->{username}, params->{password}
         );
         if ($success) {
+            # change session ID if we have a new enough D2 version with support
+            # (security best practice on privilege level change)
+            app->change_session_id
+                if app->can('change_session_id');
             session logged_in_user => params->{username};
             session logged_in_user_realm => $realm;
             # other code here
