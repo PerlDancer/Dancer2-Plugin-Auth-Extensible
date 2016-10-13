@@ -1141,10 +1141,6 @@ This framework supplies the following providers out-of-the-box:
 
 Authenticates users using system accounts on Linux/Unix type boxes
 
-=item L<Dancer2::Plugin::Auth::Extensible::Provider::Database>
-
-Authenticates users stored in a database table
-
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::Config>
 
 Authenticates users stored in the app's config
@@ -1158,6 +1154,10 @@ The following external providers are also available on the CPAN:
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::DBIC>
 
 Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
+
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Database>
+
+Authenticates users stored in a database table
 
 =back
 
