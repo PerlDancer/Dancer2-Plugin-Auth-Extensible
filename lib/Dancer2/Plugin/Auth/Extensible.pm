@@ -1793,7 +1793,7 @@ LDAP provider added by Mark Meyer (ofosos)
 
 Documentation fix by Vince Willems.
 
-Henk van Oers (GH #8, #13).
+Henk van Oers (GH #8, #13, #55).
 
 Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26, #54).
 This includes support for creating and editing users and manage user passwords.

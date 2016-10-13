@@ -1,5 +1,10 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+    [DOCUMENTATION]
+
+    * Update docs to reflect Provider::Database being an external module
+      (Henk van Oers, GH #55).
+
 0.612 Tue Oct 11 12:44:01 2016 CEST
 
     [ENHANCEMENTS]
