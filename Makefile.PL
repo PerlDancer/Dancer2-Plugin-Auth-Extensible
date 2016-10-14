@@ -29,6 +29,7 @@ WriteMakefile(
         'Dancer2::Plugin'   => 0,
         'Module::Runtime'   => 0,
         'Crypt::SaltedHash' => 0,
+        'List::Util'        => 0,
         'Moo'               => '2.000000',
         'Moo::Role'         => 0,
         'namespace::clean'  => 0,
