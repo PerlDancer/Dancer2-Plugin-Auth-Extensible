@@ -4,9 +4,6 @@ use warnings;
 use Test::Fatal;
 use Test::More;
 use Dancer2::Plugin::Auth::Extensible::Test;
-use Plack::Test;
-use HTTP::Request::Common;
-use aliased 'Dancer2::Plugin::Auth::Extensible::Provider::LDAP';
 
 BEGIN {
     $ENV{DANCER_CONFDIR}     = 't/lib';
