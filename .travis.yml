@@ -16,5 +16,5 @@ matrix:
 before_install:
   - eval $(curl https://travis-perl.github.io/init) --auto
 install:
-  - cpanm Test::CheckManifest --quiet --notest
+    - cpanm Test::CheckManifest Test::Net::LDAP --quiet --notest
   - cpanm --quiet --installdeps --notest .
