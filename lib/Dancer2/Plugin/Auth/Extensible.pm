@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Carp;
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
+use List::Util qw(any);
 use Module::Runtime qw(use_module);
 use Scalar::Util;
 use Session::Token;
@@ -566,13 +567,7 @@ sub user_has_role {
 
     return unless defined $username;
 
-    my $roles = $plugin->user_roles($username);
-
-    for my $has_role (@$roles) {
-        return 1 if $has_role eq $want_role;
-    }
-
-    return 0;
+    return any { $want_role eq $_ } @{ $plugin->user_roles($username) };
 }
 
 sub user_password {
