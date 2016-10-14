@@ -1,14 +1,15 @@
 plugins:
     Auth::Extensible:
         realms:
-            ldap1:
+            config1:
                 provider: LDAP
                 host: ldap://127.0.0.1:389
                 basedn: dc=localnet
                 binddn: cn=admin,dc=localnet
                 bindpw: Eec8aireiZ0bo7Shooxe
                 username_attribute: uid
-            ldap2:
+                name_attribute: cn
+            config2:
                 provider: LDAP
                 host: localhost
                 options:

@@ -18,6 +18,8 @@ BEGIN {
     use Dancer2;
     use Dancer2::Plugin::Auth::Extensible::Test::App;
 
+    #set logger => 'console';
+
     get '/ldap' => sub {
         my $plugin = app->with_plugin('Auth::Extensible');
         my $auth_provider = $plugin->auth_provider('ldap1');
@@ -33,14 +35,14 @@ BEGIN {
 my $app = Dancer2->runner->psgi_app;
 is( ref $app, 'CODE', 'Got app' );
 
-subtest '... LDAP provider base tests' => sub {
+#subtest '... LDAP provider base tests' => sub {
 
-    my $test = Plack::Test->create($app);
-    my $res = $test->request( GET '/ldap' );
-    ok $res->is_success, 'Successful request';
-    diag explain $res->content;
-};
+#    my $test = Plack::Test->create($app);
+#    my $res = $test->request( GET '/ldap' );
+    #ok $res->is_success, 'Successful request';
+    #diag explain $res->content;
+#};
 
-#Dancer2::Plugin::Auth::Extensible::Test::testme($app, 'base');
+Dancer2::Plugin::Auth::Extensible::Test::testme($app, 'base');
 
 done_testing;
