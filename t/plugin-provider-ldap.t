@@ -15,7 +15,6 @@ BEGIN {
     plan skip_all => "Test::Net::LDAP required for these tests" if $@;
 }
 
-use Net::LDAP::Constant qw(LDAP_SUCCESS LDAP_INVALID_CREDENTIALS);
 use Test::Net::LDAP::Mock;
 use Test::Net::LDAP::Util qw(ldap_mockify);
 
