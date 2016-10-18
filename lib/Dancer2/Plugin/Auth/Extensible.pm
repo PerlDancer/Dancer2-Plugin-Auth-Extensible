@@ -1159,6 +1159,10 @@ Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
 
 Authenticates users stored in a database table
 
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::LDAP>
+
+Authenticates users stored in an LDAP directory.
+
 =back
 
 Need to write your own?  Just create a new provider class which consumes
