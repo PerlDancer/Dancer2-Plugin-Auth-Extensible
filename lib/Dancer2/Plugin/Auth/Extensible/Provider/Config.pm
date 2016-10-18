@@ -1,6 +1,8 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
 use Dancer2::Core::Types qw/ArrayRef/;
+use List::Util qw/first/;
+use aliased 'Dancer2::Plugin::Auth::Extensible::Provider::Config::User';
 
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
@@ -64,6 +66,9 @@ has users => (
     is       => 'ro',
     isa      => ArrayRef,
     required => 1,
+    coerce   => sub {
+        [ map { User->new($_) } @{ $_[0] } ];
+    },
 );
 
 =head1 METHODS
@@ -73,23 +78,18 @@ has users => (
 =cut
 
 sub authenticate_user {
-    my ($self, $username, $password) = @_;
-    my $user_details = $self->get_user_details($username) or return;
-    return $self->match_password($password, $user_details->{pass});
+    my ( $self, $username, $password ) = @_;
+    my $user = $self->get_user_details($username) or return;
+    return $user->check_password($password);
 }
 
 =head2 get_user_details $username
 
 =cut
 
-# Just return the whole user definition from the config; this way any additional
-# fields defined for users will just get passed through.
 sub get_user_details {
-    my ($self, $username) = @_;
-    my ($user) = grep {
-        $_->{user} eq $username 
-    } @{ $self->users };
-    return $user;
+    my ( $self, $username ) = @_;
+    return first { $_->username eq $username } @{ $self->users };
 }
 
 =head2 get_user_roles $username
@@ -97,10 +97,10 @@ sub get_user_details {
 =cut
 
 sub get_user_roles {
-    my ($self, $username) = @_;
+    my ( $self, $username ) = @_;
 
-    my $user_details = $self->get_user_details($username) or return;
-    return $user_details->{roles};
+    my $user = $self->get_user_details($username) or return;
+    return $user->roles;
 }
 
 1;

@@ -11,9 +11,11 @@ t/pod.t
 t/pod-coverage.t
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config.pm
+lib/Dancer2/Plugin/Auth/Extensible/Provider/Config/User.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Unix.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Base.pm
 lib/Dancer2/Plugin/Auth/Extensible/Role/Provider.pm
+lib/Dancer2/Plugin/Auth/Extensible/Role/User.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test/App.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
