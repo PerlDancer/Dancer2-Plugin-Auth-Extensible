@@ -2,9 +2,7 @@ README
 t/00-load.t
 t/01-role-provider.t
 t/plugin-provider-config.t
-t/plugin-provider-ldap.t
 t/lib/environments/provider-config.yml
-t/lib/environments/provider-ldap.yml
 t/lib/views/.placeholder
 t/lib/public/.placeholder
 t/lib/lib/.placeholder
@@ -14,8 +12,6 @@ t/pod-coverage.t
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config/User.pm
-lib/Dancer2/Plugin/Auth/Extensible/Provider/LDAP.pm
-lib/Dancer2/Plugin/Auth/Extensible/Provider/LDAP/User.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Unix.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Base.pm
 lib/Dancer2/Plugin/Auth/Extensible/Role/Provider.pm
