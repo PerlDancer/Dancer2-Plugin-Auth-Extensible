@@ -11,6 +11,7 @@ our $VERSION = '0.612';
 use strict;
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;
+use Scalar::Util qw(blessed);
 use YAML ();
 no warnings 'uninitialized';
 
@@ -28,7 +29,9 @@ get '/loggedin' => require_login sub  {
 };
 
 get '/name' => require_login sub {
-    return "Hello, " . logged_in_user->{name};
+    my $user = logged_in_user;
+    my $name = blessed($user) ? logged_in_user->name : logged_in_user->{name};
+    return "Hello, $name";
 };
 
 get '/roles' => require_login sub {
@@ -127,18 +130,27 @@ get '/update_current_user' => sub {
 
 get '/update_user_name/:realm' => sub {
     my $realm = param 'realm';
-    update_user 'mark', realm => $realm, name => "Wiltshire Apples $realm";
+    YAML::Dump update_user 'mark', realm => $realm, name => "Wiltshire Apples $realm";
 };
 
 get '/update_user_role/:realm' => sub {
     my $realm = param 'realm';
-    update_user 'mark', realm => $realm, role => { CiderDrinker => 1 };
+    YAML::Dump update_user 'mark', realm => $realm, role => { CiderDrinker => 1 };
+};
+
+get '/get_user_details/:user' => sub {
+    content_type 'text/x-yaml';
+    my $user = get_user_details param('user');
+    my $name = blessed($user) ? $user->name : $user->{name};
+    YAML::Dump { name => $name };
 };
 
 get '/get_user_mark/:realm' => sub {
     my $realm = param 'realm';
     content_type 'text/x-yaml';
-    YAML::Dump get_user_details 'mark', $realm;
+    my $user = get_user_details 'mark', $realm;
+    my $name = blessed($user) ? $user->name : $user->{name};
+    YAML::Dump { name => $name };
 };
 
 

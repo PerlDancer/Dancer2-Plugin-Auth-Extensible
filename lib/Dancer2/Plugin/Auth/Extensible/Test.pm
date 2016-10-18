@@ -692,6 +692,17 @@ sub _test_base {
                   or diag explain $trap->read;
             ok !$res->content, "content shows fail";
         }
+        {
+            my $res = $cb->( GET '/get_user_details/dave', @headers );
+            is $res->code, 200, "/get_user_details/dave response is 200"
+              or diag explain $trap->read;
+
+        }
+        {
+            my $res = $cb->( GET '/get_user_details/burt', @headers );
+            is $res->code, 200, "/get_user_details/burt response is 200"
+              or diag explain $trap->read;
+        }
     };
 };
 
