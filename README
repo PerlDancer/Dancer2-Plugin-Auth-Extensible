@@ -63,9 +63,6 @@ AUTHENTICATION PROVIDERS
     Dancer2::Plugin::Auth::Extensible::Provider::Unix
         Authenticates users using system accounts on Linux/Unix type boxes
 
-    Dancer2::Plugin::Auth::Extensible::Provider::Database
-        Authenticates users stored in a database table
-
     Dancer2::Plugin::Auth::Extensible::Provider::Config
         Authenticates users stored in the app's config
 
@@ -74,6 +71,9 @@ AUTHENTICATION PROVIDERS
     Dancer2::Plugin::Auth::Extensible::Provider::DBIC
         Authenticates users stored in a database table using
         Dancer2::Plugin::DBIC
+
+    Dancer2::Plugin::Auth::Extensible::Provider::Database
+        Authenticates users stored in a database table
 
     Need to write your own? Just create a new provider class which consumes
     Dancer2::Plugin::Auth::Extensible::Role::Provider and implements the
@@ -668,7 +668,7 @@ ACKNOWLEDGEMENTS
 
     Documentation fix by Vince Willems.
 
-    Henk van Oers (GH #8, #13).
+    Henk van Oers (GH #8, #13, #55).
 
     Andrew Beverly (GH #6, #7, #10, #17, #22, #24, #25, #26, #54). This
     includes support for creating and editing users and manage user
