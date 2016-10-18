@@ -46,18 +46,18 @@ ok !$provider->match_password( 'bad',
 lives_ok { $password = $provider->encrypt_password() }
 "encrypt_password(undef)";
 
-like $password, qr/^{SSHA}.+$/, "password looks good";
+like $password, qr/^{SSHA512}.+$/, "password looks good";
 
 lives_ok { $password = $provider->encrypt_password( 'password' ) }
 "encrypt_password('password')";
 
-like $password, qr/^{SSHA}.+$/, "password looks good";
+like $password, qr/^{SSHA512}.+$/, "password looks good";
 
 lives_ok {
-    $password = $provider->encrypt_password( 'password', 'SHA-1' )
+    $password = $provider->encrypt_password( 'password', 'SHA-512' )
 }
-"encrypt_password('password', 'SHA-1')";
+"encrypt_password('password', 'SHA-512')";
 
-like $password, qr/^{SSHA}.+$/, "password looks good";
+like $password, qr/^{SSHA512}.+$/, "password looks good";
 
 done_testing;

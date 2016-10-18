@@ -48,13 +48,13 @@ has disable_roles => (
 
 The encryption_algorithm used by L</encrypt_password>.
 
-Defaults to 'SHA-1';
+Defaults to 'SHA-512';
 
 =cut
 
 has encryption_algorithm => (
     is      => 'ro',
-    default => 'SHA-1',
+    default => 'SHA-512',
 );
 
 =head1 METHODS
