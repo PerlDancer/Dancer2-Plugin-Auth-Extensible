@@ -30,6 +30,7 @@ Required.
 has plugin => (
     is       => 'ro',
     required => 1,
+    weaken   => 1,
 );
 
 =head2 disable_roles
