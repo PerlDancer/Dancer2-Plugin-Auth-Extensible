@@ -69,9 +69,17 @@ sub testme {
     delete $args{base};
     test_psgi $app, _test_base();
 
+    # run roles tests unless told not to
+    if ( delete $args{disable_roles} ) {
+        test_psgi $app, _test_disable_roles();
+    }
+    else {
+        test_psgi $app, _test_roles();
+    }
+
     foreach my $name (
-        qw/ create_user update_user update_roles password_reset user_password
-        lastlogin expired reset_code/
+        qw/create_user update_user update_roles
+        password_reset user_password lastlogin expired reset_code/
       )
     {
         if ( delete $args{$name} ) {
@@ -120,21 +128,6 @@ sub _test_base {
                 $res->headers->header('Location'),
                 'http://localhost/login?return_url=%2Floggedin',
                 '/loggedin redirected to login page when not logged in'
-            );
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/beer' );
-
-            is( $res->code, 302, '[GET /beer] Correct code' )
-                or diag explain $trap->read;
-
-            is(
-                $res->headers->header('Location'),
-                'http://localhost/login?return_url=%2Fbeer',
-                '/beer redirected to login page when not logged in'
             );
         }
 
@@ -244,79 +237,6 @@ sub _test_base {
 
         }
 
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/roles', @headers );
-
-            is ($res->code, 200, 'get /roles is 200')
-                or diag explain $trap->read;
-
-            is( $res->content, 'BeerDrinker,Motorcyclist',
-                'Correct roles for logged in user' );
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/roles/bob', @headers );
-
-            is ($res->code, 200, 'get /roles/bob is 200')
-                or diag explain $trap->read;
-
-            is( $res->content, 'CiderDrinker',
-                'Correct roles for other user in current realm' );
-        }
-
-        # Check we can request something which requires a role we have....
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/beer', @headers );
-
-            is( $res->code, 200,
-                'We can request a route (/beer) requiring a role we have...' )
-                or diag explain $trap->read;
-        }
-
-        # Check we can request a route that requires any of a list of roles,
-        # one of which we have:
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/anyrole', @headers );
-
-            is ($res->code, 200,
-                "We can request a multi-role route requiring with any one role")
-                or diag explain $trap->read;
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/allroles', @headers );
-
-            is ($res->code, 200,
-                "We can request a multi-role route with all roles required")
-                or diag explain $trap->read;
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/not_allroles', @headers );
-
-            is ($res->code, 302, "/not_allroles response code 302")
-                or diag explain $trap->read;
-            is(
-                $res->headers->header('Location'),
-                'http://localhost/login/denied?return_url=%2Fnot_allroles',
-                '/not_allroles redirected to denied page'
-            );
-        }
-
         # And also a route declared as a regex (this should be no different, but
         # melmothX was seeing issues with routes not requiring login when they
         # should...
@@ -328,32 +248,6 @@ sub _test_base {
 
             is ($res->code, 200, "We can request a regex route when logged in")
                 or diag explain $trap->read;
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/piss/regex', @headers );
-
-            is( $res->code, 200,
-                "We can request a route requiring a regex role we have" )
-                or diag explain $trap->read;
-        }
-
-        # ... but can't request something requiring a role we don't have
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/piss', @headers );
-
-            is ($res->code, 302,
-                "Redirect on a route requiring a role we don't have")
-                or diag explain $trap->read;
-
-            is ($res->headers->header('Location'),
-                'http://localhost/login/denied?return_url=%2Fpiss',
-                "We cannot request a route requiring a role we don't have");
         }
 
         # Check the realm we authenticated against is what we expect
@@ -401,19 +295,6 @@ sub _test_base {
                '/loggedin redirected to login page after logging out');
         }
 
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->(GET '/beer', @headers);
-
-            is($res->code, 302, 'Status code on accessing /beer after logout')
-                or diag explain $trap->read;
-
-            is($res->headers->header('Location'),
-               'http://localhost/login?return_url=%2Fbeer',
-               '/beer redirected to login page after logging out');
-        }
-
         # OK, log back in, this time as a user from the second realm
 
         {
@@ -458,18 +339,6 @@ sub _test_base {
                 or diag explain $trap->read;
 
             is($res->content, 'config2', 'Authenticated against expected realm');
-        }
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->( GET '/roles/bob/config1', @headers );
-
-            is($res->code, 200, 'Status code on /roles/bob/config1 route.')
-                or diag explain $trap->read;
-
-            is( $res->content, 'CiderDrinker',
-                'Correct roles for other user in current realm' );
         }
 
         # Now, log out again
@@ -609,33 +478,6 @@ sub _test_base {
             @headers = ( Cookie => $cookie );
         }
 
-        # 2 arg user_has_role
-
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->(GET '/does_dave_drink_beer', @headers);
-            is $res->code, 200, "/does_dave_drink_beer response is 200"
-                or diag explain $trap->read;
-            ok $res->content, "yup - dave drinks beer";
-        }
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->(GET '/does_dave_drink_cider', @headers);
-            is $res->code, 200, "/does_dave_drink_cider response is 200"
-                or diag explain $trap->read;
-            ok !$res->content, "no way does dave drink cider";
-        }
-        {
-            $trap->read; # clear logs
-
-            my $res = $cb->(GET '/does_undef_drink_beer', @headers);
-            is $res->code, 200, "/does_undef_drink_beer response is 200"
-                or diag explain $trap->read;
-            ok !$res->content, "undefined users cannot drink";
-        }
-
         # 3 arg authenticate_user
 
         {
@@ -734,6 +576,553 @@ sub _test_base {
             my $res = $cb->( GET '/get_user_details/burt', @headers );
             is $res->code, 200, "/get_user_details/burt response is 200"
               or diag explain $trap->read;
+        }
+    };
+};
+
+# roles
+
+sub _test_roles {
+
+    note "test roles";
+
+    my $sub = sub {
+
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+
+        my $cb = shift;
+
+        # first check we cannot reach protected pages when not logged in
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/beer' );
+
+            is( $res->code, 302, '[GET /beer] Correct code' )
+                or diag explain $trap->read;
+
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login?return_url=%2Fbeer',
+                '/beer redirected to login page when not logged in'
+            );
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/regex/a' );
+
+            is( $res->code, 302, '[GET /regex/a] Correct code' )
+                or diag explain $trap->read;
+
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login?return_url=%2Fregex%2Fa',
+                '/regex/a redirected to login page when not logged in'
+            );
+        }
+
+        my @headers;
+
+        # login
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
+
+            is( $res->code, 302, 'Login with real details succeeds')
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok ($cookie, "Got the cookie: $cookie");
+            @headers = (Cookie => $cookie);
+        }
+
+        # Now we're logged in, check we can access stuff we should...
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles', @headers );
+
+            is ($res->code, 200, 'get /roles is 200')
+                or diag explain $trap->read;
+
+            is( $res->content, 'BeerDrinker,Motorcyclist',
+                'Correct roles for logged in user' );
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles/bob', @headers );
+
+            is ($res->code, 200, 'get /roles/bob is 200')
+                or diag explain $trap->read;
+
+            is( $res->content, 'CiderDrinker',
+                'Correct roles for other user in current realm' );
+        }
+
+        # Check we can request something which requires a role we have....
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/beer', @headers );
+
+            is( $res->code, 200,
+                'We can request a route (/beer) requiring a role we have...' )
+                or diag explain $trap->read;
+        }
+
+        # Check we can request a route that requires any of a list of roles,
+        # one of which we have:
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/anyrole', @headers );
+
+            is ($res->code, 200,
+                "We can request a multi-role route requiring with any one role")
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/allroles', @headers );
+
+            is ($res->code, 200,
+                "We can request a multi-role route with all roles required")
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/not_allroles', @headers );
+
+            is ($res->code, 302, "/not_allroles response code 302")
+                or diag explain $trap->read;
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login/denied?return_url=%2Fnot_allroles',
+                '/not_allroles redirected to denied page'
+            );
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/piss/regex', @headers );
+
+            is( $res->code, 200,
+                "We can request a route requiring a regex role we have" )
+                or diag explain $trap->read;
+        }
+
+        # ... but can't request something requiring a role we don't have
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/piss', @headers );
+
+            is ($res->code, 302,
+                "Redirect on a route requiring a role we don't have")
+                or diag explain $trap->read;
+
+            is ($res->headers->header('Location'),
+                'http://localhost/login/denied?return_url=%2Fpiss',
+                "We cannot request a route requiring a role we don't have");
+        }
+
+        # Now, log out
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(POST '/logout', @headers );
+
+            is($res->code, 302, 'Logging out returns 302')
+                or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
+        }
+
+        # Check we can't access protected pages now we logged out:
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/beer', @headers);
+
+            is($res->code, 302, 'Status code on accessing /beer after logout')
+                or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/login?return_url=%2Fbeer',
+               '/beer redirected to login page after logging out');
+        }
+
+        # OK, log back in, this time as a user from the second realm
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(
+                POST '/login',
+                { username => 'burt', password => 'bacharach' }
+            );
+
+            is($res->code, 302, 'Login as user from second realm succeeds')
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok ($cookie, "Got the cookie: $cookie");
+            @headers = (Cookie => $cookie);
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles/bob/config1', @headers );
+
+            is($res->code, 200, 'Status code on /roles/bob/config1 route.')
+                or diag explain $trap->read;
+
+            is( $res->content, 'CiderDrinker',
+                'Correct roles for other user in current realm' );
+        }
+
+        # Now, log out again
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(POST '/logout', @headers );
+
+            is($res->code, 302, 'Logging out returns 302')
+                or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
+        }
+
+        # login as dave
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
+            is( $res->code, 302, 'Login with real details succeeds' )
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok( $cookie, "Got the cookie: $cookie" );
+            @headers = ( Cookie => $cookie );
+        }
+
+        # 2 arg user_has_role
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_dave_drink_beer', @headers);
+            is $res->code, 200, "/does_dave_drink_beer response is 200"
+                or diag explain $trap->read;
+            ok $res->content, "yup - dave drinks beer";
+        }
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_dave_drink_cider', @headers);
+            is $res->code, 200, "/does_dave_drink_cider response is 200"
+                or diag explain $trap->read;
+            ok !$res->content, "no way does dave drink cider";
+        }
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_undef_drink_beer', @headers);
+            is $res->code, 200, "/does_undef_drink_beer response is 200"
+                or diag explain $trap->read;
+            ok !$res->content, "undefined users cannot drink";
+        }
+    };
+};
+
+# disable_roles
+
+sub _test_disable_roles {
+
+    note "test disable_roles";
+
+    my $sub = sub {
+
+        my $trap = TestApp->dancer_app->logger_engine->trapper;
+
+        my $cb = shift;
+
+        # first check we cannot reach protected pages when not logged in
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/beer' );
+
+            is( $res->code, 500, '[GET /beer] Correct code is 500' )
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/regex/a' );
+
+            is( $res->code, 302, '[GET /regex/a] Correct code' )
+                or diag explain $trap->read;
+
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login?return_url=%2Fregex%2Fa',
+                '/regex/a redirected to login page when not logged in'
+            );
+        }
+
+        my @headers;
+
+        # login
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
+
+            is( $res->code, 302, 'Login with real details succeeds')
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok ($cookie, "Got the cookie: $cookie");
+            @headers = (Cookie => $cookie);
+        }
+
+        # Now we're logged in, check we can access stuff we should...
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles', @headers );
+
+            is ($res->code, 500, 'get /roles is 500')
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles/bob', @headers );
+
+            is ($res->code, 500, 'get /roles/bob is 500')
+                or diag explain $trap->read;
+        }
+
+        # Check we can request something which requires a role we have....
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/beer', @headers );
+
+            is( $res->code, 500,
+                'request a route (/beer) requiring a role we have is 500' )
+                or diag explain $trap->read;
+        }
+
+        # Check we can request a route that requires any of a list of roles,
+        # one of which we have:
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/anyrole', @headers );
+
+            is ($res->code, 500,
+                "request a multi-role route requiring with any one role is 500")
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/allroles', @headers );
+
+            is ($res->code, 500,
+                "request a multi-role route with all roles required is 500")
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/not_allroles', @headers );
+
+            is ($res->code, 500, "/not_allroles response code 500")
+                or diag explain $trap->read;
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/piss/regex', @headers );
+
+            is( $res->code, 500,
+                "request a route requiring a regex role we have is 500" )
+                or diag explain $trap->read;
+        }
+
+        # ... but can't request something requiring a role we don't have
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/piss', @headers );
+
+            is ($res->code, 500,
+                "a route requiring a role we don't have is 500")
+                or diag explain $trap->read;
+        }
+
+        # Now, log out
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(POST '/logout', @headers );
+
+            is($res->code, 302, 'Logging out returns 302')
+                or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
+        }
+
+        # Check we can't access protected pages now we logged out:
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/beer', @headers);
+
+            is( $res->code, 500,
+                'Status code on accessing /beer after logout is 500' )
+              or diag explain $trap->read;
+        }
+
+        # OK, log back in, this time as a user from the second realm
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(
+                POST '/login',
+                { username => 'burt', password => 'bacharach' }
+            );
+
+            is($res->code, 302, 'Login as user from second realm succeeds')
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok ($cookie, "Got the cookie: $cookie");
+            @headers = (Cookie => $cookie);
+        }
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( GET '/roles/bob/config1', @headers );
+
+            is( $res->code, 500,
+                'Status code on /roles/bob/config1 route is 500.' )
+              or diag explain $trap->read;
+        }
+
+        # Now, log out again
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(POST '/logout', @headers );
+
+            is($res->code, 302, 'Logging out returns 302')
+                or diag explain $trap->read;
+
+            is($res->headers->header('Location'),
+               'http://localhost/',
+               '/logout redirected to / (exit_page) after logging out');
+        }
+
+        # login as dave
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->( POST '/login',
+                [ username => 'dave', password => 'beer' ] );
+            is( $res->code, 302, 'Login with real details succeeds' )
+                or diag explain $trap->read;
+
+            # Get cookie with session id
+            my $cookie = $res->header('Set-Cookie');
+            $cookie =~ s/^(.*?);.*$/$1/s;
+            ok( $cookie, "Got the cookie: $cookie" );
+            @headers = ( Cookie => $cookie );
+        }
+
+        # 2 arg user_has_role
+
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_dave_drink_beer', @headers);
+            is $res->code, 500, "/does_dave_drink_beer response is 500"
+                or diag explain $trap->read;
+        }
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_dave_drink_cider', @headers);
+            is $res->code, 500, "/does_dave_drink_cider response is 500"
+                or diag explain $trap->read;
+        }
+        {
+            $trap->read; # clear logs
+
+            my $res = $cb->(GET '/does_undef_drink_beer', @headers);
+            is $res->code, 500, "/does_undef_drink_beer response is 500"
+                or diag explain $trap->read;
         }
     };
 };

@@ -486,11 +486,21 @@ sub password_reset_send {
 }
 
 sub require_all_roles {
-    return _build_wrapper( @_, 'all' );
+    my $plugin = shift;
+    return $plugin->disable_roles
+      ? sub {
+        croak "Cannot call require_all_roles when disable_roles is true";
+      }
+      : $plugin->_build_wrapper( @_, 'all' );
 }
 
 sub require_any_role {
-    return _build_wrapper( @_, 'any' );
+    my $plugin = shift;
+    return $plugin->disable_roles
+      ? sub {
+        croak "Cannot call require_any_role when disable_roles is true";
+      }
+      : $plugin->_build_wrapper( @_, 'any' );
 }
 
 sub require_login {
@@ -520,7 +530,12 @@ sub require_login {
 }
 
 sub require_role {
-    return _build_wrapper( @_, 'single' );
+    my $plugin = shift;
+    return $plugin->disable_roles
+      ? sub {
+        croak "Cannot call require_role when disable_roles is true";
+      }
+      : $plugin->_build_wrapper( @_, 'single' );
 }
 
 sub update_current_user {
@@ -554,6 +569,9 @@ sub update_user {
 
 sub user_has_role {
     my $plugin = shift;
+
+    croak "Cannot call user_has_role when disable_roles is true"
+      if $plugin->disable_roles;
 
     my ( $username, $want_role );
     if ( @_ == 2 ) {
@@ -661,6 +679,9 @@ sub user_password {
 sub user_roles {
     my ( $plugin, $username, $realm ) = @_;
 
+    croak "Cannot call user_roles when disable_roles is true"
+      if $plugin->disable_roles;
+
     $username = $plugin->app->session->read('logged_in_user')
       unless defined $username;
 
@@ -668,6 +689,7 @@ sub user_roles {
 
     my $roles =
       $plugin->auth_provider($search_realm)->get_user_roles($username);
+
     return unless defined $roles;
     return wantarray ? @$roles : $roles;
 }
@@ -676,8 +698,10 @@ sub user_roles {
 # private methods
 #
 
+# wrapper for require_all_roles require_any_role require_role
 sub _build_wrapper {
     my $plugin       = shift;
+
     my $require_role = shift;
     my $coderef      = shift;
     my $mode         = shift;
@@ -1315,6 +1339,8 @@ it.
 
 =item require_role
 
+Returns undef if C<disable_roles> configuration option is true.
+
 Used to wrap a route which requires a user to be logged in as a user with the
 specified role in order to access it.
 
@@ -1327,12 +1353,16 @@ regex - for example:
 
 =item require_any_role
 
+Returns undef if C<disable_roles> configuration option is true.
+
 Used to wrap a route which requires a user to be logged in as a user with any
 one (or more) of the specified roles in order to access it.
 
     get '/foo' => require_any_role [qw(Foo Bar)] => sub { ... };
 
 =item require_all_roles
+
+Returns undef if C<disable_roles> configuration option is true.
 
 Used to wrap a route which requires a user to be logged in as a user with all
 of the roles listed in order to access it.
@@ -1356,6 +1386,8 @@ The details you get back will depend upon the authentication provider in use.
 
 =item user_has_role
 
+Returns undef if C<disable_roles> configuration option is true.
+
 Check if a user has the role named.
 
 By default, the currently-logged-in user will be checked, so you need only name
@@ -1368,6 +1400,8 @@ You can also provide the username to check;
     if (user_has_role($user, $role)) { .... }
 
 =item user_roles
+
+Returns undef if C<disable_roles> configuration option is true.
 
 Returns a list of the roles of a user.
 
