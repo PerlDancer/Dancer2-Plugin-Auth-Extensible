@@ -36,7 +36,6 @@ pod_coverage_ok(
 pod_coverage_ok("Dancer2::Plugin::Auth::Extensible::Role::Provider");
 pod_coverage_ok("Dancer2::Plugin::Auth::Extensible::Provider::Config");
 pod_coverage_ok("Dancer2::Plugin::Auth::Extensible::Provider::Example");
-pod_coverage_ok("Dancer2::Plugin::Auth::Extensible::Provider::Unix");
 pod_coverage_ok(
     "Dancer2::Plugin::Auth::Extensible::Test",
     {
