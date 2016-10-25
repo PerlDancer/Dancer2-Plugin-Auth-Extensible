@@ -38,7 +38,8 @@ Current valid test names:
 =item * base
 
 This test is always run whether or not it is supplied in C<@test_names>. This
-tests all methods/functions that all providers must provide.
+tests all methods/functions that all providers must provide. See
+L<Dancer2::Plugin::Auth::Extensible::Role::Provider/required methods>.
 
 =item * create_user
 

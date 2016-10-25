@@ -130,6 +130,10 @@ provider.
 
 =over
 
+=item * create_user
+
+=item * get_user_by_code
+
 =item * set_user_details
 
 =item * set_user_password
