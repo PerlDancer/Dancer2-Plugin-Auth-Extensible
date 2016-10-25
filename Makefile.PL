@@ -35,6 +35,7 @@ WriteMakefile(
         'YAML'              => 0, # for config files and tests
         'Session::Token'    => 0,
         'Try::Tiny'         => 0,
+        'Plack'             => '1.0029', # OO-style Plack::Test
     },
     EXE_FILES => [ 'bin/dancer2-generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },
