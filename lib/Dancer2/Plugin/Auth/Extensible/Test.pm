@@ -198,13 +198,10 @@ sub _test_base {
     }
 
   SKIP: {
-        skip "priorities not defined for this provider test", 1
-          if !defined $ENV{DANCER_ENVIRONMENT}
-          || $ENV{DANCER_ENVIRONMENT} ne 'provider-config';
+        skip "Priorities not defined for this provider test", 1
+          if !get('/can_test_realm_priority')->content;
 
         # test realm priority
-        # TODO: find out if we can run these tests by poking the
-        # provider rather than having it hard-coded.
         my $logs = $trap->read;
         cmp_deeply(
             $logs,
@@ -744,6 +741,11 @@ sub _test_base {
         is $res->code, 200, "/get_user_details/dave response is 200"
           or diag explain $trap->read;
 
+        my $user = YAML::Load $res->content;
+        cmp_deeply $user,
+          superhashof( { name => 'David Precious' } ),
+          "We have Dave's name in the response"
+              or diag explain $user;
     }
     {
         my $res = get('/get_user_details/burt');

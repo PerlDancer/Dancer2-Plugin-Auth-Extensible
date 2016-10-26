@@ -141,17 +141,37 @@ get '/update_user_role/:realm' => sub {
 get '/get_user_details/:user' => sub {
     content_type 'text/x-yaml';
     my $user = get_user_details param('user');
-    my $name = blessed($user) ? $user->name : $user->{name};
-    YAML::Dump { name => $name };
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    YAML::Dump $user;
 };
 
 get '/get_user_mark/:realm' => sub {
     my $realm = param 'realm';
     content_type 'text/x-yaml';
     my $user = get_user_details 'mark', $realm;
-    my $name = blessed($user) ? $user->name : $user->{name};
-    YAML::Dump { name => $name };
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    YAML::Dump $user;
 };
 
+get '/can_test_realm_priority' => sub {
+    app->with_plugin('Auth::Extensible')->config->{realms}->{config2}
+      ->{priority};
+};
 
 1;
