@@ -1,7 +1,7 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
 use Dancer2::Core::Types qw/ArrayRef/;
-
+use List::Util qw/first/;
 use Moo;
 with "Dancer2::Plugin::Auth::Extensible::Role::Provider";
 use namespace::clean;
@@ -86,7 +86,7 @@ sub authenticate_user {
 # fields defined for users will just get passed through.
 sub get_user_details {
     my ($self, $username) = @_;
-    my ($user) = grep {
+    my $user = first {
         $_->{user} eq $username 
     } @{ $self->users };
     return $user;

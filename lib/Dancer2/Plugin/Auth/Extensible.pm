@@ -6,6 +6,7 @@ use strict;
 use warnings;
 use Carp;
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
+use List::Util qw(first);
 use Module::Runtime qw(use_module);
 use Scalar::Util;
 use Session::Token;
@@ -138,7 +139,7 @@ has realm_count => (
 sub realm {
     my ( $self, $name ) = @_;
     croak "realm name not provided" unless $name;
-    my ($realm) = grep { $_->{name} eq $name } @{ $self->realms };
+    my $realm = first { $_->{name} eq $name } @{ $self->realms };
     return $realm;
 }
 
