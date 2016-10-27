@@ -247,6 +247,9 @@ sub _test_base {
             }
           ),
           "... and we see expected message in logs.";
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
     }
 
     # Now we're logged in, check we can access stuff we should...
@@ -482,6 +485,9 @@ sub _test_base {
             }
           ),
           "... and we see expected message in logs.";
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
     }
 
     # And that now we're logged in again, we can access protected pages
@@ -562,6 +568,9 @@ sub _test_base {
             }
           ),
           "... and we see expected message in logs.";
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
     }
 
     # And that now we're logged in again, we can access protected pages
@@ -609,6 +618,9 @@ sub _test_base {
             }
           ),
           "... and we see expected message in logs." or diag explain $logs;
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
     }
 
     # Check that login route doesn't match any request string with '/login'.
@@ -681,6 +693,9 @@ sub _test_base {
             }
           ),
           "... and we see expected message in logs.";
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
     }
 
     # 2 arg user_has_role
@@ -873,6 +888,9 @@ sub _test_create_user {
               ),
               "... and we see expected message in logs." or diag explain $res;
 
+            is get('/loggedin')->content, "You are logged in",
+              "... and checking /loggedin route shows we are logged in";
+
             get('/logout');
         }
 
@@ -970,6 +988,9 @@ sub _test_update_roles {
                 }
               ),
               "... and we see expected message in logs.";
+
+            is get('/loggedin')->content, "You are logged in",
+              "... and checking /loggedin route shows we are logged in";
 
             $trap->read;    # clear logs
 
