@@ -6,7 +6,7 @@ Dancer2::Plugin::Auth::Extensible::Test::App - Dancer2 app for testing providers
 
 =cut
 
-our $VERSION = '0.613';
+our $VERSION = '0.614';
 
 use strict;
 use Dancer2 appname => 'TestApp';

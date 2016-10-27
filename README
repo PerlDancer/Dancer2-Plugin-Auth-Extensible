@@ -75,6 +75,12 @@ AUTHENTICATION PROVIDERS
     Dancer2::Plugin::Auth::Extensible::Provider::Database
         Authenticates users stored in a database table
 
+    Dancer2::Plugin::Auth::Extensible::Provider::IMAP
+        Authenticates users via in an IMAP server.
+
+    Dancer2::Plugin::Auth::Extensible::Provider::LDAP
+        Authenticates users stored in an LDAP directory.
+
     Need to write your own? Just create a new provider class which consumes
     Dancer2::Plugin::Auth::Extensible::Role::Provider and implements the
     required methods, and you're good to go!
@@ -98,6 +104,9 @@ CONTROLLING ACCESS TO ROUTES
         login page URL. If they are logged in, but do not have the required
         role, they will be redirected to the access denied URL.
 
+        If "disable_roles" configuration option is set to a true value then
+        using "require_role" will cause the application to croak on load.
+
     require_any_roles - require the user to have one of a list of roles
             get '/drink' => require_any_role [qw(BeerDrinker VodaDrinker)] => sub {
                 ...
@@ -109,6 +118,10 @@ CONTROLLING ACCESS TO ROUTES
         not have any of the specified roles, they will be redirected to the
         access denied URL.
 
+        If "disable_roles" configuration option is set to a true value then
+        using "require_any_roles" will cause the application to croak on
+        load.
+
     require_all_roles - require the user to have all roles listed
             get '/foo' => require_all_roles [qw(Foo Bar)] => sub { ... };
 
@@ -117,6 +130,10 @@ CONTROLLING ACCESS TO ROUTES
         to the login page URL. If they are logged in but do not have all of
         the specified roles, they will be redirected to the access denied
         URL.
+
+        If "disable_roles" configuration option is set to a true value then
+        using "require_all_roles" will cause the application to croak on
+        load.
 
   Replacing the Default " /login " and " /login/denied " Routes
     By default, the plugin adds a route to present a simple login form at
@@ -239,6 +256,10 @@ CONTROLLING ACCESS TO ROUTES
 
             if (user_has_role($user, $role)) { .... }
 
+        If "disable_roles" configuration option is set to a true value then
+        using "user_has_role" will cause the application to croak at
+        runtime.
+
     user_roles
         Returns a list of the roles of a user.
 
@@ -246,6 +267,9 @@ CONTROLLING ACCESS TO ROUTES
         alternatively, you may supply a username to check.
 
         Returns a list or arrayref depending on context.
+
+        If "disable_roles" configuration option is set to a true value then
+        using "user_roles" will cause the application to croak at runtime.
 
     authenticate_user
         Usually you'll want to let the built-in login handling code deal
@@ -574,6 +598,9 @@ CONTROLLING ACCESS TO ROUTES
         plugins:
             Auth::Extensible:
                 # Set to 1 if you want to disable the use of roles (0 is default)
+                # If roles are disabled then any use of role-based route decorators
+                # will cause app to croak on load. Use of 'user_roles' and
+                # 'user_has_role' will croak at runtime.
                 disable_roles: 0
                 # After /login: If no return_url is given: land here ('/' is default)
                 user_home_page: '/user'
@@ -607,8 +634,12 @@ CONTROLLING ACCESS TO ROUTES
                 # you wish to use)
                 realms:
                     realm_one:
+                        priority: 3 # Defaults to 0. Realms are checked in descending order
                         provider: Database
                             db_connection_name: 'foo'
+                    realm_two:
+                        priority: 0 # Will be checked after realm_one
+                        provider: Config
 
     Please note that you must have a session provider configured. The
     authentication framework requires sessions in order to track information
@@ -641,7 +672,7 @@ AUTHOR
 
     Stefan Hornburg (Racke), "<racke at linuxia.de>"
 
-    Conversion to Dancer2's new plugin system in 2016 by:
+    Conversion to Dancer2's new plugin system plus much cleanup & reorg:
 
     Peter Mottram (SysPete), "<peter at sysnix.com>"
 

@@ -1,5 +1,27 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.614 Thu Oct 27 16:03:17 2016 CEST 
+
+    [ENHANCEMENTS]
+
+    * Add priority attribute to force order in which realms are checked
+      (Peter Mottram).
+    * Upgrade default encryption algo to SHA-512 (Peter Mottram GH#57).
+    * Implement disable_roles in plugin (Peter Mottram GH#38).
+
+    [DOCUMENTATION]
+
+    * Add missing optional methods to Role::Provider (Peter Mottram).
+
+    [TESTS]
+
+    * Convert tests to Plack::Test's OO style (Peter Mottram).
+
+    [MISC]
+
+    * Split out LDAP provider into its own distro (Peter Mottram).
+    * Avoid a memory cycle (Peter Mottram).
+
 0.613 Tue Oct 18 15:35:19 2016 CEST
 
     [DOCUMENTATION]
