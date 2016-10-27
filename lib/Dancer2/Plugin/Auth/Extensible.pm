@@ -1199,6 +1199,10 @@ Authenticates users stored in a database table using L<Dancer2::Plugin::DBIC>
 
 Authenticates users stored in a database table
 
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::IMAP>
+
+Authenticates users via in an IMAP server.
+
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::LDAP>
 
 Authenticates users stored in an LDAP directory.
@@ -1831,7 +1835,7 @@ Dancer2 port of Dancer::Plugin::Auth::Extensible by:
 
 Stefan Hornburg (Racke), C<< <racke at linuxia.de> >>
 
-Conversion to Dancer2's new plugin system in 2016 by:
+Conversion to Dancer2's new plugin system plus much cleanup & reorg:
 
 Peter Mottram (SysPete), C<< <peter at sysnix.com> >>
 
