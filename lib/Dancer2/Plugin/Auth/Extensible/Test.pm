@@ -171,7 +171,8 @@ sub _test_base {
         );
     }
 
-    {
+    SKIP: {
+        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
         $trap->read;    # clear logs
 
         my $res = get('/regex/a');
@@ -205,7 +206,7 @@ sub _test_base {
         my $logs = $trap->read;
         cmp_deeply(
             $logs,
-            [
+            superbagof(
                 {
                     formatted => ignore(),
                     level     => 'debug',
@@ -221,7 +222,7 @@ sub _test_base {
                     level     => 'debug',
                     message   => re(qr/realm config1/)
                 },
-            ],
+            ),
             "Realms checked in the correct order"
         ) or diag explain $logs;
     }
@@ -235,13 +236,22 @@ sub _test_base {
 
         is( $res->code, 302, 'Login with real details succeeds' )
           or diag explain $trap->read;
+
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config1 accepted user dave'
+            }
+          ),
+          "... and we see expected message in logs.";
     }
 
     # Now we're logged in, check we can access stuff we should...
 
     {
-        $trap->read;    # clear logs
-
         my $res = get('/loggedin');
 
         is( $res->code, 200, 'Can access /loggedin now we are logged in' )
@@ -254,93 +264,96 @@ sub _test_base {
         );
     }
 
-    {
-        $trap->read;    # clear logs
+  SKIP: {
+        skip "not testing roles", 11 if $ENV{D2PAE_TEST_NO_ROLES};
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/name');
+            my $res = get('/name');
 
-        is( $res->code, 200, 'get /name is 200' )
-          or diag explain $trap->read;
+            is( $res->code, 200, 'get /name is 200' )
+              or diag explain $trap->read;
 
-        is(
-            $res->content,
-            'Hello, David Precious',
-            'Logged in user details via logged_in_user work'
-        );
+            is(
+                $res->content,
+                'Hello, David Precious',
+                'Logged in user details via logged_in_user work'
+            );
 
-    }
+        }
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/roles');
+            my $res = get('/roles');
 
-        is( $res->code, 200, 'get /roles is 200' )
-          or diag explain $trap->read;
+            is( $res->code, 200, 'get /roles is 200' )
+              or diag explain $trap->read;
 
-        is( $res->content, 'BeerDrinker,Motorcyclist',
-            'Correct roles for logged in user' );
-    }
+            is( $res->content, 'BeerDrinker,Motorcyclist',
+                'Correct roles for logged in user' );
+        }
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/roles/bob');
+            my $res = get('/roles/bob');
 
-        is( $res->code, 200, 'get /roles/bob is 200' )
-          or diag explain $trap->read;
+            is( $res->code, 200, 'get /roles/bob is 200' )
+              or diag explain $trap->read;
 
-        is( $res->content, 'CiderDrinker',
-            'Correct roles for other user in current realm' );
-    }
+            is( $res->content, 'CiderDrinker',
+                'Correct roles for other user in current realm' );
+        }
 
-    # Check we can request something which requires a role we have....
+        # Check we can request something which requires a role we have....
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/beer');
+            my $res = get('/beer');
 
-        is( $res->code, 200,
-            'We can request a route (/beer) requiring a role we have...' )
-          or diag explain $trap->read;
-    }
+            is( $res->code, 200,
+                'We can request a route (/beer) requiring a role we have...' )
+              or diag explain $trap->read;
+        }
 
-    # Check we can request a route that requires any of a list of roles,
-    # one of which we have:
+        # Check we can request a route that requires any of a list of roles,
+        # one of which we have:
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/anyrole');
+            my $res = get('/anyrole');
 
-        is( $res->code, 200,
-            "We can request a multi-role route requiring with any one role" )
-          or diag explain $trap->read;
-    }
+            is( $res->code, 200,
+                "We can request a multi-role route requiring with any one role"
+            ) or diag explain $trap->read;
+        }
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/allroles');
+            my $res = get('/allroles');
 
-        is( $res->code, 200,
-            "We can request a multi-role route with all roles required" )
-          or diag explain $trap->read;
-    }
+            is( $res->code, 200,
+                "We can request a multi-role route with all roles required" )
+              or diag explain $trap->read;
+        }
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/not_allroles');
+            my $res = get('/not_allroles');
 
-        is( $res->code, 302, "/not_allroles response code 302" )
-          or diag explain $trap->read;
-        is(
-            $res->headers->header('Location'),
-            'http://localhost/login/denied?return_url=%2Fnot_allroles',
-            '/not_allroles redirected to denied page'
-        );
+            is( $res->code, 302, "/not_allroles response code 302" )
+              or diag explain $trap->read;
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login/denied?return_url=%2Fnot_allroles',
+                '/not_allroles redirected to denied page'
+            );
+        }
     }
 
     # And also a route declared as a regex (this should be no different, but
@@ -356,32 +369,35 @@ sub _test_base {
           or diag explain $trap->read;
     }
 
-    {
-        $trap->read;    # clear logs
+  SKIP: {
+        skip "not testing roles", 3 if $ENV{D2PAE_TEST_NO_ROLES};
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/piss/regex');
+            my $res = get('/piss/regex');
 
-        is( $res->code, 200,
-            "We can request a route requiring a regex role we have" )
-          or diag explain $trap->read;
-    }
+            is( $res->code, 200,
+                "We can request a route requiring a regex role we have" )
+              or diag explain $trap->read;
+        }
 
-    # ... but can't request something requiring a role we don't have
+        # ... but can't request something requiring a role we don't have
 
-    {
-        $trap->read;    # clear logs
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/piss');
+            my $res = get('/piss');
 
-        is( $res->code, 302,
-            "Redirect on a route requiring a role we don't have" )
-          or diag explain $trap->read;
+            is( $res->code, 302,
+                "Redirect on a route requiring a role we don't have" )
+              or diag explain $trap->read;
 
-        is(
-            $res->headers->header('Location'),
-            'http://localhost/login/denied?return_url=%2Fpiss',
-            "We cannot request a route requiring a role we don't have"
-        );
+            is(
+                $res->headers->header('Location'),
+                'http://localhost/login/denied?return_url=%2Fpiss',
+                "We cannot request a route requiring a role we don't have"
+            );
+        }
     }
 
     # Check the realm we authenticated against is what we expect
@@ -429,7 +445,8 @@ sub _test_base {
         );
     }
 
-    {
+    SKIP: {
+        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
         $trap->read;    # clear logs
 
         my $res = get('/beer');
@@ -481,7 +498,8 @@ sub _test_base {
         is( $res->content, 'config2', 'Authenticated against expected realm' );
     }
 
-    {
+    SKIP: {
+        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
         $trap->read;    # clear logs
 
         my $res = get('/roles/bob/config1');
@@ -622,30 +640,32 @@ sub _test_base {
     }
 
     # 2 arg user_has_role
+  SKIP: {
+        skip "not testing roles", 6 if $ENV{D2PAE_TEST_NO_ROLES};
+        {
+            $trap->read;    # clear logs
 
-    {
-        $trap->read;    # clear logs
+            my $res = get('/does_dave_drink_beer');
+            is $res->code, 200, "/does_dave_drink_beer response is 200"
+              or diag explain $trap->read;
+            ok $res->content, "yup - dave drinks beer";
+        }
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/does_dave_drink_beer');
-        is $res->code, 200, "/does_dave_drink_beer response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "yup - dave drinks beer";
-    }
-    {
-        $trap->read;    # clear logs
+            my $res = get('/does_dave_drink_cider');
+            is $res->code, 200, "/does_dave_drink_cider response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "no way does dave drink cider";
+        }
+        {
+            $trap->read;    # clear logs
 
-        my $res = get('/does_dave_drink_cider');
-        is $res->code, 200, "/does_dave_drink_cider response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "no way does dave drink cider";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/does_undef_drink_beer');
-        is $res->code, 200, "/does_undef_drink_beer response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "undefined users cannot drink";
+            my $res = get('/does_undef_drink_beer');
+            is $res->code, 200, "/does_undef_drink_beer response is 200"
+              or diag explain $trap->read;
+            ok !$res->content, "undefined users cannot drink";
+        }
     }
 
     # 3 arg authenticate_user
@@ -736,21 +756,26 @@ sub _test_base {
           or diag explain $trap->read;
         ok !$res->content, "content shows fail";
     }
-    {
-        my $res = get('/get_user_details/dave');
-        is $res->code, 200, "/get_user_details/dave response is 200"
-          or diag explain $trap->read;
 
-        my $user = YAML::Load $res->content;
-        cmp_deeply $user,
-          superhashof( { name => 'David Precious' } ),
-          "We have Dave's name in the response"
+  SKIP: {
+        skip "not testing get_user_details", 6
+          if $ENV{D2PAE_TEST_NO_USER_DETAILS};
+        {
+            my $res = get('/get_user_details/dave');
+            is $res->code, 200, "/get_user_details/dave response is 200"
+              or diag explain $trap->read;
+
+            my $user = YAML::Load $res->content;
+            cmp_deeply $user,
+              superhashof( { name => 'David Precious' } ),
+              "We have Dave's name in the response"
               or diag explain $user;
-    }
-    {
-        my $res = get('/get_user_details/burt');
-        is $res->code, 200, "/get_user_details/burt response is 200"
-          or diag explain $trap->read;
+        }
+        {
+            my $res = get('/get_user_details/burt');
+            is $res->code, 200, "/get_user_details/burt response is 200"
+              or diag explain $trap->read;
+        }
     }
 }
 
