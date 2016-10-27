@@ -821,6 +821,9 @@ sub _test_base {
               or diag explain $trap->read;
         }
     }
+
+    # cleanup
+    get('/logout');
 }
 
 # create_user
@@ -829,6 +832,7 @@ sub _test_create_user {
 
     note "test create_user";
 
+    #for my $realm (qw/config1 config2/) {
     for my $realm (qw/config1 config2/) {
 
         # First create a user
@@ -867,7 +871,9 @@ sub _test_create_user {
                     message   => "$realm accepted user newuser"
                 }
               ),
-              "... and we see expected message in logs." or diag explain $logs;
+              "... and we see expected message in logs." or diag explain $res;
+
+            get('/logout');
         }
 
     }
