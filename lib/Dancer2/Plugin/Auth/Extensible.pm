@@ -487,11 +487,17 @@ sub password_reset_send {
 }
 
 sub require_all_roles {
-    return _build_wrapper( @_, 'all' );
+    my $plugin = shift;
+    croak "Cannot use require_all_roles since roles are disabled by disable_roles setting"
+      if $plugin->disable_roles;
+    return $plugin->_build_wrapper( @_, 'all' );
 }
 
 sub require_any_role {
-    return _build_wrapper( @_, 'any' );
+    my $plugin = shift;
+    croak "Cannot use require_any_role since roles are disabled by disable_roles setting"
+      if $plugin->disable_roles;
+    return $plugin->_build_wrapper( @_, 'any' );
 }
 
 sub require_login {
@@ -521,7 +527,10 @@ sub require_login {
 }
 
 sub require_role {
-    return _build_wrapper( @_, 'single' );
+    my $plugin = shift;
+    croak "Cannot use require_role since roles are disabled by disable_roles setting"
+      if $plugin->disable_roles;
+    return $plugin->_build_wrapper( @_, 'single' );
 }
 
 sub update_current_user {
@@ -555,6 +564,8 @@ sub update_user {
 
 sub user_has_role {
     my $plugin = shift;
+    croak "Cannot call user_has_role since roles are disabled by disable_roles setting"
+      if $plugin->disable_roles;
 
     my ( $username, $want_role );
     if ( @_ == 2 ) {
@@ -661,6 +672,8 @@ sub user_password {
 
 sub user_roles {
     my ( $plugin, $username, $realm ) = @_;
+    croak "Cannot call user_roles since roles are disabled by disable_roles setting"
+      if $plugin->disable_roles;
 
     $username = $plugin->app->session->read('logged_in_user')
       unless defined $username;
@@ -1721,6 +1734,9 @@ In your application's configuation file:
     plugins:
         Auth::Extensible:
             # Set to 1 if you want to disable the use of roles (0 is default)
+            # If roles are disabled then any use of role-based route decorators
+            # will cause app to croak on load. Use of 'user_roles' and
+            # 'user_has_role' will croak at runtime.
             disable_roles: 0
             # After /login: If no return_url is given: land here ('/' is default)
             user_home_page: '/user'

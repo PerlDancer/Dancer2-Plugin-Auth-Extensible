@@ -1,7 +1,9 @@
 README
 t/00-load.t
 t/01-role-provider.t
+t/disable_roles.t
 t/plugin-provider-config.t
+t/lib/environments/disable-roles.yml
 t/lib/environments/provider-config.yml
 t/lib/Provider/ConfigExtended.pm
 t/lib/views/.placeholder
