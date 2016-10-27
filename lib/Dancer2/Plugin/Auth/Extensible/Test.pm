@@ -472,6 +472,16 @@ sub _test_base {
         is( $res->code, 302, 'Login as user from second realm succeeds' )
           or diag explain $trap->read;
 
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config2 accepted user burt'
+            }
+          ),
+          "... and we see expected message in logs.";
     }
 
     # And that now we're logged in again, we can access protected pages
@@ -542,6 +552,16 @@ sub _test_base {
         is( $res->code, 302, 'Login as user with hashed password succeeds' )
           or diag explain $trap->read;
 
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config2 accepted user hashedpassword'
+            }
+          ),
+          "... and we see expected message in logs.";
     }
 
     # And that now we're logged in again, we can access protected pages
@@ -560,6 +580,9 @@ sub _test_base {
     {
         $trap->read;    # clear logs
 
+        # make sure we're logged out
+        get('/logout');
+
         my $res = post(
             '/login',
             {
@@ -575,6 +598,17 @@ sub _test_base {
         is( $res->headers->header('Location'),
             'http://localhost/foobar',
             'Redirect after login to given return_url works' );
+
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config1 accepted user dave'
+            }
+          ),
+          "... and we see expected message in logs." or diag explain $logs;
     }
 
     # Check that login route doesn't match any request string with '/login'.
@@ -637,6 +671,16 @@ sub _test_base {
         is( $res->code, 302, 'Login with real details succeeds' )
           or diag explain $trap->read;
 
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config1 accepted user dave'
+            }
+          ),
+          "... and we see expected message in logs.";
     }
 
     # 2 arg user_has_role
@@ -813,6 +857,17 @@ sub _test_create_user {
             );
             is( $res->code, 302, 'Login with newly created user succeeds' )
               or diag explain $trap->read;
+
+            my $logs = $trap->read;
+            cmp_deeply $logs,
+              superbagof(
+                {
+                    formatted => ignore(),
+                    level     => 'debug',
+                    message   => "$realm accepted user newuser"
+                }
+              ),
+              "... and we see expected message in logs." or diag explain $logs;
         }
 
     }
@@ -898,6 +953,17 @@ sub _test_update_roles {
 
             is( $res->code, 302,
                 "Login with real details succeeds (realm $realm)" );
+
+            my $logs = $trap->read;
+            cmp_deeply $logs,
+              superbagof(
+                {
+                    formatted => ignore(),
+                    level     => 'debug',
+                    message   => "$realm accepted user mark"
+                }
+              ),
+              "... and we see expected message in logs.";
 
             $trap->read;    # clear logs
 
