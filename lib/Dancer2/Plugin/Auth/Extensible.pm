@@ -1232,6 +1232,9 @@ the user is not logged in, they will be redirected to the login page URL.  If
 they are logged in, but do not have the required role, they will be redirected
 to the access denied URL.
 
+If C<disable_roles> configuration option is set to a true value then using
+L</require_role> will cause the application to croak on load.
+
 =item require_any_roles - require the user to have one of a list of roles
 
     get '/drink' => require_any_role [qw(BeerDrinker VodaDrinker)] => sub {
@@ -1243,6 +1246,9 @@ roles listed.  If the user is not logged in, they will be redirected to the
 login page URL.  If they are logged in, but do not have any of the specified
 roles, they will be redirected to the access denied URL.
 
+If C<disable_roles> configuration option is set to a true value then using
+L</require_any_roles> will cause the application to croak on load.
+
 =item require_all_roles - require the user to have all roles listed
 
     get '/foo' => require_all_roles [qw(Foo Bar)] => sub { ... };
@@ -1251,6 +1257,9 @@ Requires that the user be logged in as a user who has all of the roles listed.
 If the user is not logged in, they will be redirected to the login page URL.  If
 they are logged in but do not have all of the specified roles, they will be
 redirected to the access denied URL.
+
+If C<disable_roles> configuration option is set to a true value then using
+L</require_all_roles> will cause the application to croak on load.
 
 =back
 
@@ -1381,6 +1390,9 @@ You can also provide the username to check;
 
     if (user_has_role($user, $role)) { .... }
 
+If C<disable_roles> configuration option is set to a true value then using
+L</user_has_role> will cause the application to croak at runtime.
+
 =item user_roles
 
 Returns a list of the roles of a user.
@@ -1389,6 +1401,9 @@ By default, roles for the currently-logged-in user will be checked;
 alternatively, you may supply a username to check.
 
 Returns a list or arrayref depending on context.
+
+If C<disable_roles> configuration option is set to a true value then using
+L</user_roles> will cause the application to croak at runtime.
 
 =item authenticate_user
 
