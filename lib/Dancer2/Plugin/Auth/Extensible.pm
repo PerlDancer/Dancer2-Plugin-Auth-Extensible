@@ -386,12 +386,12 @@ sub create_user {
 
         # Would be slightly more efficient to do this at time of creation, but
         # this keeps the code simpler for the provider
-        $user = $provider->set_user_details( $user->{username},
+        $user = $provider->set_user_details( $options{username},
             pw_reset_code => $code );
         no strict 'refs';
 
         # email hard-coded as per password_reset_send()
-        my %params = ( code => $code, email => $user->{email}, user => $user );
+        my %params = ( code => $code, email => $options{email}, user => $user );
         &{ $plugin->welcome_send }( $plugin, %params );
     }
     $user;
