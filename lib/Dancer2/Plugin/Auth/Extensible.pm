@@ -1207,6 +1207,10 @@ Authenticates users via in an IMAP server.
 
 Authenticates users stored in an LDAP directory.
 
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Usergroup>
+
+An alternative L<Dancer2::Plugin::DBIC>-based provider.
+
 =back
 
 Need to write your own?  Just create a new provider class which consumes
