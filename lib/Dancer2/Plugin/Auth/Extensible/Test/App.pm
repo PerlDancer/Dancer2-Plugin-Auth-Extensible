@@ -118,10 +118,16 @@ get '/user_password' => sub {
     return user_password params('query');
 };
 
-get '/create_user/:realm' => sub {
-    my $realm = param 'realm';
-    create_user username => 'newuser', realm => $realm;
-    user_password username => 'newuser', realm => $realm, new_password => "pish_$realm";
+post '/create_user' => sub {
+    my $params   = body_parameters->as_hashref;
+    my $password = delete $params->{password};
+    my $user     = create_user %$params;
+    if ( $user && $password ) {
+        user_password
+          username     => $params->{username},
+          realm        => $params->{realm},
+          new_password => $password;
+    }
 };
 
 get '/update_current_user' => sub {

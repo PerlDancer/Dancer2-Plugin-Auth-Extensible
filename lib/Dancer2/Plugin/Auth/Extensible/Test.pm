@@ -850,12 +850,18 @@ sub _test_create_user {
     #for my $realm (qw/config1 config2/) {
     for my $realm (qw/config1 config2/) {
 
+        my $data = [
+            username => 'newuser',
+            password => "pish_$realm",
+            realm    => $realm,
+        ];
+
         # First create a user
 
         {
             $trap->read;    # clear logs
 
-            my $res = get("/create_user/$realm");
+            my $res = post( "/create_user", $data );
 
             is $res->code, 200, "/create_user response is 200"
               or diag explain $trap->read;
@@ -866,14 +872,8 @@ sub _test_create_user {
         {
             $trap->read;    # clear logs
 
-            my $res = post(
-                '/login',
-                [
-                    username => 'newuser',
-                    password => "pish_$realm",
-                    realm    => $realm
-                ]
-            );
+            my $res = post( '/login', $data );
+
             is( $res->code, 302, 'Login with newly created user succeeds' )
               or diag explain $trap->read;
 
