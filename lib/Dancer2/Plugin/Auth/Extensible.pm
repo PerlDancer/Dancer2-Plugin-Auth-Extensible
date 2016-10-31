@@ -1295,7 +1295,7 @@ Then in your code you might simply use a template:
         template
             'account/login',
             { title => 'Sign in',
-              return_url => query_parameters->get('return_url'),
+              return_url => $return_url,
             },
             { layout => 'login.tt',
             };
