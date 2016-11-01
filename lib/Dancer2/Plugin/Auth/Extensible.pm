@@ -333,6 +333,7 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
+    my @errors;
 
     # username and password must be simple non-empty scalars
     if (   defined $username
@@ -351,16 +352,26 @@ sub authenticate_user {
             $plugin->app->log( debug =>
                   "Attempting to authenticate $username against realm $realm" );
             my $provider = $plugin->auth_provider($realm);
+
             my %lastlogin =
               $plugin->record_lastlogin
               ? ( lastlogin => 'logged_in_user_lastlogin' )
               : ();
-            if (
-                $provider->authenticate_user(
-                    $username, $password, %lastlogin
-                )
-              )
-            {
+
+            my $success;
+            eval {
+                $success =
+                  $provider->authenticate_user( $username, $password,
+                    %lastlogin );
+                1;
+            } or do {
+                my $err = $@ || "Unknown error";
+                $plugin->app->log(
+                    error => "$realm provider threw error: $err" );
+                push @errors, $err;
+            };
+
+            if ( $success ) {
                 $plugin->app->log( debug => "$realm accepted user $username" );
 
                 $plugin->execute_plugin_hook(
@@ -379,16 +390,14 @@ sub authenticate_user {
 
     # If we get to here, we failed to authenticate against any realm using the
     # details provided.
-    # TODO: allow providers to raise an exception if something failed, and catch
-    # that and do something appropriate, rather than just treating it as a
-    # failed login.
 
     $plugin->execute_plugin_hook(
         'after_authenticate_user_failure',
         {
             username => $username,
             password => $password,
-            realm    => $realm
+            realm    => $realm,
+            errors   => \@errors,
         }
     );
 
@@ -1869,7 +1878,9 @@ Receives a hash reference of username, password and realm.
 
 Called in L</authenticate_user> after failed authentication.
 
-Receives a hash reference of username, password and realm.
+Receives a hash reference of username, password, realm and errors. The value
+of errors is an array reference of any errors thrown by authentication
+providers (if any).
 
 =head2 login_required
 
