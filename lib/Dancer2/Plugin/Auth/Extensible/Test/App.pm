@@ -41,20 +41,33 @@ my $provider = $plugin->auth_provider('config1');
 
 my @provider_can = ();
 
+#
+# IMPORTANT NOTE
+#
+# We use "isnt exception {...}, undef, ..." a lot which is REALLY BAD
+# practice. This should only ever be done in provider tests since we cannot
+# be sure what exception message a provider returns and we do NOT mandate
+# specific messages so we can only test if something died.
+#
+# When writing new provider tests please always test first with a "like /qr/"
+# instead and then once the tests are all working against one provider switch
+# them to the bad "isnt undef" style so they are portable.
+#
+
 subtest 'Provider authenticate_user tests' => sub {
     my $ret;
     push @provider_can, 'authenticate_user';
 
-    like exception { $ret = $provider->authenticate_user(); },
-      qr/username and password must be defined/,
+    isnt exception { $ret = $provider->authenticate_user(); },
+      undef,
       "authenticate_user with no args dies.";
 
-    like exception { $ret = $provider->authenticate_user(''); },
-      qr/username and password must be defined/,
+    isnt exception { $ret = $provider->authenticate_user(''); },
+      undef,
       "authenticate_user with empty username and no password dies.";
 
-    like exception { $ret = $provider->authenticate_user(undef, ''); },
-      qr/username and password must be defined/,
+    isnt exception { $ret = $provider->authenticate_user(undef, ''); },
+      undef,
       "authenticate_user with undef username and empty password dies.";
 
     is exception { $ret = $provider->authenticate_user('', ''); },
@@ -87,8 +100,8 @@ SKIP: {
 
         push @provider_can, 'get_user_details';
 
-        like exception { $ret = $provider->get_user_details(); },
-          qr/username must be defined/,
+        isnt exception { $ret = $provider->get_user_details(); },
+          undef,
           "get_user_details with no args dies.";
 
         is exception { $ret = $provider->get_user_details(''); },
@@ -122,8 +135,8 @@ SKIP: {
 
         push @provider_can, 'get_user_roles';
 
-        like exception { $ret = $provider->get_user_roles(); },
-          qr/username must be defined/,
+        isnt exception { $ret = $provider->get_user_roles(); },
+          undef,
           "get_user_roles with no args dies.";
 
         is exception { $ret = $provider->get_user_roles(''); }, undef,
@@ -152,16 +165,16 @@ SKIP: {
 
         push @provider_can, 'create_user';
 
-        like exception { $ret = $provider->create_user(); },
-          qr/username not supplied in args/i,
+        isnt exception { $ret = $provider->create_user(); },
+          undef,
           "create_user with no args dies.";
 
-        like exception { $ret = $provider->create_user(username => ''); },
-          qr/username not supplied in args/i,
+        isnt exception { $ret = $provider->create_user(username => ''); },
+          undef,
           "create_user with empty username dies.";
 
-        like exception { $ret = $provider->create_user(username => 'dave'); },
-          qr/user already exists|constraint/i,
+        isnt exception { $ret = $provider->create_user(username => 'dave'); },
+          undef,
           "create_user with existing username dies.";
 
         is exception {
@@ -204,12 +217,12 @@ SKIP: {
 
         push @provider_can, 'set_user_details';
 
-        like exception { $ret = $provider->set_user_details(); },
-          qr/username to update needs to be specified/i,
+        isnt exception { $ret = $provider->set_user_details(); },
+          undef,
           "set_user_details with no args dies.";
 
-        like exception { $ret = $provider->set_user_details(''); },
-          qr/username to update needs to be specified/i,
+        isnt exception { $ret = $provider->set_user_details(''); },
+          undef,
           "set_user_details with empty username dies.";
 
         is exception {
@@ -260,12 +273,12 @@ SKIP: {
 
         push @provider_can, 'get_user_by_code';
 
-        like exception { $ret = $provider->get_user_by_code(); },
-          qr/code needs to be specified/i,
+        isnt exception { $ret = $provider->get_user_by_code(); },
+          undef,
           "get_user_by_code with no args dies.";
 
-        like exception { $ret = $provider->get_user_by_code(''); },
-          qr/code needs to be specified/i,
+        isnt exception { $ret = $provider->get_user_by_code(''); },
+          undef,
           "get_user_by_code with empty code dies.";
 
         is exception { $ret = $provider->get_user_by_code('nosuchcode'); },
@@ -303,16 +316,16 @@ SKIP: {
 
         push @provider_can, 'set_user_password';
 
-        like exception { $ret = $provider->set_user_password(); },
-          qr/username and password must be defined/i,
+        isnt exception { $ret = $provider->set_user_password(); },
+          undef,
           "set_user_password with no args dies.";
 
-        like exception { $ret = $provider->set_user_password(''); },
-          qr/username and password must be defined/i,
+        isnt exception { $ret = $provider->set_user_password(''); },
+          undef,
           "set_user_password with username but undef password dies";
 
-        like exception { $ret = $provider->set_user_password( undef, '' ); },
-          qr/username and password must be defined/i,
+        isnt exception { $ret = $provider->set_user_password( undef, '' ); },
+          undef,
           "set_user_password with password but undef username dies";
 
         is exception {
@@ -353,8 +366,8 @@ SKIP: {
 
         push @provider_can, 'password_expired';
 
-        like exception { $ret = $provider->password_expired(); },
-          qr/user must be specified/i,
+        isnt exception { $ret = $provider->password_expired(); },
+          undef,
           "password_expired with no args dies.";
 
         is exception {
