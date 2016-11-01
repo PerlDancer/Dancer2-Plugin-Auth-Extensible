@@ -189,8 +189,9 @@ has realm_providers => (
 # hooks
 #
 
-plugin_hooks qw(before_authenticate_user login_required permission_denied
-  after_login_success);
+plugin_hooks 'before_authenticate_user', 'after_authenticate_user_success',
+  'after_authenticate_user_failure', 'login_required permission_denied',
+  'after_login_success';
 
 #
 # keywords
@@ -361,6 +362,16 @@ sub authenticate_user {
               )
             {
                 $plugin->app->log( debug => "$realm accepted user $username" );
+
+                $plugin->execute_plugin_hook(
+                    'after_authenticate_user_success',
+                    {
+                        username => $username,
+                        password => $password,
+                        realm    => $realm
+                    }
+                );
+
                 return wantarray ? ( 1, $realm ) : 1;
             }
         }
@@ -371,6 +382,16 @@ sub authenticate_user {
     # TODO: allow providers to raise an exception if something failed, and catch
     # that and do something appropriate, rather than just treating it as a
     # failed login.
+
+    $plugin->execute_plugin_hook(
+        'after_authenticate_user_failure',
+        {
+            username => $username,
+            password => $password,
+            realm    => $realm
+        }
+    );
+
     return wantarray ? ( 0, undef ) : 0;
 }
 
@@ -1835,6 +1856,18 @@ This plugin provides the following hooks:
 =head2 before_authenticate_user
 
 Called at the start of L</authenticate_user>.
+
+Receives a hash reference of username, password and realm.
+
+=head2 after_authenticate_user_success
+
+Called in L</authenticate_user> when authentication is successful.
+
+Receives a hash reference of username, password and realm.
+
+=head2 after_authenticate_user_failure
+
+Called in L</authenticate_user> after failed authentication.
 
 Receives a hash reference of username, password and realm.
 
