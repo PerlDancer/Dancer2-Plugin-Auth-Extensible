@@ -29,81 +29,97 @@ writing piles of tests yourself.
 
 =head1 FUNCTIONS
 
-=head2 testme $psgi_app @test_names?
-
-Current valid test names:
-
-=over
-
-=item * base
-
-This test is always run whether or not it is supplied in C<@test_names>. This
-tests all methods/functions that all providers must provide. See
-L<Dancer2::Plugin::Auth::Extensible::Role::Provider/required methods>.
-
-=item * create_user
-
-Test provider's C<create_user> method.
-
-=item * update_user
-
-Test provider's C<update_user> and C<update_current_user> methods.
-
-=item * password_reset
-
-=item * user_password
-
-=item * lastlogin
-
-Test provider's C<password_expired> function.
-
-=item * expired
-
-=back
+=head2 testme $psgi_app
 
 =cut
 
 my $jar = HTTP::Cookies->new();
 
 my %dispatch = (
-    base           => \&_test_base,
-    create_user    => \&_test_create_user,
-    expired        => \&_test_expired,
-    lastlogin      => \&_test_lastlogin,
-    password_reset => \&_test_password_reset,
-    reset_code     => \&_test_reset_code,
-    update_roles   => \&_test_update_roles,
-    update_user    => \&_test_update_user,
-    user_password  => \&_test_user_password,
+    auth_provider                   => \&auth_provider,
+    authenticate_user               => \&authenticate_user,
+    create_user                     => \&create_user,
+    get_user_details                => \&get_user_details,
+    logged_in_user                  => \&logged_in_user,
+    logged_in_user_lastlogin        => \&logged_in_user_lastlogin,
+    logged_in_user_password_expired => \&logged_in_user_password_expired,
+    password_reset_send             => \&password_reset_send,
+    realm_count                     => \&realm_count,
+    realm_names                     => \&realm_names,
+    require_all_roles               => \&require_all_roles,
+    require_any_role                => \&require_any_role,
+    require_login                   => \&require_login,
+    require_role                    => \&require_role,
+    update_current_user             => \&update_current_user,
+    update_user                     => \&update_user,
+    user_has_role                   => \&user_has_role,
+    user_password                   => \&user_password,
+    user_roles                      => \&user_roles,
+    welcome_send                    => \&welcome_send,
+);
+
+# Provider methods needed by plugin tests.
+# These are assumed to be correct. If they are not then some provider tests
+# should fail and we can fixup later.
+my %dependencies = (
+    authenticate_user => ['authenticate_user'],
+    create_user => [ 'get_user_details', 'create_user', 'set_user_details', ],
+    get_user_details => ['get_user_details'],
+    logged_in_user   => ['get_user_details'],
+    logged_in_user_password_expired =>
+      [ 'get_user_details', 'password_expired' ],
+    password_reset_send => ['set_user_details'],
+    require_all_roles   => [ 'get_user_details', 'get_user_roles' ],
+    require_any_role    => [ 'get_user_details', 'get_user_roles' ],
+    require_login       => ['get_user_details'],
+    require_role        => [ 'get_user_details', 'get_user_roles' ],
+    update_current_user => ['set_user_details'],
+    update_user         => ['set_user_details'],
+    user_has_role       => ['get_user_roles'],
+    user_password =>
+      [ 'get_user_by_code', 'authenticate_user', 'set_user_details' ],
+    user_roles => ['get_user_roles'],
 );
 
 my ( $test, $trap );
 
 sub testme {
+    BAIL_OUT "Please upgrade your provider to the latest version. Dancer2::Plugin::Auth::Extensible no longer supports the old \"testme\" tests.";
+}
+
+sub runtests {
     my $app = shift;
-    my %args = map { $_ => 1 } @_;
 
     $test = Plack::Test->create($app);
     $trap = TestApp->dancer_app->logger_engine->trapper;
 
-    # always run base tests
-    delete $args{base};
-    $dispatch{base}->();
+    my $res = get('/provider_can');
+    BAIL_OUT "Unable to determine what methods the provider supports"
+      unless $res->is_success;
 
-    my @test_names = grep { $_ ne 'base' } keys %dispatch;
+    my $ret = YAML::Load $res->content;
 
-    foreach my $name (@test_names) {
-        if ( delete $args{$name} ) {
-            $dispatch{$name}->();
+    BAIL_OUT "Unexpected response to /provider_can"
+      unless ref($ret) eq 'ARRAY';
+
+    my @provider_can = @$ret;
+
+    # main plugin tests
+  TEST: foreach my $test ( keys %dispatch ) {
+        foreach my $dep ( @{ $dependencies{$test} || [] } ) {
+            if ( !grep { $_ eq $dep } @provider_can ) {
+                diag "Provider has no method $dep so skipping $test tests.";
+                next TEST;
+            }
         }
-        else {
-            note "NOTE: not testing $name";
-        }
+        note "Testing plugin $test";
+        # TODO: remove this eval once all tests are written
+        eval { $dispatch{$test}->(); 1; } or do {
+            my $err = $@ || "Bogus error";
+            #diag "TEST MISSING: $test"
+            #if $err =~ /Undefined subroutine.+$test/;
+        };
     }
-
-    my @remaining = keys %args;
-
-    ok !@remaining, "No test names left" or diag explain @remaining;
 }
 
 sub get {
@@ -123,6 +139,101 @@ sub post {
     my $res = $test->request($req);
     $jar->extract_cookies($res);
     return $res;
+}
+
+# provider_get_user_roles
+
+sub provider_get_user_roles {
+    my $res;
+
+    # undef username
+
+    $res = post('/provider_get_user_roles', [realm => 'config1']);
+    ok $res->is_success,"get_user_roles with undef username lives";
+    is $res->content, '(undef)', '... and return is undef.';
+
+    # empty username
+
+    $res = post( '/provider_get_user_roles',
+        [ realm => 'config1', username => '' ] );
+    ok $res->is_success, "get_user_roles with empty username lives";
+    is $res->content, '(undef)', '... and return is undef.';
+
+    # non-existant username
+
+    $res = post( '/provider_get_user_roles',
+        [ realm => 'config1', username => 'nosuchuser' ] );
+    ok $res->is_success, "get_user_roles with non-existant username lives";
+    is $res->content, '(undef)', '... and return is undef.';
+
+    # good user
+
+    $res = post( '/provider_get_user_roles',
+        [ realm => 'config1', username => 'dave' ] );
+    ok $res->is_success, "get_user_roles with real username lives";
+    my $ret = YAML::Load $res->content;
+    cmp_deeply $ret, [ 'BeerDrinker', 'Motorcyclist' ],
+      "... and we get expected user roles returned.";
+
+};
+
+# provider_create_user
+
+sub provider_create_user {
+    my $res;
+
+    # empty username
+
+    $res = post( '/provider_create_user',
+        [ realm => 'config1', username => '' ] );
+    ok !$res->is_success, "create_user with empty username dies";
+    is $res->code, 500, "... with a 500 code as expected.";
+
+    # existing username
+
+    $res = post( '/provider_create_user',
+        [ realm => 'config1', username => 'dave' ] );
+    ok !$res->is_success, "create_user with existing username dave dies";
+    is $res->code, 500, "... with a 500 code as expected.";
+
+    # create user
+
+    $res = post(
+        '/provider_create_user',
+        [
+            realm    => 'config1',
+            username => 'provider_create_user',
+            name     => 'Provider Create User',
+        ]
+    );
+    ok $res->is_success, "create_user with new username lives";
+    is $res->content, 'Provider Create User',
+      "... and returned content shows user was created."
+}
+
+# provider_set_user_details
+
+sub provider_set_user_details {
+    my $res;
+
+    # undef username
+
+    $res = post('/provider_set_user_details', [realm => 'config1']);
+    is $res->code, 500, "set_user_details with undef username gives 500 error.";
+
+    # empty username
+
+    $res = post( '/provider_set_user_details',
+        [ realm => 'config1', username => '' ] );
+    is $res->code, 500, "set_user_details with empty username gives 500 error.";
+
+    # non-existant username
+
+    $res = post( '/provider_set_user_details',
+        [ realm => 'config1', username => 'nosuchuser' ] );
+    ok $res->is_success, "set_user_details with non-existant username lives";
+    is $res->content, '(undef)', '... and return is undef.';
+
 }
 
 # base
@@ -894,6 +1005,32 @@ sub _test_create_user {
             get('/logout');
         }
 
+    }
+
+    # create user with `email_welcome` so we can test reset code
+
+    my $data = [
+        username      => 'newuserwithcode',
+        realm         => 'config1',
+        email_welcome => 1,
+    ];
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = post( "/create_user", $data );
+
+        is $res->code, 200, "/create_user with welcome_send=>1 response is 200"
+          or diag explain $trap->read;
+    }
+ 
+    {
+        # the args passed to 'welcome_send' sub
+        my $args = $Dancer2::Plugin::Auth::Extensible::Test::App::data;
+        like $args->{code}, qr/^\w{32}$/, "... and we have a reset code";
+
+        my $res = get("/login/$args->{code}");
+        diag explain $res;
     }
 
 }
