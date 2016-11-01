@@ -2,7 +2,7 @@ package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
 use Crypt::SaltedHash;
 use Moo::Role;
-requires qw(authenticate_user get_user_details get_user_roles);
+requires qw(authenticate_user);
 
 our $VERSION = '0.614';
 
@@ -115,11 +115,11 @@ The following methods must be implemented by the consuming provider class.
 
 =over
 
-=item * authenticate_user
+=item * authenticate_user $username, $password
 
-=item * get_user_details
+If either of C<$username> or C<$password> are undefined then die.
 
-=item * get_user_roles
+Return true on success.
 
 =back
 
@@ -130,15 +130,51 @@ provider.
 
 =over
 
-=item * create_user
+=item * get_user_details $username
 
-=item * get_user_by_code
+Die if C<$username> is undefined. Otherwise return a user object (if
+appropriate) or a hash reference of user details.
 
-=item * set_user_details
+=item * get_user_roles $username
 
-=item * set_user_password
+Die if C<$username> is undefined. Otherwise return an array reference of
+user roles.
 
-=item * password_expired
+=item * create_user %user
+
+Create user with fields specified in C<%user>.
+
+Method should croak if C<username> key is empty or undefined. If a user with
+the specified username already exists then we would normally expect the
+method to die though this is of course dependent on the backend in use.
+
+The new user should be returned.
+
+=item * get_user_by_code $code
+
+Try to find a user which has C<pw_reset_code> field set to C<$code>.
+
+Returns the user on success.
+
+=item * set_user_details $username, %update
+
+Update user with C<$username> according to C<%update>.
+
+Passing an empty or undefined C<$username> should cause the method to die.
+
+The update user should be returned.
+
+=item * set_user_password $username, $password
+
+Set the password for the user specified by C<$username> to <$password>
+encrypted using L</encrypt_password> or via whatever other method is
+appropriate for the backend.
+
+=item * password_expired $user
+
+The C<$user> should be as returned from L</get_user_details>. The method
+checks whether the user's password has expired and returns 1 if it has and
+0 if it has not.
 
 =back
 
