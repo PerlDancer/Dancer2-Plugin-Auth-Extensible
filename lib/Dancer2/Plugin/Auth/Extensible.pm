@@ -333,23 +333,36 @@ sub auth_provider {
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
 
-    $plugin->execute_plugin_hook( 'before_authenticate_user',
-        { username => $username, password => $password, realm => $realm } );
+    # username and password must be simple non-empty scalars
+    if (   defined $username
+        && ref($username) eq ''
+        && $username ne ''
+        && defined $password
+        && ref($password) eq ''
+        && $password ne '' )
+    {
+        $plugin->execute_plugin_hook( 'before_authenticate_user',
+            { username => $username, password => $password, realm => $realm } );
 
-    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
+        my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
-    for my $realm (@realms_to_check) {
-        $plugin->app->log( debug =>
-              "Attempting to authenticate $username against realm $realm" );
-        my $provider = $plugin->auth_provider($realm);
-        my %lastlogin =
-          $plugin->record_lastlogin
-          ? ( lastlogin => 'logged_in_user_lastlogin' )
-          : ();
-        if ( $provider->authenticate_user( $username, $password, %lastlogin ) )
-        {
-            $plugin->app->log( debug => "$realm accepted user $username" );
-            return wantarray ? ( 1, $realm ) : 1;
+        for my $realm (@realms_to_check) {
+            $plugin->app->log( debug =>
+                  "Attempting to authenticate $username against realm $realm" );
+            my $provider = $plugin->auth_provider($realm);
+            my %lastlogin =
+              $plugin->record_lastlogin
+              ? ( lastlogin => 'logged_in_user_lastlogin' )
+              : ();
+            if (
+                $provider->authenticate_user(
+                    $username, $password, %lastlogin
+                )
+              )
+            {
+                $plugin->app->log( debug => "$realm accepted user $username" );
+                return wantarray ? ( 1, $realm ) : 1;
+            }
         }
     }
 
