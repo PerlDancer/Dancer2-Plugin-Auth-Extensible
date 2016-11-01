@@ -15,6 +15,7 @@ WriteMakefile(
       : ()),
     PL_FILES            => {},
     BUILD_REQUIRES => {
+        'DateTime' => 0,
         'HTTP::Request::Common' => 0,
         'Path::Tiny' => '0.016',
         'Plack::Test' => 0,
