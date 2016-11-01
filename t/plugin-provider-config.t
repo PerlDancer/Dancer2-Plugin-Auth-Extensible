@@ -19,6 +19,6 @@ BEGIN {
 my $app = Dancer2->runner->psgi_app;
 is( ref $app, 'CODE', 'Got app' );
 
-Dancer2::Plugin::Auth::Extensible::Test::testme($app, 'create_user', 'update_user');
+Dancer2::Plugin::Auth::Extensible::Test::runtests($app);
 
 done_testing;
