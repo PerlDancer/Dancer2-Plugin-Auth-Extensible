@@ -332,7 +332,7 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
-    my ( @errors, $success );
+    my ( @errors, $success, $auth_realm );
 
     $plugin->execute_plugin_hook( 'before_authenticate_user',
         { username => $username, password => $password, realm => $realm } );
@@ -370,6 +370,7 @@ sub authenticate_user {
             };
             if ($success) {
                 $plugin->app->log( debug => "$realm accepted user $username" );
+                $auth_realm = $realm;
                 last;
             }
         }
@@ -378,21 +379,18 @@ sub authenticate_user {
     # force 0 or 1 for success
     $success = 0+!!$success;
 
-    # undef realm if auth failed
-    $realm = undef unless $success;
-
     $plugin->execute_plugin_hook(
         'after_authenticate_user',
         {
             username => $username,
             password => $password,
-            realm    => $realm,
+            realm    => $auth_realm,
             errors   => \@errors,
             success  => $success,
         }
     );
 
-    return wantarray ? ( $success, $realm ) : $success;
+    return wantarray ? ( $success, $auth_realm ) : $success;
 }
 
 sub create_user {
