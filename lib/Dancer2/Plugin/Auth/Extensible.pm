@@ -453,6 +453,8 @@ sub create_user {
 
 sub get_user_details {
     my ( $plugin, $username, $realm ) = @_;
+    my ( $user, @errors );
+    return unless defined $username;
 
     my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
@@ -460,9 +462,14 @@ sub get_user_details {
         $plugin->app->log(
             debug => "Attempting to find user $username in realm $realm" );
         my $provider = $plugin->auth_provider($realm);
-        my $user = $provider->get_user_details( $username, $realm );
-        $user and return $user;
+        eval { $user = $provider->get_user_details($username); 1; } or do {
+            my $err = $@ || "Unknown error";
+            $plugin->app->log( error => "$realm provider threw error: $err" );
+            push @errors, $err;
+        };
+        last if $user;
     }
+    return $user;
 }
 
 sub logged_in_user {
