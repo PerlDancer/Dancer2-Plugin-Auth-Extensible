@@ -332,8 +332,7 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
-    my @errors  = ();
-    my $success = 0;
+    my ( @errors, $success );
 
     $plugin->execute_plugin_hook( 'before_authenticate_user',
         { username => $username, password => $password, realm => $realm } );
@@ -369,9 +368,18 @@ sub authenticate_user {
                     error => "$realm provider threw error: $err" );
                 push @errors, $err;
             };
-            last if $success;
+            if ($success) {
+                $plugin->app->log( debug => "$realm accepted user $username" );
+                last;
+            }
         }
     }
+
+    # force 0 or 1 for success
+    $success = 0+!!$success;
+
+    # undef realm if auth failed
+    $realm = undef unless $success;
 
     $plugin->execute_plugin_hook(
         'after_authenticate_user',
@@ -384,12 +392,7 @@ sub authenticate_user {
         }
     );
 
-    if ($success) {
-        $plugin->app->log( debug => "$realm accepted user $username" );
-        return wantarray ? ( 1, $realm ) : 1;
-    }
-
-    return wantarray ? ( 0, undef ) : 0;
+    return wantarray ? ( $success, $realm ) : $success;
 }
 
 sub create_user {
@@ -1862,6 +1865,9 @@ Called at the end of L</authenticate_user>.
 
 Receives a hash reference of C<username>, C<password>, C<realm>, C<errors>
 and C<success>.
+
+C<realm> is the realm that the user authenticated against of undef if auth
+failed.
 
 The value of C<errors> is an array reference of any errors thrown by
 authentication providers (if any).
