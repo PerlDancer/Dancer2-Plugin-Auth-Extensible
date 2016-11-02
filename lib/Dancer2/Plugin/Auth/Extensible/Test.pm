@@ -29,33 +29,39 @@ writing piles of tests yourself.
 
 =head1 FUNCTIONS
 
-=head2 testme $psgi_app
+=head2 runtests $psgi_app
+
+This is the way to test your provider.
+
+=head2 testme
+
+This method no longer runs any tests but exists purely to force providers
+trying to use the old tests to fail.
 
 =cut
 
 my $jar = HTTP::Cookies->new();
 
 my %dispatch = (
-    auth_provider                   => \&auth_provider,
-    authenticate_user               => \&authenticate_user,
-    create_user                     => \&create_user,
-    get_user_details                => \&get_user_details,
-    logged_in_user                  => \&logged_in_user,
-    logged_in_user_lastlogin        => \&logged_in_user_lastlogin,
-    logged_in_user_password_expired => \&logged_in_user_password_expired,
-    password_reset_send             => \&password_reset_send,
-    realm_count                     => \&realm_count,
-    realm_names                     => \&realm_names,
-    require_all_roles               => \&require_all_roles,
-    require_any_role                => \&require_any_role,
-    require_login                   => \&require_login,
-    require_role                    => \&require_role,
-    update_current_user             => \&update_current_user,
-    update_user                     => \&update_user,
-    user_has_role                   => \&user_has_role,
-    user_password                   => \&user_password,
-    user_roles                      => \&user_roles,
-    welcome_send                    => \&welcome_send,
+    authenticate_user               => \&_authenticate_user,
+    create_user                     => \&_create_user,
+    get_user_details                => \&_get_user_details,
+    logged_in_user                  => \&_logged_in_user,
+    logged_in_user_lastlogin        => \&_logged_in_user_lastlogin,
+    logged_in_user_password_expired => \&_logged_in_user_password_expired,
+    password_reset_send             => \&_password_reset_send,
+    realm_count                     => \&_realm_count,
+    realm_names                     => \&_realm_names,
+    require_all_roles               => \&_require_all_roles,
+    require_any_role                => \&_require_any_role,
+    require_login                   => \&_require_login,
+    require_role                    => \&_require_role,
+    update_current_user             => \&_update_current_user,
+    update_user                     => \&_update_user,
+    user_has_role                   => \&_user_has_role,
+    user_password                   => \&_user_password,
+    user_roles                      => \&_user_roles,
+    welcome_send                    => \&_welcome_send,
 );
 
 # Provider methods needed by plugin tests.
@@ -141,98 +147,238 @@ sub post {
     return $res;
 }
 
-# provider_get_user_roles
+# authenticate_user
 
-sub provider_get_user_roles {
-    my $res;
+sub _authenticate_user {
+    my ($res, $data, $logs);
 
-    # undef username
+    $trap->read;
 
-    $res = post('/provider_get_user_roles', [realm => 'config1']);
-    ok $res->is_success,"get_user_roles with undef username lives";
-    is $res->content, '(undef)', '... and return is undef.';
+    # no args
 
-    # empty username
+    $res = post('/authenticate_user');
+    ok $res->is_success, "/authenticate_user with no params is_success";
+    cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
+      "... and returns expected response";
+    cmp_deeply $trap->read,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":null,"realm":null,"username":null}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":null,"realm":null,"success":0,"username":null}'
+        }
+      ),
+      "... and we see expected hook output in logs.";
 
-    $res = post( '/provider_get_user_roles',
-        [ realm => 'config1', username => '' ] );
-    ok $res->is_success, "get_user_roles with empty username lives";
-    is $res->content, '(undef)', '... and return is undef.';
+    # empty username and password
 
-    # non-existant username
+    $res = post('/authenticate_user',[username=>'',password=>'']);
+    ok $res->is_success,
+      "/authenticate_user with empty username and password is_success";
+    cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
+      "... and returns expected response";
+    cmp_deeply $trap->read,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"","realm":null,"username":""}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"","realm":null,"success":0,"username":""}'
+        }
+      ),
+      "... and we see expected hook output in logs.";
 
-    $res = post( '/provider_get_user_roles',
-        [ realm => 'config1', username => 'nosuchuser' ] );
-    ok $res->is_success, "get_user_roles with non-existant username lives";
-    is $res->content, '(undef)', '... and return is undef.';
+    # good username, bad password and no realm
 
-    # good user
+    $res = post('/authenticate_user',[username=>'dave',password=>'badpwd']);
+    ok $res->is_success,
+      "/authenticate_user with user dave, bad password and no realm success";
+    cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
+      "... and returns expected response";
+    cmp_deeply $trap->read,
+      [
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"badpwd","realm":null,"username":"dave"}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config2/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config3/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config1/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"badpwd","realm":null,"success":0,"username":"dave"}'
+        }
+      ],
+      "... and we see expected hook output in logs and realms checked in correct order.";
 
-    $res = post( '/provider_get_user_roles',
-        [ realm => 'config1', username => 'dave' ] );
-    ok $res->is_success, "get_user_roles with real username lives";
-    my $ret = YAML::Load $res->content;
-    cmp_deeply $ret, [ 'BeerDrinker', 'Motorcyclist' ],
-      "... and we get expected user roles returned.";
+    # good username, good password but wrong realm
 
-};
+    $res = post( '/authenticate_user',
+        [ username => 'dave', password => 'beer', realm => 'config2' ] );
+    ok $res->is_success,
+      "/authenticate_user with user dave, good password but wrong realm success";
+    cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
+      "... and returns expected response";
+    cmp_deeply $trap->read,
+      [
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"beer","realm":"config2","username":"dave"}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config2/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"beer","realm":null,"success":0,"username":"dave"}'
+        }
+      ],
+      "... and we see expected hook output in logs and only one realm checked.";
 
-# provider_create_user
+    # good username, good password and good realm
 
-sub provider_create_user {
-    my $res;
+    $res = post( '/authenticate_user',
+        [ username => 'dave', password => 'beer', realm => 'config1' ] );
+    ok $res->is_success,
+      "/authenticate_user with user dave, good password and good realm success";
+    cmp_deeply YAML::Load( $res->content ), [ 1, "config1" ],
+      "... and returns expected response";
+    cmp_deeply $trap->read,
+      [
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"beer","realm":"config1","username":"dave"}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config1/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/config1 accepted user dave/),
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"beer","realm":"config1","success":1,"username":"dave"}'
+        }
+      ],
+      "... and we see expected hook output in logs and only one realm checked.";
 
-    # empty username
+    # good username, good password and no realm
 
-    $res = post( '/provider_create_user',
-        [ realm => 'config1', username => '' ] );
-    ok !$res->is_success, "create_user with empty username dies";
-    is $res->code, 500, "... with a 500 code as expected.";
+    $res = post( '/authenticate_user',
+        [ username => 'dave', password => 'beer' ] );
+    ok $res->is_success,
+      "/authenticate_user with user dave, good password and no realm success";
+    cmp_deeply YAML::Load( $res->content ), [ 1, "config1" ],
+      "... and returns expected response";
+    $logs = $trap->read,
+    cmp_deeply $logs,
+      [
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"beer","realm":null,"username":"dave"}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config2/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config3/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config1/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/config1 accepted user dave/),
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"beer","realm":"config1","success":1,"username":"dave"}'
+        }
+      ],
+      "... and we see expected hook output in logs and 3 realms checked."
+        or diag explain $logs;
 
-    # existing username
+    # good username, good password and no realm using 2nd realm by priority
 
-    $res = post( '/provider_create_user',
-        [ realm => 'config1', username => 'dave' ] );
-    ok !$res->is_success, "create_user with existing username dave dies";
-    is $res->code, 500, "... with a 500 code as expected.";
-
-    # create user
-
-    $res = post(
-        '/provider_create_user',
-        [
-            realm    => 'config1',
-            username => 'provider_create_user',
-            name     => 'Provider Create User',
-        ]
-    );
-    ok $res->is_success, "create_user with new username lives";
-    is $res->content, 'Provider Create User',
-      "... and returned content shows user was created."
-}
-
-# provider_set_user_details
-
-sub provider_set_user_details {
-    my $res;
-
-    # undef username
-
-    $res = post('/provider_set_user_details', [realm => 'config1']);
-    is $res->code, 500, "set_user_details with undef username gives 500 error.";
-
-    # empty username
-
-    $res = post( '/provider_set_user_details',
-        [ realm => 'config1', username => '' ] );
-    is $res->code, 500, "set_user_details with empty username gives 500 error.";
-
-    # non-existant username
-
-    $res = post( '/provider_set_user_details',
-        [ realm => 'config1', username => 'nosuchuser' ] );
-    ok $res->is_success, "set_user_details with non-existant username lives";
-    is $res->content, '(undef)', '... and return is undef.';
+    $res = post( '/authenticate_user',
+        [ username => 'bananarepublic', password => 'whatever' ] );
+    ok $res->is_success,
+      "/authenticate_user with user bananarepublic, good password and no realm success";
+    cmp_deeply YAML::Load( $res->content ), [ 1, "config3" ],
+      "... and returns expected response";
+    $logs = $trap->read,
+    cmp_deeply $logs,
+      [
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'before_authenticate_user{"password":"whatever","realm":null,"username":"bananarepublic"}'
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+bananarepublic.+realm config2/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+bananarepublic.+realm config3/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/config3 accepted user bananarepublic/),
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message => 'after_authenticate_user{"errors":[],"password":"whatever","realm":"config3","success":1,"username":"bananarepublic"}'
+        }
+      ],
+      "... and we see expected hook output in logs and 2 realms checked."
+        or diag explain $logs;
 
 }
 

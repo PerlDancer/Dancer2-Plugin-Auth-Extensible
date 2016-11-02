@@ -418,6 +418,16 @@ SKIP: {
     };
 }
 
+# hooks
+
+hook before_authenticate_user => sub {
+    debug "before_authenticate_user", to_json( shift, { canonical => 1 } );
+};
+hook after_authenticate_user => sub {
+    debug "after_authenticate_user", to_json( shift, { canonical => 1 } );
+};
+
+# and finally the routes for the main plugin tests
 
 get '/provider_can' => sub {
     send_as YAML => \@provider_can;
@@ -425,6 +435,13 @@ get '/provider_can' => sub {
 
 get '/' => sub {
     "Index always accessible";
+};
+
+post '/authenticate_user' => sub {
+    my $params = body_parameters->as_hashref;
+    my @ret = authenticate_user( $params->{username}, $params->{password},
+        $params->{realm} );
+    send_as YAML => \@ret;
 };
 
 get '/loggedin' => require_login sub  {
