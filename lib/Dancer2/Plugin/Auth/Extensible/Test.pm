@@ -147,7 +147,11 @@ sub post {
     return $res;
 }
 
-# authenticate_user
+#------------------------------------------------------------------------------
+#
+#  authenticate_user
+#
+#------------------------------------------------------------------------------
 
 sub _authenticate_user {
     my ($res, $data, $logs);
@@ -433,6 +437,144 @@ sub _authenticate_user {
       ),
       "... and we don't see realm config1 checked."
       or diag explain $logs;
+}
+
+#------------------------------------------------------------------------------
+#
+#  create_user
+#
+#------------------------------------------------------------------------------
+
+sub _create_user {
+    my ( $res, $logs );
+
+    # create user with no args should die since we have > 1 realm
+
+    $trap->read;
+
+    $res = post('/create_user');
+    is $res->code, 500,
+      "/create_user with no params is 500 due to > 1 realm.";
+
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      [
+        {
+            formatted => ignore(),
+            level     => 'error',
+            message   => re(
+                qr/Realm must be specified when more than one realm configured/
+            ),
+        }
+      ],
+      "... and error about needing realm was logged.";
+
+    for my $realm (qw/config1 config2/) {
+
+        # create a user
+
+        my $data = [
+            username => 'newuser',
+            password => "pish_$realm",
+            realm    => $realm,
+        ];
+
+        $res = post( "/create_user", $data );
+        ok $res->is_success, "/create_user newuser in realm $realm is success"
+          or diag explain $trap->read;
+        is $res->content, 1, "... and response content shows create success";
+
+        $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level   => 'debug',
+                message => qq(before_create_user{"password":"pish_$realm","realm":"$realm","username":"newuser"}),
+            },
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'after_create_user,newuser,1,[]',
+            }
+          ),
+          "... and we see expected before/after hook logs.";
+
+        # try creating same user a second time
+
+        $res = post( "/create_user", $data );
+        ok $res->is_success,
+          "/create_user newuser *again* in realm $realm is success"
+          or diag explain $trap->read;
+        is $res->content, 0, "... and response content shows create failed";
+
+        $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level   => 'debug',
+                message => qq(before_create_user{"password":"pish_$realm","realm":"$realm","username":"newuser"}),
+            },
+            {
+                formatted => ignore(),
+                level     => 'error',
+                message   => re(qr/$realm provider threw error/),
+            },
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => re(qr/after_create_user,newuser,0,\[.+\]/),
+            }
+          ),
+          "... and we see expected before/after hook logs."
+          or diag explain $logs;
+
+        # Then try logging in with that user
+
+        $trap->read;    # clear logs
+
+        $res = post( '/login', $data );
+
+        is( $res->code, 302, 'Login with newly created user succeeds' )
+          or diag explain $trap->read;
+
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => "$realm accepted user newuser"
+            }
+          ),
+          "... and we see expected message in logs."
+          or diag explain $res;
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
+
+        get('/logout');
+    }
+
+    # create user with `email_welcome` so we can test reset code
+
+    $res = post(
+        "/create_user",
+        [
+            username      => 'newuserwithcode',
+            realm         => 'config1',
+            email_welcome => 1,
+        ]
+    );
+
+    is $res->code, 200, "/create_user with welcome_send=>1 response is 200"
+      or diag explain $trap->read;
+
+    # the args passed to 'welcome_send' sub
+    my $args = $Dancer2::Plugin::Auth::Extensible::Test::App::data;
+    like $args->{code}, qr/^\w{32}$/,
+      "... and we have a reset code in the email";
 }
 
 # base
@@ -1149,89 +1291,6 @@ sub _test_base {
 
     # cleanup
     get('/logout');
-}
-
-# create_user
-
-sub _test_create_user {
-
-    note "test create_user";
-
-    #for my $realm (qw/config1 config2/) {
-    for my $realm (qw/config1 config2/) {
-
-        my $data = [
-            username => 'newuser',
-            password => "pish_$realm",
-            realm    => $realm,
-        ];
-
-        # First create a user
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = post( "/create_user", $data );
-
-            is $res->code, 200, "/create_user response is 200"
-              or diag explain $trap->read;
-        }
-
-        # Then try logging in with that user
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = post( '/login', $data );
-
-            is( $res->code, 302, 'Login with newly created user succeeds' )
-              or diag explain $trap->read;
-
-            my $logs = $trap->read;
-            cmp_deeply $logs,
-              superbagof(
-                {
-                    formatted => ignore(),
-                    level     => 'debug',
-                    message   => "$realm accepted user newuser"
-                }
-              ),
-              "... and we see expected message in logs." or diag explain $res;
-
-            is get('/loggedin')->content, "You are logged in",
-              "... and checking /loggedin route shows we are logged in";
-
-            get('/logout');
-        }
-
-    }
-
-    # create user with `email_welcome` so we can test reset code
-
-    my $data = [
-        username      => 'newuserwithcode',
-        realm         => 'config1',
-        email_welcome => 1,
-    ];
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = post( "/create_user", $data );
-
-        is $res->code, 200, "/create_user with welcome_send=>1 response is 200"
-          or diag explain $trap->read;
-    }
- 
-    {
-        # the args passed to 'welcome_send' sub
-        my $args = $Dancer2::Plugin::Auth::Extensible::Test::App::data;
-        like $args->{code}, qr/^\w{32}$/, "... and we have a reset code";
-
-        my $res = get("/login/$args->{code}");
-        diag explain $res;
-    }
-
 }
 
 # update_user

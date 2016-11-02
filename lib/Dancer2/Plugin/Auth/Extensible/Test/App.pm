@@ -426,6 +426,15 @@ hook before_authenticate_user => sub {
 hook after_authenticate_user => sub {
     debug "after_authenticate_user", to_json( shift, { canonical => 1 } );
 };
+hook before_create_user => sub {
+    debug "before_create_user", to_json( shift, { canonical => 1 } );
+};
+hook after_create_user => sub {
+    my ( $username, $user, $errors ) = @_;
+    my $ret = $user ? 1 : 0;
+    debug "after_create_user,$username,$ret,",
+      to_json( $errors, { canonical => 1 } );
+};
 
 # and finally the routes for the main plugin tests
 
@@ -442,6 +451,12 @@ post '/authenticate_user' => sub {
     my @ret = authenticate_user( $params->{username}, $params->{password},
         $params->{realm} );
     send_as YAML => \@ret;
+};
+
+post '/create_user' => sub {
+    my $params = body_parameters->as_hashref;
+    my $user   = create_user %$params;
+    return $user ? 1 : 0;
 };
 
 get '/loggedin' => require_login sub  {
@@ -536,18 +551,6 @@ get '/authenticate_user_with_wrong_realm' => sub {
 
 get '/user_password' => sub {
     return user_password params('query');
-};
-
-post '/create_user' => sub {
-    my $params   = body_parameters->as_hashref;
-    my $password = delete $params->{password};
-    my $user     = create_user %$params;
-    if ( $user && $password ) {
-        user_password
-          username     => $params->{username},
-          realm        => $params->{realm},
-          new_password => $password;
-    }
 };
 
 get '/update_current_user' => sub {
