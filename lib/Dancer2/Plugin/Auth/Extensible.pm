@@ -406,16 +406,7 @@ sub create_user {
 
     my $realm = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
-
     my $provider = $plugin->auth_provider($realm);
-
-    # Prevent duplicate users. Would be nice to make this an exception,
-    # but that's not in keeping with other functions of this module
-    if ( $provider->get_user_details( $options{username} ) ) {
-        $plugin->app->log(
-            info => "User $options{username} already exists. Not creating." );
-        return;
-    }
 
     eval { $user = $provider->create_user(%options); 1; } or do {
         my $err = $@ || "Unknown error";
@@ -423,7 +414,7 @@ sub create_user {
         push @errors, $err;
     };
 
-    if ($email_welcome) {
+    if ($user && $email_welcome) {
         my $code = _reset_code();
 
         # Would be slightly more efficient to do this at time of creation, but
