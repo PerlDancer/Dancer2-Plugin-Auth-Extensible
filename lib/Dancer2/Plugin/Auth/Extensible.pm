@@ -477,12 +477,11 @@ sub logged_in_user {
     my $session = $app->session;
     my $request = $app->request;
 
-    if ( my $user = $session->read('logged_in_user') ) {
+    if ( my $username = $session->read('logged_in_user') ) {
         my $existing = $request->vars->{logged_in_user_hash};
         return $existing if $existing;
         my $realm    = $session->read('logged_in_user_realm');
-        my $provider = $plugin->auth_provider($realm);
-        my $user     = $provider->get_user_details( $user, $realm );
+        my $user = $plugin->get_user_details($username, $realm);
         $request->vars->{logged_in_user_hash} = $user;
         return $user;
     }
