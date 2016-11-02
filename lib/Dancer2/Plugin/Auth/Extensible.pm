@@ -347,7 +347,7 @@ sub authenticate_user {
     {
         my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
-        for $realm (@realms_to_check) {
+        for my $realm (@realms_to_check) {
             $plugin->app->log( debug =>
                   "Attempting to authenticate $username against realm $realm" );
             my $provider = $plugin->auth_provider($realm);
