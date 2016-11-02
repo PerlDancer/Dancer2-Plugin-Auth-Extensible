@@ -404,9 +404,10 @@ sub create_user {
 
     $plugin->execute_plugin_hook( 'before_create_user', \%options );
 
-    my $realm = delete $options{realm} || $plugin->realm_names->[0];
+    my $realm         = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
-    my $provider = $plugin->auth_provider($realm);
+    my $password      = delete $options{password};
+    my $provider      = $plugin->auth_provider($realm);
 
     eval { $user = $provider->create_user(%options); 1; } or do {
         my $err = $@ || "Unknown error";
@@ -414,21 +415,39 @@ sub create_user {
         push @errors, $err;
     };
 
-    if ($user && $email_welcome) {
-        my $code = _reset_code();
+    if ($user) {
+        # user creation successful
+        if ($email_welcome) {
+            my $code = _reset_code();
 
-        # Would be slightly more efficient to do this at time of creation, but
-        # this keeps the code simpler for the provider
-        $user = $provider->set_user_details( $options{username},
-            pw_reset_code => $code );
-        no strict 'refs';
+            # Would be slightly more efficient to do this at time of creation,
+            # but this keeps the code simpler for the provider
+            $provider->set_user_details( $options{username},
+                pw_reset_code => $code );
 
-        # email hard-coded as per password_reset_send()
-        my %params = ( code => $code, email => $options{email}, user => $user );
-        &{ $plugin->welcome_send }( $plugin, %params );
+            # email hard-coded as per password_reset_send()
+            my %params =
+              ( code => $code, email => $options{email}, user => $user );
+
+            no strict 'refs';
+            &{ $plugin->welcome_send }( $plugin, %params );
+        }
+        elsif ($password) {
+            eval {
+                $provider->set_user_password( $options{username}, $password );
+                1;
+            } or do {
+                my $err = $@ || "Unknown error";
+                $plugin->app->log(
+                    error => "$realm provider threw error: $err" );
+                push @errors, $err;
+            };
+        }
     }
 
-    $plugin->execute_plugin_hook( 'after_create_user', $user, \@errors );
+    $plugin->execute_plugin_hook( 'after_create_user', $options{username},
+        $user, \@errors );
+
     return $user;
 }
 
@@ -1886,8 +1905,8 @@ Receives a hash reference of the arguments passed to L</create_user>.
 
 Called at the end of L</create_user>.
 
-Receives the created user (or undef) and an array reference of any errors
-from the main method or from the provider.
+Receives the requested username, the created user (or undef) and an array
+reference of any errors from the main method or from the provider.
 
 =head2 login_required
 
