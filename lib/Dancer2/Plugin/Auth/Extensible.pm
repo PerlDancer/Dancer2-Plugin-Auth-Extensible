@@ -190,7 +190,8 @@ has realm_providers => (
 #
 
 plugin_hooks 'before_authenticate_user', 'after_authenticate_user',
-  'login_required permission_denied', 'after_login_success';
+  'before_create_user', 'after_create_user',
+  'login_required', 'permission_denied', 'after_login_success';
 
 #
 # keywords
@@ -396,9 +397,12 @@ sub authenticate_user {
 sub create_user {
     my $plugin  = shift;
     my %options = @_;
+    my ( $user, @errors );
 
     croak "Realm must be specified when more than one realm configured"
       if !$options{realm} && $plugin->realm_count > 1;
+
+    $plugin->execute_plugin_hook( 'before_create_user', \%options );
 
     my $realm = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
@@ -412,7 +416,13 @@ sub create_user {
             info => "User $options{username} already exists. Not creating." );
         return;
     }
-    my $user = $provider->create_user(%options);
+
+    eval { $user = $provider->create_user(%options); 1; } or do {
+        my $err = $@ || "Unknown error";
+        $plugin->app->log( error => "$realm provider threw error: $err" );
+        push @errors, $err;
+    };
+
     if ($email_welcome) {
         my $code = _reset_code();
 
@@ -426,7 +436,9 @@ sub create_user {
         my %params = ( code => $code, email => $options{email}, user => $user );
         &{ $plugin->welcome_send }( $plugin, %params );
     }
-    $user;
+
+    $plugin->execute_plugin_hook( 'after_create_user', $user, \@errors );
+    return $user;
 }
 
 sub get_user_details {
@@ -1872,6 +1884,19 @@ authentication providers (if any).
 
 The value of C<success> is either C<1> or C<0> to show whether or not
 authentication was successful.
+
+=head2 before_create_user
+
+Called at the start of L</create_user>.
+
+Receives a hash reference of the arguments passed to L</create_user>.
+
+=head2 after_create_user
+
+Called at the end of L</create_user>.
+
+Receives the created user (or undef) and an array reference of any errors
+from the main method or from the provider.
 
 =head2 login_required
 
