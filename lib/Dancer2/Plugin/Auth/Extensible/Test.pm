@@ -204,8 +204,9 @@ sub _authenticate_user {
       "/authenticate_user with user dave, bad password and no realm success";
     cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
       "... and returns expected response";
-    cmp_deeply $trap->read,
-      [
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
         {
             formatted => ignore(),
             level     => 'debug',
@@ -231,8 +232,9 @@ sub _authenticate_user {
             level     => 'debug',
             message => 'after_authenticate_user{"errors":[],"password":"badpwd","realm":null,"success":0,"username":"dave"}'
         }
-      ],
-      "... and we see expected hook output in logs and realms checked in correct order.";
+      ),
+      "... and we see expected hook output in logs and realms checked."
+      or diag explain $logs;
 
     # good username, good password but wrong realm
 
@@ -242,8 +244,10 @@ sub _authenticate_user {
       "/authenticate_user with user dave, good password but wrong realm success";
     cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
       "... and returns expected response";
-    cmp_deeply $trap->read,
-      [
+
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
         {
             formatted => ignore(),
             level     => 'debug',
@@ -259,8 +263,25 @@ sub _authenticate_user {
             level     => 'debug',
             message => 'after_authenticate_user{"errors":[],"password":"beer","realm":null,"success":0,"username":"dave"}'
         }
-      ],
-      "... and we see expected hook output in logs and only one realm checked.";
+      ),
+      "... and we see expected hook output in logs and realm config2 checked"
+      or diag explain $logs;
+
+    cmp_deeply $logs,
+      noneof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config1/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config3/)
+        },
+      ),
+      "... and the other realms were not checked."
+      or diag explain $logs;
 
     # good username, good password and good realm
 
@@ -270,8 +291,10 @@ sub _authenticate_user {
       "/authenticate_user with user dave, good password and good realm success";
     cmp_deeply YAML::Load( $res->content ), [ 1, "config1" ],
       "... and returns expected response";
-    cmp_deeply $trap->read,
-      [
+
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
         {
             formatted => ignore(),
             level     => 'debug',
@@ -292,8 +315,26 @@ sub _authenticate_user {
             level     => 'debug',
             message => 'after_authenticate_user{"errors":[],"password":"beer","realm":"config1","success":1,"username":"dave"}'
         }
-      ],
-      "... and we see expected hook output in logs and only one realm checked.";
+      ),
+      "... and we see expected hook output in logs and only one realm checked"
+      or diag explain $logs;
+
+    cmp_deeply $logs,
+      noneof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config2/)
+        },
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+dave.+realm config3/)
+        },
+      ),
+      "... and the other realms were not checked."
+      or diag explain $logs;
+
 
     # good username, good password and no realm
 
@@ -303,9 +344,10 @@ sub _authenticate_user {
       "/authenticate_user with user dave, good password and no realm success";
     cmp_deeply YAML::Load( $res->content ), [ 1, "config1" ],
       "... and returns expected response";
-    $logs = $trap->read,
+
+    $logs = $trap->read;
     cmp_deeply $logs,
-      [
+      superbagof(
         {
             formatted => ignore(),
             level     => 'debug',
@@ -336,9 +378,9 @@ sub _authenticate_user {
             level     => 'debug',
             message => 'after_authenticate_user{"errors":[],"password":"beer","realm":"config1","success":1,"username":"dave"}'
         }
-      ],
+      ),
       "... and we see expected hook output in logs and 3 realms checked."
-        or diag explain $logs;
+      or diag explain $logs;
 
     # good username, good password and no realm using 2nd realm by priority
 
@@ -348,9 +390,10 @@ sub _authenticate_user {
       "/authenticate_user with user bananarepublic, good password and no realm success";
     cmp_deeply YAML::Load( $res->content ), [ 1, "config3" ],
       "... and returns expected response";
-    $logs = $trap->read,
+
+    $logs = $trap->read;
     cmp_deeply $logs,
-      [
+      superbagof(
         {
             formatted => ignore(),
             level     => 'debug',
@@ -376,10 +419,20 @@ sub _authenticate_user {
             level     => 'debug',
             message => 'after_authenticate_user{"errors":[],"password":"whatever","realm":"config3","success":1,"username":"bananarepublic"}'
         }
-      ],
-      "... and we see expected hook output in logs and 2 realms checked."
-        or diag explain $logs;
+      ),
+      "... and we see expected hook output in logs and 2 realms checked"
+      or diag explain $logs;
 
+    cmp_deeply $logs,
+      noneof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message   => re(qr/Attempting.+bananarepublic.+realm config1/)
+        },
+      ),
+      "... and we don't see realm config1 checked."
+      or diag explain $logs;
 }
 
 # base
