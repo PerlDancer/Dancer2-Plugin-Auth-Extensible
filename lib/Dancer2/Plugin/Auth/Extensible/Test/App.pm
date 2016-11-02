@@ -432,8 +432,7 @@ hook before_create_user => sub {
 hook after_create_user => sub {
     my ( $username, $user, $errors ) = @_;
     my $ret = $user ? 1 : 0;
-    debug "after_create_user,$username,$ret,",
-      to_json( $errors, { canonical => 1 } );
+    debug "after_create_user,$username,$ret,",scalar @$errors ? 'yes' : 'no';
 };
 
 # and finally the routes for the main plugin tests
@@ -457,6 +456,21 @@ post '/create_user' => sub {
     my $params = body_parameters->as_hashref;
     my $user   = create_user %$params;
     return $user ? 1 : 0;
+};
+
+post '/get_user_details' => sub {
+    my $params = body_parameters->as_hashref;
+    my $user = get_user_details $params->{username}, $params->{realm};
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    return $user ? send_as YAML => $user : 0;
 };
 
 get '/loggedin' => require_login sub  {
@@ -565,21 +579,6 @@ get '/update_user_name/:realm' => sub {
 get '/update_user_role/:realm' => sub {
     my $realm = param 'realm';
     YAML::Dump update_user 'mark', realm => $realm, role => { CiderDrinker => 1 };
-};
-
-get '/get_user_details/:user' => sub {
-    content_type 'text/x-yaml';
-    my $user = get_user_details param('user');
-    if ( blessed($user) ) {
-        if ( $user->isa('DBIx::Class::Row')) {
-            $user = +{ $user->get_columns };
-        }
-        else {
-            # assume some kind of hash-backed object
-            $user = \%$user;
-        }
-    }
-    YAML::Dump $user;
 };
 
 get '/get_user_mark/:realm' => sub {

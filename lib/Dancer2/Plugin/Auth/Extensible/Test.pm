@@ -110,11 +110,12 @@ sub runtests {
 
     my @provider_can = @$ret;
 
+    my @to_test = ($ENV{D2PAE_TEST_ONLY}) || keys %dispatch;
     # main plugin tests
-  TEST: foreach my $test ( keys %dispatch ) {
+  TEST: foreach my $test ( @to_test ) {
         foreach my $dep ( @{ $dependencies{$test} || [] } ) {
             if ( !grep { $_ eq $dep } @provider_can ) {
-                diag "Provider has no method $dep so skipping $test tests.";
+                note "Provider has no method $dep so skipping $test tests.";
                 next TEST;
             }
         }
@@ -122,8 +123,8 @@ sub runtests {
         # TODO: remove this eval once all tests are written
         eval { $dispatch{$test}->(); 1; } or do {
             my $err = $@ || "Bogus error";
-            #diag "TEST MISSING: $test"
-            #if $err =~ /Undefined subroutine.+$test/;
+            diag "TEST MISSING: $test"
+            if $err =~ /Undefined subroutine.+$test/;
         };
     }
 }
@@ -495,7 +496,7 @@ sub _create_user {
             {
                 formatted => ignore(),
                 level     => 'debug',
-                message   => 'after_create_user,newuser,1,[]',
+                message   => 'after_create_user,newuser,1,no',
             }
           ),
           "... and we see expected before/after hook logs.";
@@ -524,7 +525,7 @@ sub _create_user {
             {
                 formatted => ignore(),
                 level     => 'debug',
-                message   => re(qr/after_create_user,newuser,0,\[.+\]/),
+                message   => re(qr/after_create_user,newuser,0,yes/),
             }
           ),
           "... and we see expected before/after hook logs."
@@ -576,6 +577,101 @@ sub _create_user {
     like $args->{code}, qr/^\w{32}$/,
       "... and we have a reset code in the email";
 }
+
+#------------------------------------------------------------------------------
+#
+#  get_user_details
+#
+#------------------------------------------------------------------------------
+
+sub _get_user_details {
+    my ( $logs, $res );
+
+    # no args
+
+    $res = post('/get_user_details');
+    ok $res->is_success, "/get_user_details with no params is_success";
+    is $res->content, 0, "... and no user was returned.";
+
+    # unknown user
+
+    $trap->read;
+
+    $res = post( '/get_user_details', [ username => 'NoSuchUser' ] );
+    ok $res->is_success, "/get_user_details with unknown user is_success";
+    is $res->content, 0, "... and no user was returned.";
+
+    $logs = $trap->read;
+    cmp_deeply $logs, superbagof(
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user NoSuchUser in realm config2',
+        },
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user NoSuchUser in realm config3',
+        },
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user NoSuchUser in realm config1',
+        },
+    ), "... and we see logs we expect.";
+
+    # known user but wrong realm
+
+    $trap->read;
+
+    $res =
+      post( '/get_user_details', [ username => 'dave', realm => 'config2' ] );
+    ok $res->is_success, "/get_user_details dave config2 is_success";
+    is $res->content, 0, "... and no user was returned (wrong realm).";
+
+    $logs = $trap->read;
+    cmp_deeply $logs, superbagof(
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user dave in realm config2',
+        },
+    ), "... and we see logs we expect" or diag explain $logs;
+
+    cmp_deeply $logs, noneof(
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user dave in realm config3',
+        },
+        {
+            formatted => ignore(),
+            level => 'debug',
+            message => 'Attempting to find user dave in realm config1',
+        },
+    ), "... and none of the ones we don't expect." or diag explain $logs;
+
+    # known user unspecified realm
+
+    $trap->read;
+
+    $res =
+      post( '/get_user_details', [ username => 'dave' ] );
+    ok $res->is_success, "/get_user_details dave in any realm is_success";
+    like $res->content, qr/David Precious/,
+      "... and correct user was returned.";
+
+    # known user correct realm
+
+    $trap->read;
+
+    $res =
+      post( '/get_user_details', [ username => 'dave', realm => 'config1' ] );
+    ok $res->is_success, "/get_user_details dave in config1 is_success";
+    like $res->content, qr/David Precious/,
+      "... and correct user was returned.";
+
+};
 
 # base
 
