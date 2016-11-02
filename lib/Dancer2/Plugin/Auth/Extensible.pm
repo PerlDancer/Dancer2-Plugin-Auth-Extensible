@@ -189,9 +189,8 @@ has realm_providers => (
 # hooks
 #
 
-plugin_hooks 'before_authenticate_user', 'after_authenticate_user_success',
-  'after_authenticate_user_failure', 'login_required permission_denied',
-  'after_login_success';
+plugin_hooks 'before_authenticate_user', 'after_authenticate_user',
+  'login_required permission_denied', 'after_login_success';
 
 #
 # keywords
@@ -333,7 +332,11 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
-    my @errors;
+    my @errors  = ();
+    my $success = 0;
+
+    $plugin->execute_plugin_hook( 'before_authenticate_user',
+        { username => $username, password => $password, realm => $realm } );
 
     # username and password must be simple non-empty scalars
     if (   defined $username
@@ -343,12 +346,9 @@ sub authenticate_user {
         && ref($password) eq ''
         && $password ne '' )
     {
-        $plugin->execute_plugin_hook( 'before_authenticate_user',
-            { username => $username, password => $password, realm => $realm } );
-
         my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
-        for my $realm (@realms_to_check) {
+        for $realm (@realms_to_check) {
             $plugin->app->log( debug =>
                   "Attempting to authenticate $username against realm $realm" );
             my $provider = $plugin->auth_provider($realm);
@@ -358,7 +358,6 @@ sub authenticate_user {
               ? ( lastlogin => 'logged_in_user_lastlogin' )
               : ();
 
-            my $success;
             eval {
                 $success =
                   $provider->authenticate_user( $username, $password,
@@ -370,36 +369,25 @@ sub authenticate_user {
                     error => "$realm provider threw error: $err" );
                 push @errors, $err;
             };
-
-            if ( $success ) {
-                $plugin->app->log( debug => "$realm accepted user $username" );
-
-                $plugin->execute_plugin_hook(
-                    'after_authenticate_user_success',
-                    {
-                        username => $username,
-                        password => $password,
-                        realm    => $realm
-                    }
-                );
-
-                return wantarray ? ( 1, $realm ) : 1;
-            }
+            last if $success;
         }
     }
 
-    # If we get to here, we failed to authenticate against any realm using the
-    # details provided.
-
     $plugin->execute_plugin_hook(
-        'after_authenticate_user_failure',
+        'after_authenticate_user',
         {
             username => $username,
             password => $password,
             realm    => $realm,
             errors   => \@errors,
+            success  => $success,
         }
     );
+
+    if ($success) {
+        $plugin->app->log( debug => "$realm accepted user $username" );
+        return wantarray ? ( 1, $realm ) : 1;
+    }
 
     return wantarray ? ( 0, undef ) : 0;
 }
@@ -1866,21 +1854,20 @@ This plugin provides the following hooks:
 
 Called at the start of L</authenticate_user>.
 
-Receives a hash reference of username, password and realm.
+Receives a hash reference of C<username>, C<password> and C<realm>.
 
-=head2 after_authenticate_user_success
+=head2 after_authenticate_user
 
-Called in L</authenticate_user> when authentication is successful.
+Called at the end of L</authenticate_user>.
 
-Receives a hash reference of username, password and realm.
+Receives a hash reference of C<username>, C<password>, C<realm>, C<errors>
+and C<success>.
 
-=head2 after_authenticate_user_failure
+The value of C<errors> is an array reference of any errors thrown by
+authentication providers (if any).
 
-Called in L</authenticate_user> after failed authentication.
-
-Receives a hash reference of username, password, realm and errors. The value
-of errors is an array reference of any errors thrown by authentication
-providers (if any).
+The value of C<success> is either C<1> or C<0> to show whether or not
+authentication was successful.
 
 =head2 login_required
 
