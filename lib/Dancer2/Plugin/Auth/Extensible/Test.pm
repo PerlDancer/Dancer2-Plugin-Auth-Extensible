@@ -46,21 +46,16 @@ my %dispatch = (
     authenticate_user               => \&_authenticate_user,
     create_user                     => \&_create_user,
     get_user_details                => \&_get_user_details,
+    login_logout                    => \&_login_logout,
     logged_in_user                  => \&_logged_in_user,
     logged_in_user_lastlogin        => \&_logged_in_user_lastlogin,
     logged_in_user_password_expired => \&_logged_in_user_password_expired,
     password_reset_send             => \&_password_reset_send,
-    realm_count                     => \&_realm_count,
-    realm_names                     => \&_realm_names,
-    require_all_roles               => \&_require_all_roles,
-    require_any_role                => \&_require_any_role,
     require_login                   => \&_require_login,
-    require_role                    => \&_require_role,
+    roles                           => \&_roles,
     update_current_user             => \&_update_current_user,
     update_user                     => \&_update_user,
-    user_has_role                   => \&_user_has_role,
     user_password                   => \&_user_password,
-    user_roles                      => \&_user_roles,
     welcome_send                    => \&_welcome_send,
 );
 
@@ -75,16 +70,12 @@ my %dependencies = (
     logged_in_user_password_expired =>
       [ 'get_user_details', 'password_expired' ],
     password_reset_send => ['set_user_details'],
-    require_all_roles   => [ 'get_user_details', 'get_user_roles' ],
-    require_any_role    => [ 'get_user_details', 'get_user_roles' ],
     require_login       => ['get_user_details'],
-    require_role        => [ 'get_user_details', 'get_user_roles' ],
+    roles               => [ 'get_user_details', 'get_user_roles' ],
     update_current_user => ['set_user_details'],
     update_user         => ['set_user_details'],
-    user_has_role       => ['get_user_roles'],
     user_password =>
       [ 'get_user_by_code', 'authenticate_user', 'set_user_details' ],
-    user_roles => ['get_user_roles'],
 );
 
 my ( $test, $trap );
@@ -111,21 +102,18 @@ sub runtests {
     my @provider_can = @$ret;
 
     my @to_test = ($ENV{D2PAE_TEST_ONLY}) || keys %dispatch;
-    # main plugin tests
-  TEST: foreach my $test ( @to_test ) {
+
+    foreach my $test ( @to_test ) {
+        my @missing;
         foreach my $dep ( @{ $dependencies{$test} || [] } ) {
-            if ( !grep { $_ eq $dep } @provider_can ) {
-                note "Provider has no method $dep so skipping $test tests.";
-                next TEST;
-            }
+            push @missing, $dep if !grep { $_ eq $dep } @provider_can;
         }
-        note "Testing plugin $test";
-        # TODO: remove this eval once all tests are written
-        eval { $dispatch{$test}->(); 1; } or do {
-            my $err = $@ || "Bogus error";
-            diag "TEST MISSING: $test"
-            if $err =~ /Undefined subroutine.+$test/;
-        };
+      SKIP: {
+            skip "Provider $test tests as provider is missing methods: "
+              . join( ", ", @missing ), 1
+              if @missing;
+            subtest "Plugin $test tests" => $dispatch{$test};
+        }
     }
 }
 
@@ -673,21 +661,321 @@ sub _get_user_details {
 
 };
 
-# base
+#------------------------------------------------------------------------------
+#
+#  login_logout
+#
+#------------------------------------------------------------------------------
 
-sub _test_base {
-    note "test base";
+sub _login_logout {
+    my ( $data, $res );
 
-    # First, without being logged in, check we can access the index page,
+    # Check that login route doesn't match any request string with '/login'.
+
+    $trap->read;
+    $res = get('/foo/login');
+    is $res->code, 404, "'/foo/login' URL not matched by login route regex."
+      or diag explain $trap->read;
+
+    # Now, without being logged in, check we can access the index page,
     # but not stuff we need to be logged in for:
 
-    {
-        my $res = get('/');
-        ok $res->is_success, "Index always accessible - GET / success";
-        is $res->content,    'Index always accessible',
+    $res = get('/');
+    ok $res->is_success, "Index always accessible - GET / success";
+    is $res->content,    'Index always accessible',
           "...and we got expected content.";
 
+    # check session_data when not logged in
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    ok !defined $data->{logged_in_user},
+      "... and logged_in_user is not set in the session";
+    ok !defined $data->{logged_in_user_realm},
+      "... and logged_in_user_realm is not set in the session.";
+
+    # get /login
+
+    $res = get('/login');
+    TODO: {
+        local $TODO = "GET /login returns 401";
+        ok $res->is_success, "GET /login is_success";
     }
+    like $res->content, qr/input.+name="password"/,
+      "... and we have the login page.";
+
+    # post empty /login
+
+    $res = post('/login');
+    TODO: {
+        local $TODO = "POST /login returns 401 for failed login";
+        ok $res->is_success, "POST /login is_success";
+    }
+    like $res->content, qr/input.+name="password"/,
+      "... and we have the login page";
+    like $res->content, qr/LOGIN FAILED/,
+      "... and we see LOGIN FAILED";
+
+    # check session_data again
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    ok !defined $data->{logged_in_user},
+      "... and logged_in_user is not set in the session";
+    ok !defined $data->{logged_in_user_realm},
+      "... and logged_in_user_realm is not set in the session.";
+
+    # post good /login
+
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+    ok $res->is_redirect, "POST /login with good username/password is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check session_data again
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    is $data->{logged_in_user}, 'dave',
+      "... and session logged_in_user is set to dave";
+    is $data->{logged_in_user_realm}, 'config1',
+      "... and session logged_in_user_realm is set to config1.";
+
+    # get /logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "GET /logout is_redirect" or diag explain $res;
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check session_data again
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    ok !defined $data->{logged_in_user},
+      "... and logged_in_user is not set in the session";
+    ok !defined $data->{logged_in_user_realm},
+      "... and logged_in_user_realm is not set in the session.";
+
+    # post good /login
+
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+    ok $res->is_redirect, "POST /login with good username/password is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check session_data again
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    is $data->{logged_in_user}, 'dave',
+      "... and session logged_in_user is set to dave" or diag explain $data;
+    is $data->{logged_in_user_realm}, 'config1',
+      "... and session logged_in_user_realm is set to config1.";
+
+    # POST /logout
+
+    $res = post('/logout');
+    ok $res->is_redirect, "POST /logout is_redirect" or diag explain $res;
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check session_data again
+
+    $res = get('/session_data');
+    ok $res->is_success, "/session_data is_success";
+    $data = YAML::Load $res->content;
+    ok !defined $data->{logged_in_user},
+      "... and logged_in_user is not set in the session";
+    ok !defined $data->{logged_in_user_realm},
+      "... and logged_in_user_realm is not set in the session.";
+}
+
+#------------------------------------------------------------------------------
+#
+#  logged_in_user
+#
+#------------------------------------------------------------------------------
+
+sub _logged_in_user {
+    my ( $data, $res );
+
+    # check logged_in_user when not logged in
+
+    $res = get('/logged_in_user');
+    ok $res->is_success, "/logged_in_user is_success";
+    $data = YAML::Load $res->content;
+    is $data, 'none', "... and there is no logged_in_user."
+      or diag explain $data;
+
+    # post empty /login
+
+    $res = post('/login');
+    TODO: {
+        local $TODO = "POST /login returns 401 for failed login";
+        ok $res->is_success, "POST /login is_success";
+    }
+    like $res->content, qr/input.+name="password"/,
+      "... and we have the login page";
+    like $res->content, qr/LOGIN FAILED/,
+      "... and we see LOGIN FAILED";
+
+    # check logged_in_user again
+
+    $res = get('/logged_in_user');
+    ok $res->is_success, "/logged_in_user is_success";
+    $data = YAML::Load $res->content;
+    is $data, 'none', "... and there is no logged_in_user."
+      or diag explain $data;
+
+    # post good /login
+
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+    ok $res->is_redirect, "POST /login with good username/password is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check logged_in_user again
+
+    $res = get('/logged_in_user');
+    ok $res->is_success, "/logged_in_user is_success";
+    $data = YAML::Load $res->content;
+    is $data->{name}, 'David Precious',
+      "... and we see dave's name is David Precious." or diag explain $data;
+
+    # get /logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "GET /logout is_redirect" or diag explain $res;
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check logged_in_user again
+
+    $res = get('/logged_in_user');
+    ok $res->is_success, "/logged_in_user is_success";
+    $data = YAML::Load $res->content;
+    is $data, 'none', "... and there is no logged_in_user."
+      or diag explain $data;
+}
+
+#------------------------------------------------------------------------------
+#
+#  logged_in_user_lastlogin
+#
+#------------------------------------------------------------------------------
+
+sub _logged_in_user_lastlogin {
+    ok 1;
+}
+
+#------------------------------------------------------------------------------
+#
+#  logged_in_user_password_expired
+#
+#------------------------------------------------------------------------------
+
+sub _logged_in_user_password_expired {
+    ok 1;
+}
+
+#------------------------------------------------------------------------------
+#
+#  password_reset_send
+#
+#------------------------------------------------------------------------------
+
+sub _password_reset_send {
+    ok 1;
+}
+
+#------------------------------------------------------------------------------
+#
+#  require_login
+#
+#------------------------------------------------------------------------------
+
+sub _require_login {
+    my ( $res, $logs );
+
+    # check open / is ok
+
+    $res = get('/');
+    ok $res->is_success, "GET / is success - no login required";
+
+    # we cannot reach require_login routes
+
+    $res = get('/loggedin');
+    ok $res->is_redirect, "GET /loggedin causes redirect";
+    is $res->header('location'),
+      'http://localhost/login?return_url=%2Floggedin',
+      "... and we're redirected to /login with return_url=/loggedin.";
+
+    # regex route when not logged in
+
+    $res = get('/regex/a');
+    ok $res->is_redirect, "GET /regex/a causes redirect";
+    is $res->header('location'),
+      'http://localhost/login?return_url=%2Fregex%2Fa',
+      "... and we're redirected to /login with return_url=/regex/a.";
+
+    # login
+
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+    ok $res->is_redirect, "POST /login with good username/password is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check we can reach restricted page
+
+    $res = get('/loggedin');
+    ok $res->is_success, "GET /loggedin is_success now we're logged in";
+    is $res->content, "You are logged in", "... and we can see page content.";
+
+    # regex route
+
+    $res = get('/regex/a');
+    ok $res->is_success, "GET /regex/a is_success now we're logged in";
+    is $res->content, "Matched", "... and we can see page content.";
+
+    # cleanup
+    get('/logout');
+
+    # require_login should receive a coderef
+
+    $trap->read;    # clear logs
+    $res  = get('/require_login_no_sub');
+    $logs = $trap->read;
+    is @$logs, 1, "One message in the logs" or diag explain $logs;
+    is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
+    is $logs->[0]->{message},
+      'Invalid require_login usage, please see docs',
+      "Warning message is as expected";
+    $trap->read;    # clear logs
+
+    $res  = get('/require_login_not_coderef');
+    $logs = $trap->read;
+    is @$logs, 1, "One message in the logs" or diag explain $logs;
+    is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
+    is $logs->[0]->{message},
+      'Invalid require_login usage, please see docs',
+      "Warning message is as expected";
+}
+
+#------------------------------------------------------------------------------
+#
+#  roles
+#
+#------------------------------------------------------------------------------
+
+sub _roles {
+
+    # make sure we're not logged in
 
     {
         $trap->read;    # clear logs
@@ -704,6 +992,8 @@ sub _test_base {
         );
     }
 
+    # and can't reach pages that have require_role
+
     {
         $trap->read;    # clear logs
 
@@ -719,62 +1009,6 @@ sub _test_base {
         );
     }
 
-    SKIP: {
-        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
-        $trap->read;    # clear logs
-
-        my $res = get('/regex/a');
-
-        is( $res->code, 302, '[GET /regex/a] Correct code' )
-          or diag explain $trap->read;
-
-        is(
-            $res->headers->header('Location'),
-            'http://localhost/login?return_url=%2Fregex%2Fa',
-            '/regex/a redirected to login page when not logged in'
-        );
-    }
-
-    # OK, now check we can't log in with fake details
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = post( '/login', [ username => 'foo', password => 'bar' ] );
-
-        is( $res->code, 401, 'Login with fake details fails' )
-          or diag explain $trap->read;
-    }
-
-  SKIP: {
-        skip "Priorities not defined for this provider test", 1
-          if !get('/can_test_realm_priority')->content;
-
-        # test realm priority
-        my $logs = $trap->read;
-        cmp_deeply(
-            $logs,
-            superbagof(
-                {
-                    formatted => ignore(),
-                    level     => 'debug',
-                    message   => re(qr/realm config2/)
-                },
-                {
-                    formatted => ignore(),
-                    level     => 'debug',
-                    message   => re(qr/realm config3/)
-                },
-                {
-                    formatted => ignore(),
-                    level     => 'debug',
-                    message   => re(qr/realm config1/)
-                },
-            ),
-            "Realms checked in the correct order"
-        ) or diag explain $logs;
-    }
-
     # ... and that we can log in with real details
 
     {
@@ -785,183 +1019,140 @@ sub _test_base {
         is( $res->code, 302, 'Login with real details succeeds' )
           or diag explain $trap->read;
 
-        my $logs = $trap->read;
-        cmp_deeply $logs,
-          superbagof(
-            {
-                formatted => ignore(),
-                level     => 'debug',
-                message   => 'config1 accepted user dave'
-            }
-          ),
-          "... and we see expected message in logs.";
-
         is get('/loggedin')->content, "You are logged in",
           "... and checking /loggedin route shows we are logged in";
     }
 
-    # Now we're logged in, check we can access stuff we should...
+    # user_roles for logged_in_user
 
     {
-        my $res = get('/loggedin');
+        $trap->read;    # clear logs
 
-        is( $res->code, 200, 'Can access /loggedin now we are logged in' )
+        my $res = get('/roles');
+
+        is( $res->code, 200, 'get /roles is 200' )
           or diag explain $trap->read;
 
+        is( $res->content, 'BeerDrinker,Motorcyclist',
+            'Correct roles for logged in user' );
+    }
+
+    # user_roles for specific user
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/roles/bob');
+
+        is( $res->code, 200, 'get /roles/bob is 200' )
+          or diag explain $trap->read;
+
+        is( $res->content, 'CiderDrinker',
+            'Correct roles for other user in current realm' );
+    }
+
+    # Check we can request something which requires a role we have....
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/beer');
+
+        is( $res->code, 200,
+            'We can request a route (/beer) requiring a role we have...' )
+          or diag explain $trap->read;
+    }
+
+    # Check we can request a route that requires any of a list of roles,
+    # one of which we have:
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/anyrole');
+
+        is( $res->code, 200,
+            "We can request a multi-role route requiring with any one role" )
+          or diag explain $trap->read;
+    }
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/allroles');
+
+        is( $res->code, 200,
+            "We can request a multi-role route with all roles required" )
+          or diag explain $trap->read;
+    }
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/not_allroles');
+
+        is( $res->code, 302, "/not_allroles response code 302" )
+          or diag explain $trap->read;
         is(
-            $res->content,
-            'You are logged in',
-            'Correct page content while logged in, too'
+            $res->headers->header('Location'),
+            'http://localhost/login/denied?return_url=%2Fnot_allroles',
+            '/not_allroles redirected to denied page'
         );
     }
 
-  SKIP: {
-        skip "not testing roles", 11 if $ENV{D2PAE_TEST_NO_ROLES};
-        {
-            $trap->read;    # clear logs
+    {
+        $trap->read;    # clear logs
 
-            my $res = get('/name');
+        my $res = get('/piss/regex');
 
-            is( $res->code, 200, 'get /name is 200' )
-              or diag explain $trap->read;
-
-            is(
-                $res->content,
-                'Hello, David Precious',
-                'Logged in user details via logged_in_user work'
-            );
-
-        }
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/roles');
-
-            is( $res->code, 200, 'get /roles is 200' )
-              or diag explain $trap->read;
-
-            is( $res->content, 'BeerDrinker,Motorcyclist',
-                'Correct roles for logged in user' );
-        }
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/roles/bob');
-
-            is( $res->code, 200, 'get /roles/bob is 200' )
-              or diag explain $trap->read;
-
-            is( $res->content, 'CiderDrinker',
-                'Correct roles for other user in current realm' );
-        }
-
-        # Check we can request something which requires a role we have....
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/beer');
-
-            is( $res->code, 200,
-                'We can request a route (/beer) requiring a role we have...' )
-              or diag explain $trap->read;
-        }
-
-        # Check we can request a route that requires any of a list of roles,
-        # one of which we have:
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/anyrole');
-
-            is( $res->code, 200,
-                "We can request a multi-role route requiring with any one role"
-            ) or diag explain $trap->read;
-        }
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/allroles');
-
-            is( $res->code, 200,
-                "We can request a multi-role route with all roles required" )
-              or diag explain $trap->read;
-        }
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/not_allroles');
-
-            is( $res->code, 302, "/not_allroles response code 302" )
-              or diag explain $trap->read;
-            is(
-                $res->headers->header('Location'),
-                'http://localhost/login/denied?return_url=%2Fnot_allroles',
-                '/not_allroles redirected to denied page'
-            );
-        }
+        is( $res->code, 200,
+            "We can request a route requiring a regex role we have" )
+          or diag explain $trap->read;
     }
 
-    # And also a route declared as a regex (this should be no different, but
-    # melmothX was seeing issues with routes not requiring login when they
-    # should...
+    # ... but can't request something requiring a role we don't have
 
     {
         $trap->read;    # clear logs
 
-        my $res = get('/regex/a');
+        my $res = get('/piss');
 
-        is( $res->code, 200, "We can request a regex route when logged in" )
+        is( $res->code, 302,
+            "Redirect on a route requiring a role we don't have" )
           or diag explain $trap->read;
+
+        is(
+            $res->headers->header('Location'),
+            'http://localhost/login/denied?return_url=%2Fpiss',
+            "We cannot request a route requiring a role we don't have"
+        );
     }
 
-  SKIP: {
-        skip "not testing roles", 3 if $ENV{D2PAE_TEST_NO_ROLES};
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/piss/regex');
-
-            is( $res->code, 200,
-                "We can request a route requiring a regex role we have" )
-              or diag explain $trap->read;
-        }
-
-        # ... but can't request something requiring a role we don't have
-
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/piss');
-
-            is( $res->code, 302,
-                "Redirect on a route requiring a role we don't have" )
-              or diag explain $trap->read;
-
-            is(
-                $res->headers->header('Location'),
-                'http://localhost/login/denied?return_url=%2Fpiss',
-                "We cannot request a route requiring a role we don't have"
-            );
-        }
-    }
-
-    # Check the realm we authenticated against is what we expect
+    # 2 arg user_has_role
 
     {
         $trap->read;    # clear logs
 
-        my $res = get('/realm');
-
-        is( $res->code, 200, 'Status code on /realm route.' )
+        my $res = get('/does_dave_drink_beer');
+        is $res->code, 200, "/does_dave_drink_beer response is 200"
           or diag explain $trap->read;
+        ok $res->content, "yup - dave drinks beer";
+    }
+    {
+        $trap->read;    # clear logs
 
-        is( $res->content, 'config1', 'Authenticated against expected realm' );
+        my $res = get('/does_dave_drink_cider');
+        is $res->code, 200, "/does_dave_drink_cider response is 200"
+          or diag explain $trap->read;
+        ok !$res->content, "no way does dave drink cider";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/does_undef_drink_beer');
+        is $res->code, 200, "/does_undef_drink_beer response is 200"
+          or diag explain $trap->read;
+        ok !$res->content, "undefined users cannot drink";
     }
 
     # Now, log out
@@ -996,8 +1187,7 @@ sub _test_base {
         );
     }
 
-    SKIP: {
-        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
+    {
         $trap->read;    # clear logs
 
         my $res = get('/beer');
@@ -1049,21 +1239,7 @@ sub _test_base {
           or diag explain $trap->read;
     }
 
-    # And that the realm we authenticated against is what we expect
-
     {
-        $trap->read;    # clear logs
-
-        my $res = get('/realm');
-
-        is( $res->code, 200, 'Status code on /realm route.' )
-          or diag explain $trap->read;
-
-        is( $res->content, 'config2', 'Authenticated against expected realm' );
-    }
-
-    SKIP: {
-        skip "not testing roles", 2 if $ENV{D2PAE_TEST_NO_ROLES};
         $trap->read;    # clear logs
 
         my $res = get('/roles/bob/config1');
@@ -1089,6 +1265,168 @@ sub _test_base {
             'http://localhost/',
             '/logout redirected to / (exit_page) after logging out' );
     }
+
+}
+
+#------------------------------------------------------------------------------
+#
+#  update_current_user
+#
+#------------------------------------------------------------------------------
+
+sub _update_current_user {
+    ok 1;
+}
+
+#------------------------------------------------------------------------------
+#
+#  update_user
+#
+#------------------------------------------------------------------------------
+
+sub _update_user {
+    for my $realm (qw/config1 config2/) {
+
+        # First test a standard user details update.
+
+        {
+            $trap->read;    # clear logs
+
+            # Get the current user settings, and make sure name is not what
+            # we're going to change it to.
+            my $res = get("/get_user_mark/$realm");
+            is $res->code, 200, "get /get_user_mark/$realm is 200"
+              or diag explain $trap->read;
+
+            my $user = YAML::Load $res->content;
+            my $name = $user->{name} || '';
+            cmp_ok(
+                $name, 'ne',
+                "Wiltshire Apples $realm",
+                "Name is not currently Wiltshire Apples $realm"
+            );
+        }
+        {
+            $trap->read;    # clear logs
+
+            # Update the user
+            my $res = get("/update_user_name/$realm");
+            is $res->code, 200, "get /update_user_name/$realm is 200"
+              or diag explain $trap->read;
+
+            $trap->read;    # clear logs
+
+            # check it
+            $res = get("/get_user_mark/$realm");
+            is $res->code, 200, "get /get_user_mark/$realm is 200"
+              or diag explain $trap->read;
+
+            my $user = YAML::Load $res->content;
+            cmp_ok(
+                $user->{name}, 'eq',
+                "Wiltshire Apples $realm",
+                "Name is now Wiltshire Apples $realm"
+            );
+        }
+    }
+}
+
+#------------------------------------------------------------------------------
+#
+#  user_password
+#
+#------------------------------------------------------------------------------
+
+sub _user_password {
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/user_password?username=dave&password=beer');
+        is $res->code, 200,
+          "/user_password?username=dave&password=beer response is 200"
+          or diag explain $trap->read;
+        ok $res->content, "content shows success";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/user_password?username=dave&password=cider');
+        is $res->code, 200,
+          "/user_password?username=dave&password=cider response is 200"
+          or diag explain $trap->read;
+        ok !$res->content, "content shows fail";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res =
+          get('/user_password?username=dave&password=beer&realm=config1');
+
+        is $res->code, 200,
+"/user_password?username=dave&password=beer&realm=config1 response is 200"
+          or diag explain $trap->read;
+        ok $res->content, "content shows success";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res =
+          get('/user_password?username=dave&password=beer&realm=config2');
+
+        is $res->code, 200,
+"/user_password?username=dave&password=beer&realm=config2 response is 200"
+          or diag explain $trap->read;
+        ok !$res->content, "content shows fail";
+    }
+
+    # now with logged_in_user
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+
+        is( $res->code, 302, 'Login with real details succeeds' )
+          or diag explain $trap->read;
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/user_password?password=beer');
+        is $res->code, 200, "/user_password?password=beer response is 200"
+          or diag explain $trap->read;
+        ok $res->content, "content shows success";
+    }
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/user_password?password=cider');
+        is $res->code, 200, "/user_password?password=cider response is 200"
+          or diag explain $trap->read;
+        ok !$res->content, "content shows fail";
+    }
+
+    # cleanup
+    get('/logout');
+}
+
+#------------------------------------------------------------------------------
+#
+#  welcome_send
+#
+#------------------------------------------------------------------------------
+
+sub _welcome_send {
+    ok 1;
+}
+
+
+# base
+
+sub _test_base {
 
     # Now check we can log in as a user whose password is stored hashed:
 
@@ -1171,18 +1509,6 @@ sub _test_base {
           "... and checking /loggedin route shows we are logged in";
     }
 
-    # Check that login route doesn't match any request string with '/login'.
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/foo/login');
-
-        is( $res->code, 404,
-            "'/foo/login' URL not matched by login route regex." )
-          or diag explain $trap->read;
-    }
-
     # Now, log out again
 
     {
@@ -1197,30 +1523,6 @@ sub _test_base {
             '/logout redirected to / (exit_page) after logging out' );
     }
 
-    # require_login should receive a coderef
-
-    {
-        $trap->read;    # clear logs
-
-        my $res  = get('/require_login_no_sub');
-        my $logs = $trap->read;
-        is @$logs, 1, "One message in the logs" or diag explain $logs;
-        is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
-        is $logs->[0]->{message},
-          'Invalid require_login usage, please see docs',
-          "Warning message is as expected";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res  = get('/require_login_not_coderef');
-        my $logs = $trap->read;
-        is @$logs, 1, "One message in the logs" or diag explain $logs;
-        is $logs->[0]->{level}, 'warning', "We got a warning in the logs";
-        is $logs->[0]->{message},
-          'Invalid require_login usage, please see docs',
-          "Warning message is as expected";
-    }
 
     # login as dave
 
@@ -1246,34 +1548,6 @@ sub _test_base {
           "... and checking /loggedin route shows we are logged in";
     }
 
-    # 2 arg user_has_role
-  SKIP: {
-        skip "not testing roles", 6 if $ENV{D2PAE_TEST_NO_ROLES};
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/does_dave_drink_beer');
-            is $res->code, 200, "/does_dave_drink_beer response is 200"
-              or diag explain $trap->read;
-            ok $res->content, "yup - dave drinks beer";
-        }
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/does_dave_drink_cider');
-            is $res->code, 200, "/does_dave_drink_cider response is 200"
-              or diag explain $trap->read;
-            ok !$res->content, "no way does dave drink cider";
-        }
-        {
-            $trap->read;    # clear logs
-
-            my $res = get('/does_undef_drink_beer');
-            is $res->code, 200, "/does_undef_drink_beer response is 200"
-              or diag explain $trap->read;
-            ok !$res->content, "undefined users cannot drink";
-        }
-    }
 
     # 3 arg authenticate_user
 
@@ -1305,141 +1579,11 @@ sub _test_base {
         ok !$res->content, "authentication failure";
     }
 
-    # user_password
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/user_password?username=dave&password=beer');
-        is $res->code, 200,
-          "/user_password?username=dave&password=beer response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/user_password?username=dave&password=cider');
-        is $res->code, 200,
-          "/user_password?username=dave&password=cider response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res =
-          get('/user_password?username=dave&password=beer&realm=config1');
-
-        is $res->code, 200,
-"/user_password?username=dave&password=beer&realm=config1 response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res =
-          get('/user_password?username=dave&password=beer&realm=config2');
-
-        is $res->code, 200,
-"/user_password?username=dave&password=beer&realm=config2 response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/user_password?password=beer');
-        is $res->code, 200, "/user_password?password=beer response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/user_password?password=cider');
-        is $res->code, 200, "/user_password?password=cider response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
-
-  SKIP: {
-        skip "not testing get_user_details", 6
-          if $ENV{D2PAE_TEST_NO_USER_DETAILS};
-        {
-            my $res = get('/get_user_details/dave');
-            is $res->code, 200, "/get_user_details/dave response is 200"
-              or diag explain $trap->read;
-
-            my $user = YAML::Load $res->content;
-            cmp_deeply $user,
-              superhashof( { name => 'David Precious' } ),
-              "We have Dave's name in the response"
-              or diag explain $user;
-        }
-        {
-            my $res = get('/get_user_details/burt');
-            is $res->code, 200, "/get_user_details/burt response is 200"
-              or diag explain $trap->read;
-        }
-    }
 
     # cleanup
     get('/logout');
 }
 
-# update_user
-
-sub _test_update_user {
-
-    note "test update_user";
-
-    for my $realm (qw/config1 config2/) {
-
-        # First test a standard user details update.
-
-        {
-            $trap->read;    # clear logs
-
-            # Get the current user settings, and make sure name is not what
-            # we're going to change it to.
-            my $res = get("/get_user_mark/$realm");
-            is $res->code, 200, "get /get_user_mark/$realm is 200"
-              or diag explain $trap->read;
-
-            my $user = YAML::Load $res->content;
-            my $name = $user->{name} || '';
-            cmp_ok(
-                $name, 'ne',
-                "Wiltshire Apples $realm",
-                "Name is not currently Wiltshire Apples $realm"
-            );
-        }
-        {
-            $trap->read;    # clear logs
-
-            # Update the user
-            my $res = get("/update_user_name/$realm");
-            is $res->code, 200, "get /update_user_name/$realm is 200"
-              or diag explain $trap->read;
-
-            $trap->read;    # clear logs
-
-            # check it
-            $res = get("/get_user_mark/$realm");
-            is $res->code, 200, "get /get_user_mark/$realm is 200"
-              or diag explain $trap->read;
-
-            my $user = YAML::Load $res->content;
-            cmp_ok(
-                $user->{name}, 'eq',
-                "Wiltshire Apples $realm",
-                "Name is now Wiltshire Apples $realm"
-            );
-        }
-    }
-}
 
 # update_roles
 # This is pretty much DBIC provider at the moment until D2PAE itself defines

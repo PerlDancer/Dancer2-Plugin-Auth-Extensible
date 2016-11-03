@@ -473,15 +473,36 @@ post '/get_user_details' => sub {
     return $user ? send_as YAML => $user : 0;
 };
 
+get '/session_data' => sub {
+    my $session = session->data;
+    send_as YAML => $session;
+};
+
+get '/logged_in_user' => sub {
+    my $user = logged_in_user;
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    send_as YAML => $user ? $user : 'none';
+};
+
 get '/loggedin' => require_login sub  {
     "You are logged in";
 };
 
-get '/name' => require_login sub {
-    my $user = logged_in_user;
-    my $name = blessed($user) ? logged_in_user->name : logged_in_user->{name};
-    return "Hello, $name";
+get qr{/regex/(.+)} => require_login sub {
+    return "Matched";
 };
+
+get '/require_login_no_sub' => require_login;
+
+get '/require_login_not_coderef' => require_login { a => 1 };
 
 get '/roles' => require_login sub {
     my $roles = user_roles() || [];
@@ -499,9 +520,6 @@ get '/roles/:user/:realm' => require_login sub {
     return join ',', sort @{ user_roles($user, $realm) };
 };
 
-get '/realm' => require_login sub {
-    return session->read('logged_in_user_realm');
-};
 
 get '/beer' => require_role BeerDrinker => sub {
     "You can have a beer";
@@ -531,14 +549,6 @@ get '/not_allroles' => require_all_roles ['BeerDrinker', 'BadRole'] => sub {
     "Matching multiple required roles should fail";
 };
 
-get qr{/regex/(.+)} => require_login sub {
-    return "Matched";
-};
-
-get '/require_login_no_sub' => require_login;
-
-get '/require_login_not_coderef' => require_login { a => 1 };
-
 get '/does_dave_drink_beer' => sub {
     return user_has_role('dave', 'BeerDrinker');
 };
@@ -549,18 +559,6 @@ get '/does_dave_drink_cider' => sub {
 
 get '/does_undef_drink_beer' => sub {
     return user_has_role(undef, 'BeerDrinker');
-};
-
-get '/authenticate_user_with_realm_pass' => sub {
-    return authenticate_user('dave', 'beer', 'config1');
-};
-
-get '/authenticate_user_with_realm_fail' => sub {
-    return authenticate_user('dave', 'cider', 'config1');
-};
-
-get '/authenticate_user_with_wrong_realm' => sub {
-    return authenticate_user('dave', 'beer', 'config2');
 };
 
 get '/user_password' => sub {
