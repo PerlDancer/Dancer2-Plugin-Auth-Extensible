@@ -481,7 +481,11 @@ sub logged_in_user {
         my $existing = $request->vars->{logged_in_user_hash};
         return $existing if $existing;
         my $realm    = $session->read('logged_in_user_realm');
-        my $user = $plugin->get_user_details($username, $realm);
+        my $provider = $plugin->auth_provider($realm);
+        my $user =
+            $provider->can('get_user_details')
+          ? $plugin->get_user_details( $username, $realm )
+          : +{ username => $username };
         $request->vars->{logged_in_user_hash} = $user;
         return $user;
     }
