@@ -1,5 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Provider::Config;
 
+use Carp qw/croak/;
 use Dancer2::Core::Types qw/ArrayRef/;
 use List::Util qw/first/;
 use Moo;
@@ -74,6 +75,10 @@ has users => (
 
 sub authenticate_user {
     my ($self, $username, $password) = @_;
+
+    croak "username and password must be defined"
+      unless defined $username && defined $password;
+
     my $user_details = $self->get_user_details($username) or return;
     return $self->match_password($password, $user_details->{pass});
 }
@@ -86,6 +91,10 @@ sub authenticate_user {
 # fields defined for users will just get passed through.
 sub get_user_details {
     my ($self, $username) = @_;
+
+    croak "username must be defined"
+      unless defined $username;
+
     my $user = first {
         $_->{user} eq $username 
     } @{ $self->users };
@@ -98,6 +107,9 @@ sub get_user_details {
 
 sub get_user_roles {
     my ($self, $username) = @_;
+
+    croak "username must be defined"
+      unless defined $username;
 
     my $user_details = $self->get_user_details($username) or return;
     return $user_details->{roles};

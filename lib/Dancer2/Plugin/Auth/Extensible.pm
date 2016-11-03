@@ -189,8 +189,9 @@ has realm_providers => (
 # hooks
 #
 
-plugin_hooks qw(before_authenticate_user login_required permission_denied
-  after_login_success);
+plugin_hooks 'before_authenticate_user', 'after_authenticate_user',
+  'before_create_user', 'after_create_user',
+  'login_required', 'permission_denied', 'after_login_success';
 
 #
 # keywords
@@ -239,7 +240,9 @@ sub BUILD {
                 my $app = shift;
 
                 if ( $weak_plugin->logged_in_user ) {
-                    $app->redirect( $app->request->params->{return_url}
+                    # User is already logged in so redirect elsewhere
+                    $app->redirect(
+                             $app->request->query_parameter->get('return_url')
                           || $weak_plugin->user_home_page );
                 }
 
@@ -330,73 +333,128 @@ sub auth_provider {
 
 sub authenticate_user {
     my ( $plugin, $username, $password, $realm ) = @_;
+    my ( @errors, $success, $auth_realm );
 
     $plugin->execute_plugin_hook( 'before_authenticate_user',
         { username => $username, password => $password, realm => $realm } );
 
-    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
+    # username and password must be simple non-empty scalars
+    if (   defined $username
+        && ref($username) eq ''
+        && $username ne ''
+        && defined $password
+        && ref($password) eq ''
+        && $password ne '' )
+    {
+        my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
-    for my $realm (@realms_to_check) {
-        $plugin->app->log( debug =>
-              "Attempting to authenticate $username against realm $realm" );
-        my $provider = $plugin->auth_provider($realm);
-        my %lastlogin =
-          $plugin->record_lastlogin
-          ? ( lastlogin => 'logged_in_user_lastlogin' )
-          : ();
-        if ( $provider->authenticate_user( $username, $password, %lastlogin ) )
-        {
-            $plugin->app->log( debug => "$realm accepted user $username" );
-            return wantarray ? ( 1, $realm ) : 1;
+        for my $realm (@realms_to_check) {
+            $plugin->app->log( debug =>
+                  "Attempting to authenticate $username against realm $realm" );
+            my $provider = $plugin->auth_provider($realm);
+
+            my %lastlogin =
+              $plugin->record_lastlogin
+              ? ( lastlogin => 'logged_in_user_lastlogin' )
+              : ();
+
+            eval {
+                $success =
+                  $provider->authenticate_user( $username, $password,
+                    %lastlogin );
+                1;
+            } or do {
+                my $err = $@ || "Unknown error";
+                $plugin->app->log(
+                    error => "$realm provider threw error: $err" );
+                push @errors, $err;
+            };
+            if ($success) {
+                $plugin->app->log( debug => "$realm accepted user $username" );
+                $auth_realm = $realm;
+                last;
+            }
         }
     }
 
-    # If we get to here, we failed to authenticate against any realm using the
-    # details provided.
-    # TODO: allow providers to raise an exception if something failed, and catch
-    # that and do something appropriate, rather than just treating it as a
-    # failed login.
-    return wantarray ? ( 0, undef ) : 0;
+    # force 0 or 1 for success
+    $success = 0+!!$success;
+
+    $plugin->execute_plugin_hook(
+        'after_authenticate_user',
+        {
+            username => $username,
+            password => $password,
+            realm    => $auth_realm,
+            errors   => \@errors,
+            success  => $success,
+        }
+    );
+
+    return wantarray ? ( $success, $auth_realm ) : $success;
 }
 
 sub create_user {
     my $plugin  = shift;
     my %options = @_;
+    my ( $user, @errors );
 
     croak "Realm must be specified when more than one realm configured"
       if !$options{realm} && $plugin->realm_count > 1;
 
-    my $realm = delete $options{realm} || $plugin->realm_names->[0];
+    $plugin->execute_plugin_hook( 'before_create_user', \%options );
+
+    my $realm         = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
+    my $password      = delete $options{password};
+    my $provider      = $plugin->auth_provider($realm);
 
-    my $provider = $plugin->auth_provider($realm);
+    eval { $user = $provider->create_user(%options); 1; } or do {
+        my $err = $@ || "Unknown error";
+        $plugin->app->log( error => "$realm provider threw error: $err" );
+        push @errors, $err;
+    };
 
-    # Prevent duplicate users. Would be nice to make this an exception,
-    # but that's not in keeping with other functions of this module
-    if ( $provider->get_user_details( $options{username} ) ) {
-        $plugin->app->log(
-            info => "User $options{username} already exists. Not creating." );
-        return;
+    if ($user) {
+        # user creation successful
+        if ($email_welcome) {
+            my $code = _reset_code();
+
+            # Would be slightly more efficient to do this at time of creation,
+            # but this keeps the code simpler for the provider
+            $provider->set_user_details( $options{username},
+                pw_reset_code => $code );
+
+            # email hard-coded as per password_reset_send()
+            my %params =
+              ( code => $code, email => $options{email}, user => $user );
+
+            no strict 'refs';
+            &{ $plugin->welcome_send }( $plugin, %params );
+        }
+        elsif ($password) {
+            eval {
+                $provider->set_user_password( $options{username}, $password );
+                1;
+            } or do {
+                my $err = $@ || "Unknown error";
+                $plugin->app->log(
+                    error => "$realm provider threw error: $err" );
+                push @errors, $err;
+            };
+        }
     }
-    my $user = $provider->create_user(%options);
-    if ($email_welcome) {
-        my $code = _reset_code();
 
-        # Would be slightly more efficient to do this at time of creation, but
-        # this keeps the code simpler for the provider
-        $user = $provider->set_user_details( $user->{username},
-            pw_reset_code => $code );
-        no strict 'refs';
+    $plugin->execute_plugin_hook( 'after_create_user', $options{username},
+        $user, \@errors );
 
-        # email hard-coded as per password_reset_send()
-        my %params = ( code => $code, email => $user->{email}, user => $user );
-        &{ $plugin->welcome_send }( $plugin, %params );
-    }
-    $user;
+    return $user;
 }
 
 sub get_user_details {
     my ( $plugin, $username, $realm ) = @_;
+    my $user;
+    return unless defined $username;
 
     my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
@@ -404,9 +462,13 @@ sub get_user_details {
         $plugin->app->log(
             debug => "Attempting to find user $username in realm $realm" );
         my $provider = $plugin->auth_provider($realm);
-        my $user = $provider->get_user_details( $username, $realm );
-        $user and return $user;
+        eval { $user = $provider->get_user_details($username); 1; } or do {
+            my $err = $@ || "Unknown error";
+            $plugin->app->log( error => "$realm provider threw error: $err" );
+        };
+        last if $user;
     }
+    return $user;
 }
 
 sub logged_in_user {
@@ -415,12 +477,11 @@ sub logged_in_user {
     my $session = $app->session;
     my $request = $app->request;
 
-    if ( my $user = $session->read('logged_in_user') ) {
+    if ( my $username = $session->read('logged_in_user') ) {
         my $existing = $request->vars->{logged_in_user_hash};
         return $existing if $existing;
         my $realm    = $session->read('logged_in_user_realm');
-        my $provider = $plugin->auth_provider($realm);
-        my $user     = $provider->get_user_details( $user, $realm );
+        my $user = $plugin->get_user_details($username, $realm);
         $request->vars->{logged_in_user_hash} = $user;
         return $user;
     }
@@ -1207,6 +1268,10 @@ Authenticates users via in an IMAP server.
 
 Authenticates users stored in an LDAP directory.
 
+=item L<Dancer2::Plugin::Auth::Extensible::Provider::Usergroup>
+
+An alternative L<Dancer2::Plugin::DBIC>-based provider.
+
 =back
 
 Need to write your own?  Just create a new provider class which consumes
@@ -1817,7 +1882,36 @@ This plugin provides the following hooks:
 
 Called at the start of L</authenticate_user>.
 
-Receives a hash reference of username, password and realm.
+Receives a hash reference of C<username>, C<password> and C<realm>.
+
+=head2 after_authenticate_user
+
+Called at the end of L</authenticate_user>.
+
+Receives a hash reference of C<username>, C<password>, C<realm>, C<errors>
+and C<success>.
+
+C<realm> is the realm that the user authenticated against of undef if auth
+failed.
+
+The value of C<errors> is an array reference of any errors thrown by
+authentication providers (if any).
+
+The value of C<success> is either C<1> or C<0> to show whether or not
+authentication was successful.
+
+=head2 before_create_user
+
+Called at the start of L</create_user>.
+
+Receives a hash reference of the arguments passed to L</create_user>.
+
+=head2 after_create_user
+
+Called at the end of L</create_user>.
+
+Receives the requested username, the created user (or undef) and an array
+reference of any errors from the main method or from the provider.
 
 =head2 login_required
 

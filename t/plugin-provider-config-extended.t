@@ -7,7 +7,7 @@ use lib 't/lib';
 
 BEGIN {
     $ENV{DANCER_CONFDIR} = 't/lib';
-    $ENV{DANCER_ENVIRONMENT} = 'provider-config';
+    $ENV{DANCER_ENVIRONMENT} = 'provider-config-extended';
 }
 
 {

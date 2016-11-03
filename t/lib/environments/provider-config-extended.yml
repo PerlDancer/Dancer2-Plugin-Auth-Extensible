@@ -2,7 +2,8 @@ plugins:
     Auth::Extensible:
         realms:
             config1:
-                provider: Config
+                provider: Provider::ConfigExtended
+                password_expiry_days: 2
                 users:
                     - user: dave
                       pass: beer
@@ -19,7 +20,7 @@ plugins:
                       pass: wantscider
                       name: "Update here"
             config2:
-                provider: Config
+                provider: Provider::ConfigExtended
                 priority: 10
                 users:
                     - user: burt
@@ -30,7 +31,7 @@ plugins:
                       pass: wantscider
                       name: "Update here"
             config3:
-                provider: Config
+                provider: Provider::ConfigExtended
                 priority: 2
                 users:
                     - user: bananarepublic
