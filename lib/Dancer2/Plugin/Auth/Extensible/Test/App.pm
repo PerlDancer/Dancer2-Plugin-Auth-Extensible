@@ -525,10 +525,6 @@ get '/beer' => require_role BeerDrinker => sub {
     "You can have a beer";
 };
 
-get '/cider' => require_role CiderDrinker => sub {
-    "You can have a cider";
-};
-
 get '/piss' => require_role BearGrylls => sub {
     "You can drink piss";
 };
@@ -566,17 +562,22 @@ get '/user_password' => sub {
 };
 
 get '/update_current_user' => sub {
-    update_current_user name => "I love cider";
+    my $user = update_current_user name => "I love cider";
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    YAML::Dump $user;
 };
 
 get '/update_user_name/:realm' => sub {
     my $realm = param 'realm';
     YAML::Dump update_user 'mark', realm => $realm, name => "Wiltshire Apples $realm";
-};
-
-get '/update_user_role/:realm' => sub {
-    my $realm = param 'realm';
-    YAML::Dump update_user 'mark', realm => $realm, role => { CiderDrinker => 1 };
 };
 
 get '/get_user_mark/:realm' => sub {
@@ -593,11 +594,6 @@ get '/get_user_mark/:realm' => sub {
         }
     }
     YAML::Dump $user;
-};
-
-get '/can_test_realm_priority' => sub {
-    app->with_plugin('Auth::Extensible')->config->{realms}->{config2}
-      ->{priority};
 };
 
 1;

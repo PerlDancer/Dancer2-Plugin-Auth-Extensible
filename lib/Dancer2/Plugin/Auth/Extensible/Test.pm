@@ -56,7 +56,6 @@ my %dispatch = (
     update_current_user             => \&_update_current_user,
     update_user                     => \&_update_user,
     user_password                   => \&_user_password,
-    welcome_send                    => \&_welcome_send,
 );
 
 # Provider methods needed by plugin tests.
@@ -794,6 +793,101 @@ sub _login_logout {
       "... and logged_in_user is not set in the session";
     ok !defined $data->{logged_in_user_realm},
       "... and logged_in_user_realm is not set in the session.";
+
+    # Now check we can log in as a user whose password is stored hashed:
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = post(
+            '/login',
+            {
+                username => 'hashedpassword',
+                password => 'password'
+            }
+        );
+
+        is( $res->code, 302, 'Login as user with hashed password succeeds' )
+          or diag explain $trap->read;
+
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config2 accepted user hashedpassword'
+            }
+          ),
+          "... and we see expected message in logs.";
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
+    }
+
+    # And that now we're logged in again, we can access protected pages
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = get('/loggedin');
+
+        is( $res->code, 200, 'Can access /loggedin now we are logged in again' )
+          or diag explain $trap->read;
+    }
+
+    # Check that the redirect URL can be set when logging in
+
+    {
+        $trap->read;    # clear logs
+
+        # make sure we're logged out
+        get('/logout');
+
+        my $res = post(
+            '/login',
+            {
+                username   => 'dave',
+                password   => 'beer',
+                return_url => '/foobar',
+            }
+        );
+
+        is( $res->code, 302, 'Status code for login with return_url' )
+          or diag explain $trap->read;
+
+        is( $res->headers->header('Location'),
+            'http://localhost/foobar',
+            'Redirect after login to given return_url works' );
+
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'debug',
+                message   => 'config1 accepted user dave'
+            }
+          ),
+          "... and we see expected message in logs." or diag explain $logs;
+
+        is get('/loggedin')->content, "You are logged in",
+          "... and checking /loggedin route shows we are logged in";
+    }
+
+    # Now, log out again
+
+    {
+        $trap->read;    # clear logs
+
+        my $res = post('/logout');
+        is( $res->code, 302, 'Logging out returns 302' )
+          or diag explain $trap->read;
+
+        is( $res->headers->header('Location'),
+            'http://localhost/',
+            '/logout redirected to / (exit_page) after logging out' );
+    }
 }
 
 #------------------------------------------------------------------------------
@@ -1275,7 +1369,64 @@ sub _roles {
 #------------------------------------------------------------------------------
 
 sub _update_current_user {
-    ok 1;
+    for my $realm (qw/config1 config2/) {
+
+        # Now we're going to update the current user
+
+        {
+            $trap->read;    # clear logs
+
+            # First login as the test user
+            my $res = post(
+                '/login',
+                [
+                    username => 'mark',
+                    password => "wantscider",
+                    realm    => $realm
+                ]
+            );
+
+            is( $res->code, 302,
+                "Login with real details succeeds (realm $realm)" );
+
+            my $logs = $trap->read;
+            cmp_deeply $logs,
+              superbagof(
+                {
+                    formatted => ignore(),
+                    level     => 'debug',
+                    message   => "$realm accepted user mark"
+                }
+              ),
+              "... and we see expected message in logs.";
+
+            is get('/loggedin')->content, "You are logged in",
+              "... and checking /loggedin route shows we are logged in";
+
+            $trap->read;    # clear logs
+
+            # Update the "current" user, that we logged in above
+            $res = get("/update_current_user");
+            is $res->code, 200, "get /update_current_user is 200"
+              or diag explain $trap->read;
+
+            $trap->read;    # clear logs
+
+            # Check the update has worked
+            $res = get("/get_user_mark/$realm");
+            is $res->code, 200, "get /get_user_mark/$realm is 200"
+              or diag explain $trap->read;
+
+            my $user = YAML::Load $res->content;
+
+            cmp_ok( $user->{name}, 'eq', "I love cider",
+                "Name is now I love cider" );
+
+            $trap->read;    # clear logs
+
+            $res = post('/logout');
+        }
+    }
 }
 
 #------------------------------------------------------------------------------
@@ -1411,341 +1562,6 @@ sub _user_password {
 
     # cleanup
     get('/logout');
-}
-
-#------------------------------------------------------------------------------
-#
-#  welcome_send
-#
-#------------------------------------------------------------------------------
-
-sub _welcome_send {
-    ok 1;
-}
-
-
-# base
-
-sub _test_base {
-
-    # Now check we can log in as a user whose password is stored hashed:
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = post(
-            '/login',
-            {
-                username => 'hashedpassword',
-                password => 'password'
-            }
-        );
-
-        is( $res->code, 302, 'Login as user with hashed password succeeds' )
-          or diag explain $trap->read;
-
-        my $logs = $trap->read;
-        cmp_deeply $logs,
-          superbagof(
-            {
-                formatted => ignore(),
-                level     => 'debug',
-                message   => 'config2 accepted user hashedpassword'
-            }
-          ),
-          "... and we see expected message in logs.";
-
-        is get('/loggedin')->content, "You are logged in",
-          "... and checking /loggedin route shows we are logged in";
-    }
-
-    # And that now we're logged in again, we can access protected pages
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/loggedin');
-
-        is( $res->code, 200, 'Can access /loggedin now we are logged in again' )
-          or diag explain $trap->read;
-    }
-
-    # Check that the redirect URL can be set when logging in
-
-    {
-        $trap->read;    # clear logs
-
-        # make sure we're logged out
-        get('/logout');
-
-        my $res = post(
-            '/login',
-            {
-                username   => 'dave',
-                password   => 'beer',
-                return_url => '/foobar',
-            }
-        );
-
-        is( $res->code, 302, 'Status code for login with return_url' )
-          or diag explain $trap->read;
-
-        is( $res->headers->header('Location'),
-            'http://localhost/foobar',
-            'Redirect after login to given return_url works' );
-
-        my $logs = $trap->read;
-        cmp_deeply $logs,
-          superbagof(
-            {
-                formatted => ignore(),
-                level     => 'debug',
-                message   => 'config1 accepted user dave'
-            }
-          ),
-          "... and we see expected message in logs." or diag explain $logs;
-
-        is get('/loggedin')->content, "You are logged in",
-          "... and checking /loggedin route shows we are logged in";
-    }
-
-    # Now, log out again
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = post('/logout');
-        is( $res->code, 302, 'Logging out returns 302' )
-          or diag explain $trap->read;
-
-        is( $res->headers->header('Location'),
-            'http://localhost/',
-            '/logout redirected to / (exit_page) after logging out' );
-    }
-
-
-    # login as dave
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = post( '/login', [ username => 'dave', password => 'beer' ] );
-        is( $res->code, 302, 'Login with real details succeeds' )
-          or diag explain $trap->read;
-
-        my $logs = $trap->read;
-        cmp_deeply $logs,
-          superbagof(
-            {
-                formatted => ignore(),
-                level     => 'debug',
-                message   => 'config1 accepted user dave'
-            }
-          ),
-          "... and we see expected message in logs.";
-
-        is get('/loggedin')->content, "You are logged in",
-          "... and checking /loggedin route shows we are logged in";
-    }
-
-
-    # 3 arg authenticate_user
-
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/authenticate_user_with_realm_pass');
-        is $res->code, 200,
-          "/authenticate_user_with_realm_pass response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "authentication success";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/authenticate_user_with_realm_fail');
-        is $res->code, 200,
-          "/authenticate_user_with_realm_fail response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "authentication failure";
-    }
-    {
-        $trap->read;    # clear logs
-
-        my $res = get('/authenticate_user_with_wrong_realm');
-        is $res->code, 200,
-          "/authenticate_user_with_wrong_realm response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "authentication failure";
-    }
-
-
-    # cleanup
-    get('/logout');
-}
-
-
-# update_roles
-# This is pretty much DBIC provider at the moment until D2PAE itself defines
-# how role changes can be performed.
-
-sub _test_update_roles {
-
-    note "test update_user";
-
-    for my $realm (qw/config1 config2/) {
-
-        # Now we're going to update the current user and add a role
-
-        {
-            $trap->read;    # clear logs
-
-            # First login as the test user
-            my $res = post(
-                '/login',
-                [
-                    username => 'mark',
-                    password => "wantscider",
-                    realm    => $realm
-                ]
-            );
-
-            is( $res->code, 302,
-                "Login with real details succeeds (realm $realm)" );
-
-            my $logs = $trap->read;
-            cmp_deeply $logs,
-              superbagof(
-                {
-                    formatted => ignore(),
-                    level     => 'debug',
-                    message   => "$realm accepted user mark"
-                }
-              ),
-              "... and we see expected message in logs.";
-
-            is get('/loggedin')->content, "You are logged in",
-              "... and checking /loggedin route shows we are logged in";
-
-            $trap->read;    # clear logs
-
-            # Update the "current" user, that we logged in above
-            $res = get("/update_current_user");
-            is $res->code, 200, "get /update_current_user is 200"
-              or diag explain $trap->read;
-
-            $trap->read;    # clear logs
-
-            # Check the update has worked
-            $res = get("/get_user_mark/$realm");
-            is $res->code, 200, "get /get_user_mark/$realm is 200"
-              or diag explain $trap->read;
-
-            my $user = YAML::Load $res->content;
-
-            cmp_ok( $user->{name}, 'eq', "I love cider",
-                "Name is now I love cider" );
-
-            $trap->read;    # clear logs
-
-            # Now the role. First check that the role doesn't work.
-            $res = get('/cider');
-            is( $res->code, 302, "[GET /cider] Correct code for realm $realm" );
-
-            diag explain $trap->read;    # clear logs
-
-            # Now add the role
-            $res = get("/update_user_role/$realm");
-
-            diag explain $trap->read;    # clear logs
-
-            # And see whether we're now allowed access
-            $res = get('/cider');
-            is( $res->code, 200,
-"We can request a route (/cider) requiring a role we have (realm $realm)"
-            );
-
-            $trap->read;                 # clear logs
-
-            $res = post('/logout');
-        }
-    }
-}
-
-# password_reset
-
-sub _test_password_reset {
-    croak "FIXME: no password_reset tests";
-}
-
-# user_password
-
-sub _test_user_password {
-    croak "FIXME: no user_password tests";
-}
-
-# lastlogin
-
-sub _test_lastlogin {
-    croak "FIXME: no lastlogin tests";
-}
-
-# expired
-
-sub _test_expired {
-    croak "FIXME: no expired tests";
-}
-
-# reset code
-
-sub _test_reset_code {
-
-    note "test reset_code";
-
-    {
-        $trap->read;    # clear logs
-        my $res = get('/user_password?code=');
-        is $res->code, 200, "/user_password?code= response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-        my $logs = $trap->read;
-        ok !@$logs, "No log message";
-    }
-    {
-        $trap->read;    # clear logs
-        my $res = get('/user_password?code=beer');
-        is $res->code, 200, "/user_password?code=beer response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-        my $logs = $trap->read;
-        is $logs->[0]->{level}, 'debug', "we got a debug log message";
-        like $logs->[0]->{message},
-          qr/^No user found in realm config\d with code beer$/,
-          "message is: No user found in realm configX with code beer";
-    }
-    {
-        $trap->read;    # clear logs
-        my $res = get('/user_password?new_password=beer');
-        is $res->code, 500, "/user_password?new_password=beer response is 500"
-          or diag explain $trap->read;
-        my $logs = $trap->read;
-        is $logs->[0]->{level}, 'error', "we got a debug log message";
-        like $logs->[0]->{message},
-          qr/^Route exception: No username specified and no logged-in user/,
-"message is: 'Route exception: No username specified and no logged-in user'";
-    }
-    {
-        $trap->read;    # clear logs
-        my $res = get('/user_password?new_password=beer&realm=config1');
-        is $res->code, 500,
-          "/user_password?new_password=beer&realm=config1 response is 500"
-          or diag explain $trap->read;
-        my $logs = $trap->read;
-        is $logs->[0]->{level}, 'error', "we got a debug log message";
-        like $logs->[0]->{message},
-          qr/^Route exception: set_user_password was not implemented/,
-"message is: 'Route exception: set_user_password was not implemented...'";
-    }
 }
 
 1;
