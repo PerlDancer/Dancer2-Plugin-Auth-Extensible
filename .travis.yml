@@ -12,7 +12,9 @@ perl:
 matrix:
   include:
     - perl: 5.22
-      env: COVERAGE=1
+      env:
+        - COVERAGE=1
+        - DEVEL_COVER_OPTIONS="+ignore,\blib/Dancer2/Plugin/Auth/Extensible/Test.pm,\bt/,-coverage,statement,branch,condition,path,subroutine,time"
 before_install:
   - eval $(curl https://travis-perl.github.io/init) --auto
 install:

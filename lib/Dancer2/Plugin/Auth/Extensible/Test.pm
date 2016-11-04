@@ -80,7 +80,6 @@ my %dependencies = (
 my ( $test, $trap );
 
 sub testme {
-    # uncoverable subroutine
     BAIL_OUT "Please upgrade your provider to the latest version. Dancer2::Plugin::Auth::Extensible no longer supports the old \"testme\" tests.";
 }
 
