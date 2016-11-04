@@ -1208,7 +1208,7 @@ Configure the plugin to use the authentication provider class you wish to use:
         Auth::Extensible:
             realms:
                 users:
-                    provider: Example
+                    provider: Config
                     ....
 
 The configuration you provide will depend on the authentication provider module
@@ -1236,7 +1236,7 @@ to authenticate a user against the chosen source of authentication.
 
 For an example of how simple provider classes are, so you can build your own if
 required or just try out this authentication framework plugin easily, 
-see L<Dancer2::Plugin::Auth::Extensible::Provider::Example>.
+see L<Dancer2::Plugin::Auth::Extensible::Provider::Config>.
 
 This framework supplies the following providers out-of-the-box:
 
