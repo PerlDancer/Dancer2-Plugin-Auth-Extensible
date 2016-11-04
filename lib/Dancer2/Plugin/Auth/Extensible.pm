@@ -242,7 +242,7 @@ sub BUILD {
                 if ( $weak_plugin->logged_in_user ) {
                     # User is already logged in so redirect elsewhere
                     $app->redirect(
-                             $app->request->query_parameter->get('return_url')
+                             $app->request->query_parameters->get('return_url')
                           || $weak_plugin->user_home_page );
                 }
 
