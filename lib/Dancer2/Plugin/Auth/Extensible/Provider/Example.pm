@@ -9,4 +9,6 @@ Dancer2::Plugin::Auth::Extensible::Example
 See L<Dancer2::Plugin::Auth::Extensible::Config> for an example provider.
 See also L<Dancer2::Plugin::Auth::Extensible::Role::Provider>.
 
+=cut
+
 1;
