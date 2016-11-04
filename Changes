@@ -1,5 +1,24 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.620 Thu  3 Nov 16:01:22 CET 2016
+
+    [ENHANCEMENTS]
+
+    * User returned by providers can now be any kind of object. Previously
+      the providers were required to return a hashref (Peter Mottram).
+    * Most provider methods can now throw exceptions which will be caught
+      by the plugin (Peter Mottram).
+    * Added new hooks: after_authenticate_user, before_create_user and
+      after_create_user (Peter Mottram).
+    * If password is provided to create_user then set it immediately.
+
+    [TESTS]
+
+    * New tests for testing provider methods directly (Peter Mottram).
+    * Major test overhaul to enable clearer testing (Peter Mottram).
+    * Create extended version of Provider::Config for use in tests to allow
+      most plugin features to be tested without relying on external providers.
+
 0.614 Thu Oct 27 16:03:17 2016 CEST 
 
     [ENHANCEMENTS]

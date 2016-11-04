@@ -1,6 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Test;
 
-our $VERSION = '0.614';
+our $VERSION = '0.620';
 
 =head1 NAME
 
@@ -605,7 +605,8 @@ sub _get_user_details {
             level => 'debug',
             message => 'Attempting to find user NoSuchUser in realm config1',
         },
-    ), "... and we see logs we expect.";
+    ), "... and we see logs we expect."
+        or diag explain $logs;
 
     # known user but wrong realm
 
