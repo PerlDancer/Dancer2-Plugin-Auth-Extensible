@@ -250,8 +250,9 @@ sub BUILD {
                 # Reset password code submitted?
                 my ($code) = $app->request->splat;
 
-                if (   $weak_plugin->reset_password_handler
-                    && $weak_plugin->user_password(code => $code ) )
+                if (   $code
+                    && $weak_plugin->reset_password_handler
+                    && $weak_plugin->user_password( code => $code ) )
                 {
                     $app->request->params->{password_code_valid} = 1;
                 }

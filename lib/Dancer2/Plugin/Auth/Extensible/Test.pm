@@ -50,6 +50,7 @@ my %dispatch = (
     logged_in_user                  => \&_logged_in_user,
     logged_in_user_lastlogin        => \&_logged_in_user_lastlogin,
     logged_in_user_password_expired => \&_logged_in_user_password_expired,
+    password_reset                  => \&_password_reset,
     password_reset_send             => \&_password_reset_send,
     require_login                   => \&_require_login,
     roles                           => \&_roles,
@@ -68,6 +69,7 @@ my %dependencies = (
     logged_in_user   => ['get_user_details'],
     logged_in_user_password_expired =>
       [ 'get_user_details', 'password_expired' ],
+    password_reset      => ['get_user_by_code'],
     password_reset_send => ['set_user_details'],
     require_login       => ['get_user_details'],
     roles               => ['get_user_roles' ],
@@ -82,6 +84,9 @@ my ( $test, $trap );
 sub testme {
     BAIL_OUT "Please upgrade your provider to the latest version. Dancer2::Plugin::Auth::Extensible no longer supports the old \"testme\" tests.";
 }
+
+# so test can check
+my @provider_can;
 
 sub runtests {
     my $app = shift;
@@ -98,7 +103,7 @@ sub runtests {
     BAIL_OUT "Unexpected response to /provider_can"
       unless ref($ret) eq 'ARRAY';
 
-    my @provider_can = @$ret;
+    @provider_can = @$ret;
 
     my @to_test = ($ENV{D2PAE_TEST_ONLY}) || keys %dispatch;
 
@@ -704,6 +709,9 @@ sub _login_logout {
     }
     like $res->content, qr/input.+name="password"/,
       "... and we have the login page.";
+    like $res->content,
+      qr/Enter your username to obtain an email to reset your password/,
+      "... which has password reset option (reset_password_handler=>1).";
 
     # post empty /login
 
@@ -992,6 +1000,19 @@ sub _logged_in_user_lastlogin {
 #------------------------------------------------------------------------------
 
 sub _logged_in_user_password_expired {
+    ok 1;
+}
+
+#------------------------------------------------------------------------------
+#
+#  password_reset
+#
+#------------------------------------------------------------------------------
+
+sub _password_reset {
+    my $res;
+
+    $res = get('/login');
     ok 1;
 }
 

@@ -7,6 +7,7 @@ t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
 t/lib/environments/no-default-pages.yml
 t/lib/environments/no-realms-configured.yml
+t/lib/environments/no-reset-password-handler.yml
 t/lib/environments/provider-config.yml
 t/lib/environments/provider-config-extended.yml
 t/lib/Provider/ConfigExtended.pm
@@ -16,6 +17,7 @@ t/lib/lib/.placeholder
 t/manifest.t
 t/no-default-pages.t
 t/no-realms-configured.t
+t/no-reset-password-handler.t
 t/pod.t
 t/pod-coverage.t
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
