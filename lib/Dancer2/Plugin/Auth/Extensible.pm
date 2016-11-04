@@ -241,6 +241,7 @@ sub BUILD {
 
                 if ( $weak_plugin->logged_in_user ) {
                     # User is already logged in so redirect elsewhere
+                    # uncoverable condition false
                     $app->redirect(
                              $app->request->query_parameters->get('return_url')
                           || $weak_plugin->user_home_page );
@@ -1138,6 +1139,7 @@ sub _post_login_route {
         $app->session->write( logged_in_user_realm => $realm );
         $app->log( core => "Realm is $realm" );
         $plugin->execute_plugin_hook( 'after_login_success' );
+        # uncoverable condition false
         $app->redirect( $app->request->params->{return_url}
               || $plugin->user_home_page );
     }
