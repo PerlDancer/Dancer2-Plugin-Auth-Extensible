@@ -70,7 +70,7 @@ my %dependencies = (
       [ 'get_user_details', 'password_expired' ],
     password_reset_send => ['set_user_details'],
     require_login       => ['get_user_details'],
-    roles               => [ 'get_user_details', 'get_user_roles' ],
+    roles               => ['get_user_roles' ],
     update_current_user => ['set_user_details'],
     update_user         => ['set_user_details'],
     user_password =>
