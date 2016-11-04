@@ -418,6 +418,20 @@ SKIP: {
     };
 }
 
+subtest "Plugin coverage testing" => sub {
+    # DO NOT use this for testing things that can be tested elsewhere since
+    # these tests are purely to catch the code paths that we can't get to
+    # any other way.
+
+    like exception { $plugin->realm() }, qr/realm name not provided/,
+      "Calling realm method with no args dies";
+
+    like exception { $plugin->realm('') }, qr/realm name not provided/,
+      "... and calling it with single empty arg dies.";
+
+
+};
+
 # hooks
 
 hook before_authenticate_user => sub {
