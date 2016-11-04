@@ -744,6 +744,22 @@ sub _login_logout {
     is $data->{logged_in_user_realm}, 'config1',
       "... and session logged_in_user_realm is set to config1.";
 
+    # get /login whilst already logged in
+
+    $res = get('/login');
+    ok $res->is_redirect, "GET /login whilst logged in is redirected."
+      or diag explain $res;
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # get /login whilst already logged in with return_url set
+
+    $res = get('/login?return_url=/foo');
+    ok $res->is_redirect,
+      "GET /login whilst logged in with return_url set in query is redirected.";
+    is $res->header('location'), 'http://localhost/foo',
+      "... and redirect location is correct.";
+
     # get /logout
 
     $res = get('/logout');
