@@ -429,7 +429,23 @@ subtest "Plugin coverage testing" => sub {
     like exception { $plugin->realm('') }, qr/realm name not provided/,
       "... and calling it with single empty arg dies.";
 
+    foreach my $username ( undef, +{}, '', 'username' ) {
+        foreach my $password ( undef, +{}, '', 'password' ) {
+            my $ret = $plugin->authenticate_user( $username, $password );
+            is $ret, 0,
+                "Checking authenticate_user with username/password: "
+              . mydumper($username) . "/"
+              . mydumper($password);
+        }
+    }
+};
 
+sub mydumper {
+    my $val = shift;
+    !defined $val && return '(undef)';
+    ref($val) ne '' && return ref($val);
+    $val eq '' && return '(empty)';
+    $val;
 };
 
 # hooks
