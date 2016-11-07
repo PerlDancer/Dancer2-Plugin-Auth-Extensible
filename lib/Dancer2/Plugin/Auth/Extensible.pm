@@ -371,6 +371,7 @@ sub authenticate_user {
                     %lastlogin );
                 1;
             } or do {
+                # uncoverable condition right
                 my $err = $@ || "Unknown error";
                 $plugin->app->log(
                     error => "$realm provider threw error: $err" );
@@ -417,6 +418,7 @@ sub create_user {
     my $provider      = $plugin->auth_provider($realm);
 
     eval { $user = $provider->create_user(%options); 1; } or do {
+        # uncoverable condition right
         my $err = $@ || "Unknown error";
         $plugin->app->log( error => "$realm provider threw error: $err" );
         push @errors, $err;
@@ -444,6 +446,7 @@ sub create_user {
                 $provider->set_user_password( $options{username}, $password );
                 1;
             } or do {
+                # uncoverable condition right
                 my $err = $@ || "Unknown error";
                 $plugin->app->log(
                     error => "$realm provider threw error: $err" );
@@ -470,6 +473,7 @@ sub get_user_details {
             debug => "Attempting to find user $username in realm $realm" );
         my $provider = $plugin->auth_provider($realm);
         eval { $user = $provider->get_user_details($username); 1; } or do {
+            # uncoverable condition right
             my $err = $@ || "Unknown error";
             $plugin->app->log( error => "$realm provider threw error: $err" );
         };
