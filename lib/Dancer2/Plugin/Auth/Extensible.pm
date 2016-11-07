@@ -502,7 +502,16 @@ sub logged_in_user {
 }
 
 sub logged_in_user_lastlogin {
-    shift->app->session->read('logged_in_user_lastlogin');
+    my $lastlogin = shift->app->session->read('logged_in_user_lastlogin');
+    if ( defined $lastlogin && ref($lastlogin) eq '' && $lastlogin =~ /^\d+$/ )
+    {
+        # A sane epoch time. Old Provider::DBIC stores DateTime in the session
+        # which might get stringified or perhaps not and some session engines
+        # might fail to serialize/deserialize so we now store epoch and
+        # convert back to DateTime.
+        $lastlogin = DateTime->from_epoch( epoch => $lastlogin );
+    }
+    return $lastlogin;
 }
 
 sub logged_in_user_password_expired {
