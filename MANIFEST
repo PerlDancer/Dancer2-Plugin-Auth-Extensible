@@ -7,6 +7,7 @@ t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
 t/lib/environments/no-default-pages.yml
 t/lib/environments/no-login-handler.yml
+t/lib/environments/no-provider-configured.yml
 t/lib/environments/no-realms-configured.yml
 t/lib/environments/no-reset-password-handler.yml
 t/lib/environments/provider-config.yml
@@ -18,6 +19,7 @@ t/lib/lib/.placeholder
 t/manifest.t
 t/no-default-pages.t
 t/no-login-handler.t
+t/no-provider-configured.t
 t/no-realms-configured.t
 t/no-reset-password-handler.t
 t/pod.t
