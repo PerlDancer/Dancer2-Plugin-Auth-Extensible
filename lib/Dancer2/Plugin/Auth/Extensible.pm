@@ -305,8 +305,13 @@ sub auth_provider {
     # If no realm was provided, but we have a logged in user, use their realm.
     # Don't try and read the session any earlier though, as it won't be
     # available on plugin load
-    if ( !$realm && $plugin->app->session->read('logged_in_user') ) {
-        $realm = $plugin->app->session->read('logged_in_user_realm');
+    if ( !defined $realm ) {
+        if ( $plugin->app->session->read('logged_in_user') ) {
+            $realm = $plugin->app->session->read('logged_in_user_realm');
+        }
+        else {
+            croak "auth_provider needs realm or there must be a logged in user";
+        }
     }
 
     # First, if we already have a provider for this realm, go ahead and use it:
