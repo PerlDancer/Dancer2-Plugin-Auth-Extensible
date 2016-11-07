@@ -744,22 +744,21 @@ sub user_password {
 
 sub user_roles {
     my ( $plugin, $username, $realm ) = @_;
-    croak "Cannot call user_roles since roles are disabled by disable_roles setting"
+    croak
+      "Cannot call user_roles since roles are disabled by disable_roles setting"
       if $plugin->disable_roles;
 
-    $username = $plugin->app->session->read('logged_in_user')
-      unless defined $username;
-
-    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
-
-    foreach my $search_realm (@realms_to_check) {
-        my $roles =
-            $plugin->auth_provider($search_realm)->get_user_roles($username);
-        if ( defined $roles ) {
-            return wantarray ? @$roles : $roles;
-        }
+    if ( !defined $username ) {
+        # assume logged_in_user so clear realm and look for user
+        $realm = undef;
+        $username = $plugin->app->session->read('logged_in_user');
+        croak "user_roles needs a username or a logged in user"
+          unless $username;
     }
-    return;
+
+    my $roles = $plugin->auth_provider($realm)->get_user_roles($username);
+    return unless defined $roles;
+    return wantarray ? @$roles : $roles;
 }
 
 #
