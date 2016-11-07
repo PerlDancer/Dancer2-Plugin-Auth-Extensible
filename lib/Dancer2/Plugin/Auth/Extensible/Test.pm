@@ -63,7 +63,6 @@ my %dispatch = (
 # These are assumed to be correct. If they are not then some provider tests
 # should fail and we can fixup later.
 my %dependencies = (
-    authenticate_user => ['authenticate_user'],
     create_user => [ 'get_user_details', 'create_user', 'set_user_details', ],
     get_user_details => ['get_user_details'],
     logged_in_user   => ['get_user_details'],
@@ -149,10 +148,9 @@ sub post {
 sub _authenticate_user {
     my ($res, $data, $logs);
 
-    $trap->read;
-
     # no args
 
+    $trap->read;
     $res = post('/authenticate_user');
     ok $res->is_success, "/authenticate_user with no params is_success";
     cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
@@ -331,7 +329,6 @@ sub _authenticate_user {
       ),
       "... and the other realms were not checked."
       or diag explain $logs;
-
 
     # good username, good password and no realm
 
@@ -670,10 +667,44 @@ sub _get_user_details {
 #
 #  login_logout
 #
+#  also includes some auth_provider tests
+#
 #------------------------------------------------------------------------------
 
 sub _login_logout {
-    my ( $data, $res );
+    my ( $data, $res, $logs );
+
+    # auth_provider with no args
+
+    $trap->read;
+    $res = post('/auth_provider');
+    is $res->code, 500, "auth_provider with no args dies";
+    $logs = $trap->read;
+    cmp_deeply $logs, superbagof(
+        { formatted => ignore(),
+            level => 'error',
+            message => re(qr/auth_provider needs realm or/),
+        }
+    ), "... and correct error message is seen in logs." or diag explain $logs;
+
+    # auth_provider with non-existant realm
+
+    $trap->read;
+    $res = post('/auth_provider', [realm => 'NoSuchRealm']);
+    is $res->code, 500, "auth_provider with non-existant realm dies";
+    $logs = $trap->read;
+    cmp_deeply $logs, superbagof(
+        { formatted => ignore(),
+            level => 'error',
+            message => re(qr/Invalid realm NoSuchRealm/),
+        }
+    ), "... and correct error message is seen in logs." or diag explain $logs;
+
+    # auth_provider with good realm
+
+    $res = post('/auth_provider', [realm => 'config1']);
+    ok $res->is_success, "auth_provider with good realm lives"
+      or diag explain $trap->read;
 
     # Check that login route doesn't match any request string with '/login'.
 
@@ -767,6 +798,12 @@ sub _login_logout {
       "GET /login whilst logged in with return_url set in query is redirected.";
     is $res->header('location'), 'http://localhost/foo',
       "... and redirect location is correct.";
+
+    # auth_provider with no realm but user is logged in
+
+    $res = post('/auth_provider');
+    ok $res->is_success, "auth_provider with *no* realm lives"
+      or diag explain $trap->read;
 
     # get /logout
 

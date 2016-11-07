@@ -610,4 +610,9 @@ get '/get_user_mark/:realm' => sub {
     YAML::Dump $user;
 };
 
+post '/auth_provider' => sub {
+    $plugin->auth_provider( body_parameters->get('realm') );
+    return;
+};
+
 1;
