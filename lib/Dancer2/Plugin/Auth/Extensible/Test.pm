@@ -913,6 +913,15 @@ sub _login_logout {
             'http://localhost/',
             '/logout redirected to / (exit_page) after logging out' );
     }
+
+    # /login/denied page
+
+    {
+        my $res = get('/login/denied');
+        is $res->code, '403', "GET /login/denied results in a 403 denied code";
+        like $res->content, qr/Permission Denied/,
+          "... and we have Permission Denied text in page";
+    }
 }
 
 #------------------------------------------------------------------------------
