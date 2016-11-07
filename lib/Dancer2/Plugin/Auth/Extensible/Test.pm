@@ -66,6 +66,7 @@ my %dependencies = (
     create_user => [ 'get_user_details', 'create_user', 'set_user_details', ],
     get_user_details => ['get_user_details'],
     logged_in_user   => ['get_user_details'],
+    logged_in_user_lastlogin => ['create_user'],
     logged_in_user_password_expired =>
       [ 'get_user_details', 'password_expired' ],
     password_reset      => ['get_user_by_code'],
@@ -427,6 +428,17 @@ sub _authenticate_user {
       ),
       "... and we don't see realm config1 checked."
       or diag explain $logs;
+
+    # quick pairwise for coverage
+    foreach my $username ( undef, +{}, '', 'username' ) {
+        foreach my $password ( undef, +{}, '', 'password' ) {
+            $res = post( '/authenticate_user',
+                [ username => $username, password => $password ] );
+            ok $res->is_success, "/authenticate_user with user dave, bad password and no realm success";
+            cmp_deeply YAML::Load( $res->content ), [ 0, undef ],
+              "... and returns expected response";
+        }
+    }
 }
 
 #------------------------------------------------------------------------------
@@ -1036,7 +1048,106 @@ sub _logged_in_user {
 #------------------------------------------------------------------------------
 
 sub _logged_in_user_lastlogin {
-    ok 1;
+    my ( $res, $session );
+
+    # create a new user for test so we are sure lastlogin has not been set
+
+    $res = post(
+        "/create_user",
+        [
+            username      => 'lastlogin1',
+            password      => 'lastlogin2',
+            realm         => 'config1',
+        ]
+    );
+    ok $res->is_success, "create_user lastlogin1 call is_success";
+
+    # check the session for logged_in_user_lastlogin
+
+    $res = get('/session_data');
+    ok $res->is_success, "get /session_data is_success";
+    $session = YAML::Load $res->content;
+    ok !defined $session->{logged_in_user_lastlogin},
+      "... and logged_in_user_lastlogin is not set in the session.";
+
+    # we cannot reach require_login routes
+
+    $res = get('/loggedin');
+    ok $res->is_redirect, "GET /loggedin causes redirect";
+    is $res->header('location'),
+      'http://localhost/login?return_url=%2Floggedin',
+      "... and we're redirected to /login with return_url=/loggedin.";
+
+    # login
+
+    $res =
+      post( '/login', [ username => 'lastlogin1', password => 'lastlogin2' ] );
+    ok $res->is_redirect, "POST /login with with new user is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check we can reach restricted page
+
+    $res = get('/loggedin');
+    ok $res->is_success, "GET /loggedin is_success now we're logged in";
+    is $res->content, "You are logged in", "... and we can see page content.";
+
+    # check the session for logged_in_user_lastlogin
+
+    $res = get('/session_data');
+    ok $res->is_success, "get /session_data is_success";
+    $session = YAML::Load $res->content;
+    ok !defined $session->{logged_in_user_lastlogin},
+      "... and logged_in_user_lastlogin is still not set in the session.";
+
+    # check logged_in_user_lastlogin method
+
+    $res = get('/logged_in_user_lastlogin');
+    ok $res->is_success, "get /logged_in_user_lastlogin is_success";
+    is $res->content, "not set",
+      "... and logged_in_user_lastlogin returns undef"
+      or diag explain $res->content;
+
+    # logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "/logout is_success";
+
+    # login again and now logged_in_user_lastlogin should be set
+
+    $res =
+      post( '/login', [ username => 'lastlogin1', password => 'lastlogin2' ] );
+    ok $res->is_redirect, "POST /login with with new user is_redirect";
+    is $res->header('location'), 'http://localhost/',
+      "... and redirect location is correct.";
+
+    # check we can reach restricted page
+
+    $res = get('/loggedin');
+    ok $res->is_success, "GET /loggedin is_success now we're logged in";
+    is $res->content, "You are logged in", "... and we can see page content.";
+
+    # check the session for logged_in_user_lastlogin
+
+    $res = get('/session_data');
+    ok $res->is_success, "get /session_data is_success";
+    $session = YAML::Load $res->content;
+    ok defined $session->{logged_in_user_lastlogin},
+      "... and logged_in_user_lastlogin is still not set in the session."
+      or diag explain $session;
+    like $session->{logged_in_user_lastlogin}, qr/^\d+$/,
+      "... and session logged_in_user_lastlogin looks like an epoch time.";
+
+    # check logged_in_user_lastlogin method
+
+    $res = get('/logged_in_user_lastlogin');
+    ok $res->is_success, "get /logged_in_user_lastlogin is_success";
+    my $date = DateTime->now->ymd;
+    is $res->content, $date,
+      "... and logged_in_user_lastlogin is $date.";
+
+    # cleanup
+    get('/logout');
 }
 
 #------------------------------------------------------------------------------

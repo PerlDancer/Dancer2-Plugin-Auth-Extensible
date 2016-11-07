@@ -13,6 +13,20 @@ has password_expiry_days => (
     isa => Int,
 );
 
+around authenticate_user => sub {
+    my ( $orig, $self, $username, $password, %options) = @_;
+    my $ret = $orig->($self, $username, $password, %options);
+    if ( $ret && $options{lastlogin} ) {
+        my $user = $self->get_user_details($username);
+        if ( $user->{lastlogin} ) {
+            $self->plugin->app->session->write(
+                $options{lastlogin} => $user->{lastlogin}->epoch );
+        }
+        $user->{lastlogin} = DateTime->now;
+    }
+    return $ret;
+};
+
 sub create_user {
     my $self = shift;
     my %user = @_ == 1 && ref($_[0]) eq 'HASH' ? %{ $_[0] } : @_;

@@ -508,6 +508,14 @@ get '/session_data' => sub {
     send_as YAML => $session;
 };
 
+get '/logged_in_user_lastlogin' => sub {
+    my $dt = logged_in_user_lastlogin;
+    if ( ref($dt) eq 'DateTime' ) {
+        return $dt->ymd;
+    }
+    return 'not set';
+};
+
 get '/logged_in_user' => sub {
     my $user = logged_in_user;
     if ( blessed($user) ) {

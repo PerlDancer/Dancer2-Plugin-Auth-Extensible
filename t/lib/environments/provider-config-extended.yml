@@ -1,5 +1,6 @@
 plugins:
     Auth::Extensible:
+        record_lastlogin: 1
         realms:
             config1:
                 provider: Provider::ConfigExtended
