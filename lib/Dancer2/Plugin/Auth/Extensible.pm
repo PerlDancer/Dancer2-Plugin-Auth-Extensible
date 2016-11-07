@@ -745,12 +745,16 @@ sub user_roles {
     $username = $plugin->app->session->read('logged_in_user')
       unless defined $username;
 
-    my $search_realm = ( $realm ? $realm : '' );
+    my @realms_to_check = $realm ? ($realm) : @{ $plugin->realm_names };
 
-    my $roles =
-      $plugin->auth_provider($search_realm)->get_user_roles($username);
-    return unless defined $roles;
-    return wantarray ? @$roles : $roles;
+    foreach my $search_realm (@realms_to_check) {
+        my $roles =
+            $plugin->auth_provider($search_realm)->get_user_roles($username);
+        if ( defined $roles ) {
+            return wantarray ? @$roles : $roles;
+        }
+    }
+    return;
 }
 
 #
