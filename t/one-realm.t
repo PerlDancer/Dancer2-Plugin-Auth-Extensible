@@ -21,8 +21,6 @@ BEGIN {
     use Dancer2::Plugin::Auth::Extensible;
 
     my $plugin = app->with_plugin('Auth::Extensible');
-    my $trap   = dancer_app->logger_engine->trapper;
-    my $logs;
 
     is exception {
         $plugin->create_user( username => 'one-realm1', password => 'pwd1' );
@@ -33,6 +31,13 @@ BEGIN {
         my $user   = create_user %$params;
         return $user ? 1 : 0;
     };
+
+    post '/update_user' => sub {
+        my $params   = body_parameters->as_hashref;
+        my $username = delete $params->{username};
+        my $user     = update_user $username, %$params;
+        return $user->{name};
+    };
 }
 
 my $app = Dancer2->runner->psgi_app;
@@ -40,12 +45,20 @@ is( ref $app, 'CODE', 'Got app' );
 
 my $test = Plack::Test->create($app);
 my $url  = 'http://localhost';
+my $trap = TestApp->dancer_app->logger_engine->trapper;
 
 {
     my $res =
       $test->request( POST "$url/create_user", [ username => 'one-realm2' ] );
     ok $res->is_success, "POST /create_user is_success";
     is $res->content, 1, "... and response shows user was created.";
+}
+{
+    my $res =
+      $test->request( POST "$url/update_user", [ username => 'one-realm2', name => 'fred' ] );
+    ok $res->is_success, "POST /update_user is_success"
+      or diag explain $trap->read;
+    is $res->content, 'fred', "... and response shows user was updated.";
 }
 
 done_testing;
