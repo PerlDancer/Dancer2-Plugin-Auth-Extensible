@@ -862,12 +862,13 @@ sub _login_logout {
     is $data->{logged_in_user_realm}, 'config1',
       "... and session logged_in_user_realm is set to config1.";
 
-    # POST /logout
+    # POST /logout with return_url
 
-    $res = post('/logout');
-    ok $res->is_redirect, "POST /logout is_redirect" or diag explain $res;
-    is $res->header('location'), 'http://localhost/',
-      "... and redirect location is correct.";
+    $res = post('/logout', [ return_url => '/foo/bar' ] );
+    ok $res->is_redirect, "POST /logout with return_url /foo/bar is_redirect"
+      or diag explain $res;
+    is $res->header('location'), 'http://localhost/foo/bar',
+      "... and redirect location /foo/bar is correct.";
 
     # check session_data again
 
