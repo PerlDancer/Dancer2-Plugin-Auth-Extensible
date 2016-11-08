@@ -116,6 +116,10 @@ sub runtests {
             skip "Provider $test tests as provider is missing methods: "
               . join( ", ", @missing ), 1
               if @missing;
+
+            # for safety in case one set of tests doesn't clean up carefully
+            $jar->clear;
+
             subtest "Plugin $test tests" => $dispatch{$test};
         }
     }
