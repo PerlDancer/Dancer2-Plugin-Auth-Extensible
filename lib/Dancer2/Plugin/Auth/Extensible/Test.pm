@@ -1582,6 +1582,24 @@ sub _roles {
 #------------------------------------------------------------------------------
 
 sub _update_current_user {
+
+    # no user logged in
+
+    $trap->read;
+    my $res = get("/update_current_user");
+    ok $res->is_success, "get /update_current_user is_success"
+      or diag explain $trap->read;
+    cmp_deeply $trap->read,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => 'debug',
+            message =>
+              'Could not update current user as no user currently logged in',
+        }
+      ),
+      "Could not update current user as no user currently logged in";
+
     for my $realm (qw/config1 config2/) {
 
         # Now we're going to update the current user
