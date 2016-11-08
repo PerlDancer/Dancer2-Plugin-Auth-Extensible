@@ -1035,6 +1035,14 @@ sub _logged_in_user {
     is $data->{name}, 'David Precious',
       "... and we see dave's name is David Precious." or diag explain $data;
 
+    # check logged_in_user gets cached (coverage)
+
+    $res = get('/logged_in_user_twice');
+    ok $res->is_success, "/logged_in_user_twice is_success";
+    $data = YAML::Load $res->content;
+    is $data->{name}, 'David Precious',
+      "... and we see dave's name is David Precious." or diag explain $data;
+
     # get /logout
 
     $res = get('/logout');

@@ -530,6 +530,21 @@ get '/logged_in_user' => sub {
     send_as YAML => $user ? $user : 'none';
 };
 
+get '/logged_in_user_twice' => sub {
+    logged_in_user; # retrieve
+    my $user = logged_in_user; # should now be stashed in var
+    if ( blessed($user) ) {
+        if ( $user->isa('DBIx::Class::Row')) {
+            $user = +{ $user->get_columns };
+        }
+        else {
+            # assume some kind of hash-backed object
+            $user = \%$user;
+        }
+    }
+    send_as YAML => $user ? $user : 'none';
+};
+
 get '/loggedin' => require_login sub  {
     "You are logged in";
 };
