@@ -1,5 +1,29 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.621 
+
+    [ENHANCEMENTS]
+
+    * auth_provider now croaks if no realm is supplied (Peter Mottram).
+
+    [BUG FIXES]
+
+    * query_parameter should be query_parameters in get /login route
+      (Peter Mottram).
+    * user_password logic corrected (Peter Mottram).
+    * realm_name should be realm_names in update_user (Peter Mottram).
+
+    [TESTS]
+
+    * Huge number of new tests added (Peter Mottram).
+    * Add build dep on HTTP::Cookies (Peter Mottram).
+
+    [MISC]
+
+    * Remove old Provider::Example since Provider::Config is a much better
+      example provider (Peter Mottram).
+    * logged_in_user_lastlogin now stored in session as epoch (Peter Mottram).
+
 0.620 Thu  3 Nov 16:01:22 CET 2016
 
     [ENHANCEMENTS]
