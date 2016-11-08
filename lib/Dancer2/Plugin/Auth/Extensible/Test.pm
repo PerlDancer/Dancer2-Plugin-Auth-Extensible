@@ -14,6 +14,7 @@ use strict;
 use Carp qw(croak);
 use Test::More;
 use Test::Deep;
+use Test::MockDateTime;
 use Plack::Test;
 use HTTP::Cookies;
 use HTTP::Request::Common qw(GET POST);
@@ -1175,7 +1176,43 @@ sub _logged_in_user_lastlogin {
 #------------------------------------------------------------------------------
 
 sub _logged_in_user_password_expired {
-    ok 1;
+    my $res;
+
+    my $data = [
+        username => 'pwdexpired1',
+        password => 'pwd1',
+        realm    => 'config1'
+    ];
+
+    on '2016-10-01 00:00:00' => sub {
+        $res = post( '/create_user',$data);
+        ok $res->is_success, "create user pwdexpired1 is success on 2016-10-01";
+        is $res->content, 1,
+          "... and it seems user was created based on response.";
+
+        $res = get('/logged_in_user_password_expired');
+        is $res->content, 'no',
+          "... and before login logged_in_user_password_expired is false.";
+
+        post('/login', $data);
+        $res = get('/loggedin');
+        ok $res->is_success, "User is now logged in";
+
+        $res = get('/logged_in_user_password_expired');
+        is $res->content, 'no',
+          "... and logged_in_user_password_expired is false.";
+    };
+
+    note "... time passes ...";
+
+    on '2016-11-01 00:00:00' => sub {
+
+        $res = get('/logged_in_user_password_expired');
+        is $res->content, 'yes',
+          "... and 30 days later logged_in_user_password_expired is true.";
+
+        post('/logout');
+    };
 }
 
 #------------------------------------------------------------------------------

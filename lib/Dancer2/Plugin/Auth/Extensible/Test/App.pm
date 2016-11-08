@@ -663,4 +663,9 @@ post '/auth_provider' => sub {
     return;
 };
 
+get '/logged_in_user_password_expired' => sub {
+    my $ret = logged_in_user_password_expired;
+    return $ret ? 'yes' : 'no';
+};
+
 1;
