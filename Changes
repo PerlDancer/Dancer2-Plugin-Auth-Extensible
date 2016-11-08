@@ -1,6 +1,6 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
-0.621 
+0.621 Tue  8 Nov 16:44:51 CET 2016
 
     [ENHANCEMENTS]
 
@@ -23,6 +23,7 @@ Revision history for Dancer2-Plugin-Auth-Extensible
     * Remove old Provider::Example since Provider::Config is a much better
       example provider (Peter Mottram).
     * logged_in_user_lastlogin now stored in session as epoch (Peter Mottram).
+    * Removed unused _try_realms method (Peter Mottram).
 
 0.620 Thu  3 Nov 16:01:22 CET 2016
 
