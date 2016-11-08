@@ -1730,6 +1730,48 @@ sub _update_user {
                 "Name is now Wiltshire Apples $realm"
             );
         }
+
+        # log in user dave and whilst logged in change user mark
+        {
+            my $res = post('/login', [username => 'dave', password => 'beer']);
+            ok $res->is_redirect, "login user dave";
+
+            $res = get('/logged_in_user');
+            ok $res->is_success, "... and get logged_in_user is_success";
+            like $res->content, qr/David Precious/,
+              "... and we see dave's details."
+              or diag $res->content;
+
+            # Update mark
+            $res = post(
+                "/update_user",
+                [
+                    realm    => $realm,
+                    username => "mark",
+                    name     => "No beer for me"
+                ]
+            );
+            ok $res->is_success, "change mark's name is success"
+              or diag explain $trap->read;
+
+            $trap->read;    # clear logs
+
+            # check it
+            $res = get("/get_user_mark/$realm");
+            ok $res->is_success, "get /get_user_mark/$realm is_success"
+              or diag explain $trap->read;
+
+            my $user = YAML::Load $res->content;
+            is $user->{name}, "No beer for me",
+              "... and mark's name is now No beer for me.";
+
+            $res = get('/logged_in_user');
+            ok $res->is_success, "get logged_in_user is_success";
+            like $res->content, qr/David Precious/,
+              "... and we see still see dave's details."
+              or diag $res->content;
+
+        }
     }
 }
 
