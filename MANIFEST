@@ -8,6 +8,7 @@ t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
 t/lib/environments/exploding.yml
 t/lib/environments/no-default-pages.yml
+t/lib/environments/no-get-user-details.yml
 t/lib/environments/no-login-handler.yml
 t/lib/environments/no-provider-configured.yml
 t/lib/environments/no-realms-configured.yml
@@ -17,11 +18,13 @@ t/lib/environments/provider-config.yml
 t/lib/environments/provider-config-extended.yml
 t/lib/Provider/ConfigExtended.pm
 t/lib/Provider/Exploding.pm
+t/lib/Provider/NoGetUserDetails.pm
 t/lib/views/.placeholder
 t/lib/public/.placeholder
 t/lib/lib/.placeholder
 t/manifest.t
 t/no-default-pages.t
+t/no-get-user-details.t
 t/no-login-handler.t
 t/no-provider-configured.t
 t/no-realms-configured.t
