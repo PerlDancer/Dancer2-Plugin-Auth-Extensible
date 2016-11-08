@@ -638,7 +638,7 @@ sub update_user {
     croak "Realm must be specified when more than one realm configured"
       if !$update{realm} && $plugin->realm_count > 1;
 
-    my $realm    = delete $update{realm} || $plugin->realm_name->[0];
+    my $realm    = delete $update{realm} || $plugin->realm_names->[0];
     my $provider = $plugin->auth_provider($realm);
     my $updated  = $provider->set_user_details( $username, %update );
     my $cur_user = $plugin->app->session->read('logged_in_user');
