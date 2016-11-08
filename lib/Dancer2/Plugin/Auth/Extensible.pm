@@ -1039,28 +1039,6 @@ sub _send_email {
     }
 }
 
-# Given a class method name and a set of parameters, try calling that class
-# method for each realm in turn, arranging for each to receive the configuration
-# defined for that realm, until one returns a non-undef, then return the realm
-# which succeeded and the response.
-# Note: all provider class methods return a single value; if any need to return
-# a list in future, this will need changing)
-#
-# FIXME: this is not used anywhere - what is it for?
-sub _try_realms {
-    my ( $plugin, $method, @args );
-    for my $realm ( @{ $plugin->realm_names } ) {
-        my $provider = $plugin->auth_provider($realm);
-        if ( !$provider->can($method) ) {
-            croak "Provider $provider does not provide a $method method!";
-        }
-        if ( defined( my $result = $provider->$method(@args) ) ) {
-            return $result;
-        }
-    }
-    return;
-}
-
 #
 # routes
 #
