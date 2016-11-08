@@ -41,6 +41,8 @@ my $provider = $plugin->auth_provider('config1');
 
 my @provider_can = ();
 
+push @provider_can, 'record_lastlogin' if $plugin->config->{record_lastlogin};
+
 #
 # IMPORTANT NOTE
 #

@@ -67,7 +67,7 @@ my %dependencies = (
     create_user => [ 'get_user_details', 'create_user', 'set_user_details', ],
     get_user_details => ['get_user_details'],
     logged_in_user   => ['get_user_details'],
-    logged_in_user_lastlogin => ['create_user'],
+    logged_in_user_lastlogin => ['create_user','record_lastlogin'],
     logged_in_user_password_expired =>
       [ 'get_user_details', 'password_expired' ],
     password_reset      => ['get_user_by_code'],
