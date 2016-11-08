@@ -1299,6 +1299,25 @@ sub _roles {
         );
     }
 
+    {
+        $trap->read;
+        my $res = get('/user_roles');
+        is $res->code, 500,
+          "user_roles with no logged_in_user and no args dies";
+        my $logs = $trap->read;
+        cmp_deeply $logs,
+          superbagof(
+            {
+                formatted => ignore(),
+                level     => 'error',
+                message =>
+                  re(qr/user_roles needs a username or a logged in user/),
+            }
+          ),
+          "got error: user_roles needs a username or a logged in user",
+          or diag explain $logs;
+    }
+
     # and can't reach pages that have require_role
 
     {
