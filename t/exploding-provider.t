@@ -57,7 +57,23 @@ BEGIN {
               re(qr/config1 provider threw error: KABOOM set_user_password/),
         }
       ),
-      "... and auth attempt plus kaboom found in logs."
+      "... and set_password kaboom found in logs."
+      or diag explain $logs;
+
+    is exception {
+        $plugin->get_user_details( 'fred' );
+    }, undef, "get_user_details lives";
+
+    cmp_deeply $logs = $trap->read,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => 'error',
+            message =>
+              re(qr/config1 provider threw error: KABOOM get_user_details/),
+        }
+      ),
+      "... and get_user_details kaboom found in logs."
       or diag explain $logs;
 
 }

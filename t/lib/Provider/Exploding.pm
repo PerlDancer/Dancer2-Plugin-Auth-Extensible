@@ -10,7 +10,10 @@ sub authenticate_user {
     croak "KABOOM authenticate_user";
 }
 
-#get_user_details
+sub get_user_details {
+    croak "KABOOM get_user_details";
+}
+
 #get_user_roles
 
 sub create_user {
