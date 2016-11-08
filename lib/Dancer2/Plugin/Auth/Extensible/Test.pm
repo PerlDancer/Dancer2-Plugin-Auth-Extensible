@@ -475,6 +475,12 @@ sub _create_user {
       ],
       "... and error about needing realm was logged.";
 
+    # create user with no password
+
+    $res = post( "/create_user",
+        [ username => 'createusernopw', realm => 'config1' ] );
+    ok $res->is_success, "/create_user with no password is_success";
+
     for my $realm (qw/config1 config2/) {
 
         # create a user
