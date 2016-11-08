@@ -573,6 +573,9 @@ get '/roles/:user/:realm' => require_login sub {
     return join ',', sort @{ user_roles($user, $realm) };
 };
 
+get '/user_roles' => sub {
+    return join ',', sort @{ user_roles() };
+};
 
 get '/beer' => require_role BeerDrinker => sub {
     "You can have a beer";
