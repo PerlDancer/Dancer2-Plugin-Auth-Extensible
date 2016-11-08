@@ -44,6 +44,22 @@ BEGIN {
       "... and auth attempt plus kaboom found in logs."
       or diag explain $logs;
 
+    is exception {
+        $plugin->create_user( username => 'fred', password => 'config1' );
+    }, undef, "create_user with set_user_password lives";
+
+    cmp_deeply $logs = $trap->read,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => 'error',
+            message =>
+              re(qr/config1 provider threw error: KABOOM set_user_password/),
+        }
+      ),
+      "... and auth attempt plus kaboom found in logs."
+      or diag explain $logs;
+
 }
 
 done_testing;

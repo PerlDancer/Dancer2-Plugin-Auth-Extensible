@@ -12,10 +12,18 @@ sub authenticate_user {
 
 #get_user_details
 #get_user_roles
-#create_user
+
+sub create_user {
+    shift;return {@_};
+}
+
 #get_user_by_code
 #set_user_details
-#set_user_password
+
+sub set_user_password {
+    croak "KABOOM set_user_password";
+}
+
 #password_expired
 
 1;
