@@ -633,6 +633,12 @@ get '/update_user_name/:realm' => sub {
     YAML::Dump update_user 'mark', realm => $realm, name => "Wiltshire Apples $realm";
 };
 
+post '/update_user' => sub {
+    my $params = body_parameters->as_hashref;
+    my $username = delete $params->{username};
+    send_as YAML => update_user $username, %$params;
+};
+
 get '/get_user_mark/:realm' => sub {
     my $realm = param 'realm';
     content_type 'text/x-yaml';

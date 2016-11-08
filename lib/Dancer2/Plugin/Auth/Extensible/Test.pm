@@ -1667,6 +1667,26 @@ sub _update_current_user {
 #------------------------------------------------------------------------------
 
 sub _update_user {
+
+    # update_user with no realm specified
+
+    $trap->read;
+    my $res = post("/update_user", [ username => "mark", name => "FooBar" ]);
+    is $res->code, 500, "update_user with no realm specified croaks 500";
+    my $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => "error",
+            message   => re(
+                qr/Realm must be specified when more than one realm configured/
+            ),
+        }
+      ),
+      "got log: Realm must be specified when more than one realm configured."
+      or diag explain $logs;
+
     for my $realm (qw/config1 config2/) {
 
         # First test a standard user details update.
