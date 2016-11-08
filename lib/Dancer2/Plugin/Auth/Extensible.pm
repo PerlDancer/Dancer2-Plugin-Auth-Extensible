@@ -412,6 +412,7 @@ sub create_user {
 
     $plugin->execute_plugin_hook( 'before_create_user', \%options );
 
+    # uncoverable condition false
     my $realm         = delete $options{realm} || $plugin->realm_names->[0];
     my $email_welcome = delete $options{email_welcome};
     my $password      = delete $options{password};
@@ -638,6 +639,7 @@ sub update_user {
     croak "Realm must be specified when more than one realm configured"
       if !$update{realm} && $plugin->realm_count > 1;
 
+    # uncoverable condition false
     my $realm    = delete $update{realm} || $plugin->realm_names->[0];
     my $provider = $plugin->auth_provider($realm);
     my $updated  = $provider->set_user_details( $username, %update );
@@ -1143,6 +1145,7 @@ sub _post_login_route {
     }
 
     if ( $plugin->logged_in_user ) {
+        # uncoverable condition false
         $app->redirect( $app->request->params->{return_url}
               || $plugin->user_home_page );
     }
