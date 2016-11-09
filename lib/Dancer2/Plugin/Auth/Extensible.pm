@@ -263,7 +263,7 @@ sub BUILD {
                     && $weak_plugin->reset_password_handler
                     && $weak_plugin->user_password( code => $code ) )
                 {
-                    $app->request->params->{password_code_valid} = 1;
+                    $app->request->parameters->set('password_code_valid' => 1),
                 }
                 else {
                     $app->response->status(401);
@@ -565,6 +565,8 @@ sub password_reset_send {
                 debug => "Failed to set_user_details with $realm: $_" );
         };
         if ($user) {
+            $plugin->app->log(
+                debug => "got one");
 
             # Okay, so email key is hard-coded, and therefore relies on the
             # provider returning that key. The alternative is to have a
@@ -708,6 +710,8 @@ sub user_password {
                     "Failed to check for code with $realm_check: $_" );
             };
             if ($username) {
+                $plugin->app->log( 'debug',
+                    "Found $username for code with $realm_check" );
                 $realm = $realm_check;
                 last;
             }

@@ -26,12 +26,14 @@ set show_errors => 1;
 # nasty shared global makes it easy to pass data between app and test script
 our $data = {};
 
+config->{plugins}->{"Auth::Extensible"}->{password_reset_send_email} =
+  __PACKAGE__ . "::email_send";
 config->{plugins}->{"Auth::Extensible"}->{welcome_send} =
-  __PACKAGE__ . "::welcome_send";
+  __PACKAGE__ . "::email_send";
 
-sub welcome_send {
+sub email_send {
     my ( $plugin, %args ) = @_;
-    $data = \%args;
+    $data = { %args, called => 1 };
 }
 
 # we need the plugin object and a provider for provider tests

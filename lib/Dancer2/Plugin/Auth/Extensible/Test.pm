@@ -52,7 +52,6 @@ my %dispatch = (
     logged_in_user_lastlogin        => \&_logged_in_user_lastlogin,
     logged_in_user_password_expired => \&_logged_in_user_password_expired,
     password_reset                  => \&_password_reset,
-    password_reset_send             => \&_password_reset_send,
     require_login                   => \&_require_login,
     roles                           => \&_roles,
     update_current_user             => \&_update_current_user,
@@ -70,8 +69,7 @@ my %dependencies = (
     logged_in_user_lastlogin => ['create_user','record_lastlogin'],
     logged_in_user_password_expired =>
       [ 'get_user_details', 'password_expired' ],
-    password_reset      => ['get_user_by_code'],
-    password_reset_send => ['set_user_details'],
+    password_reset      => ['get_user_by_code', 'set_user_details'],
     require_login       => ['get_user_details'],
     roles               => ['get_user_roles' ],
     update_current_user => ['set_user_details'],
@@ -571,6 +569,8 @@ sub _create_user {
     }
 
     # create user with `email_welcome` so we can test reset code
+
+    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
 
     $res = post(
         "/create_user",
@@ -1232,20 +1232,71 @@ sub _logged_in_user_password_expired {
 #------------------------------------------------------------------------------
 
 sub _password_reset {
-    my $res;
+    my ( $res, $code );
 
-    $res = get('/login');
-    ok 1;
-}
+    # request password reset with non-existant user
 
-#------------------------------------------------------------------------------
-#
-#  password_reset_send
-#
-#------------------------------------------------------------------------------
+    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
 
-sub _password_reset_send {
-    ok 1;
+    $res = post( '/login',
+        [ username_reset => 'NoSuchUser', submit_reset => 'truthy value' ] );
+
+    is $res->code, 401, "POST /login with password reset request gets code 401"
+      or diag explain $res;
+
+    like $res->content, qr/A password reset request has been sent/,
+      "... and we see \"A password reset request has been sent\" in page";
+
+    ok !defined $Dancer2::Plugin::Auth::Extensible::Test::App::data,
+      "... and password_reset_send_email was not called."
+      or diag explain $Dancer2::Plugin::Auth::Extensible::Test::App::data;
+
+    # call /login/$code with bad code
+
+    $res = get("/login/12345678901234567890123456789012");
+
+    is $res->code, 401, "GET /login/<code> with bad code gets response 401"
+      or diag explain $res;
+
+    like $res->content, qr/You need to log in to continue/,
+      "... and we have the /login page.";
+
+    # request password reset with valid user
+
+    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
+
+    $res = post( '/login',
+        [ username_reset => 'dave', submit_reset => 'truthy value' ] );
+
+    is $res->code, 401, "POST /login with password reset request gets code 401"
+      or diag explain $res;
+
+    like $res->content, qr/A password reset request has been sent/,
+      "... and we see \"A password reset request has been sent\" in page";
+
+    cmp_deeply $Dancer2::Plugin::Auth::Extensible::Test::App::data,
+      {
+        called => 1,
+        code   => re(qr/\w+/),
+        email  => ignore(),
+      },
+      "... and password_reset_send_email received code and email.";
+
+    $code = $Dancer2::Plugin::Auth::Extensible::Test::App::data->{code};
+
+    # call /login/$code
+
+    $trap->read;
+
+    $res = get("/login/$code");
+
+    ok $res->is_success, "GET /login/<code> with good code is_success"
+      or diag explain $res;
+
+    like $res->content,
+      qr/Please click the button below to reset your password/,
+      "... and we have the /login page asking us to click to reset password.";
+
 }
 
 #------------------------------------------------------------------------------
