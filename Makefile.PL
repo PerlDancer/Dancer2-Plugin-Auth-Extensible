@@ -48,6 +48,7 @@ WriteMakefile(
         'Session::Token'    => 0,
         'Try::Tiny'         => 0,
         'Plack'             => '1.0029', # OO-style Plack::Test
+        'URI::Escape'       => 0,
     },
     EXE_FILES => [ 'bin/dancer2-generate-crypted-password' ],
     dist                => { COMPRESS => 'gzip -9f', SUFFIX => 'gz', },

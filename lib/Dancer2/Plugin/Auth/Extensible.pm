@@ -14,6 +14,7 @@ use Module::Runtime qw(use_module);
 use Scalar::Util;
 use Session::Token;
 use Try::Tiny;
+use URI::Escape;
 use Dancer2::Plugin;
 
 #
@@ -895,14 +896,24 @@ sub _default_login_page {
     my $plugin = shift;
     my $request = $plugin->app->request;
 
+    # This only works with the default password generator but since we
+    # are planning to remove password generation in favour of user-specified
+    # password on reset then this will do for now.
+    my $new_password = $request->parameters->get('new_password');
+    if ( defined $new_password ) {
+        $new_password =~ s/[^a-zA-Z0-9]//g;
+    }
+
+    # Make sure all tokens are escaped in some way.
     my $tokens = {
-        loginpage           => $plugin->login_page,
-        login_failed        => $request->var('login_failed'),
-        new_password        => $request->parameters->get('new_password'),
-        password_code_valid => $request->parameters->get('password_code_valid'),
-        reset_sent          => $request->parameters->get('reset_sent'),
-        reset_password_handler => $plugin->reset_password_handler,
-        return_url             => $request->parameters->get('return_url'),
+        loginpage    => uri_escape( $plugin->login_page ),
+        login_failed => !!$request->var('login_failed'),
+        new_password => $new_password,
+        password_code_valid =>
+          !!$request->parameters->get('password_code_valid'),
+        reset_sent             => !!$request->parameters->get('reset_sent'),
+        reset_password_handler => !!$plugin->reset_password_handler,
+        return_url => uri_escape( $request->parameters->get('return_url') ),
     };
     $plugin->_render_template( 'login.tt', $tokens );
 }
