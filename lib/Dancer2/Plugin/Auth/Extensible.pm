@@ -188,6 +188,11 @@ has realm_providers => (
     init_arg => undef,
 );
 
+has _template_tiny => (
+    is      => 'ro',
+    default => sub { Dancer2::Template::Tiny->new },
+);
+
 #
 # hooks
 #
@@ -876,14 +881,19 @@ __EMAIL
     $plugin->_send_email( to => $options{email}, %message );
 }
 
+sub _render_template {
+    my ( $plugin, $view, $tokens ) = @_;
+    $tokens ||= +{};
+
+    my $template =
+      path( dist_dir('Dancer2-Plugin-Auth-Extensible'), 'views', $view );
+
+    $plugin->_template_tiny->render( $template, $tokens );
+}
+
 sub _default_login_page {
     my $plugin = shift;
     my $request = $plugin->app->request;
-
-    my $tt = Dancer2::Template::Tiny->new;
-
-    my $template =
-      path( dist_dir('Dancer2-Plugin-Auth-Extensible'), 'views', 'login.tt' );
 
     my $tokens = {
         loginpage           => $plugin->login_page,
@@ -894,18 +904,11 @@ sub _default_login_page {
         reset_password_handler => $plugin->reset_password_handler,
         return_url             => $request->parameters->get('return_url'),
     };
-    $tt->render( $template, $tokens );
+    $plugin->_render_template( 'login.tt', $tokens );
 }
 
 sub _default_permission_denied_page {
-    my $plugin = shift;
-    return <<PAGE
-<h1>Permission Denied</h1>
-
-<p>
-Sorry, you're not allowed to access that page.
-</p>
-PAGE
+    shift->_render_template( 'login_denied.tt' );
 }
 
 sub _default_welcome_send {
