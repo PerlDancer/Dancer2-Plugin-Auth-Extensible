@@ -1,6 +1,8 @@
 use strict;
 use warnings;
 use ExtUtils::MakeMaker;
+use File::ShareDir::Install;
+install_share 'share';
 
 WriteMakefile(
     NAME                => 'Dancer2::Plugin::Auth::Extensible',
@@ -16,6 +18,7 @@ WriteMakefile(
     PL_FILES            => {},
     BUILD_REQUIRES => {
         'DateTime' => 0,
+        'File::ShareDir::Install' => '0.06',
         'HTTP::Cookies' => 0,
         'HTTP::Request::Common' => 0,
         'Path::Tiny' => '0.016',
@@ -30,7 +33,10 @@ WriteMakefile(
         'Carp'              => 0,
         'Dancer2'           => '0.200000',
         'Dancer2::Core::Types' => 0,
+        'Dancer2::FileUtils' => 0,
         'Dancer2::Plugin'   => 0,
+        'Dancer2::Template::Tiny' => 0,
+        'File::Share'       => 0,
         'Module::Runtime'   => 0,
         'Crypt::SaltedHash' => 0,
         'List::Util'        => 0,
@@ -38,6 +44,7 @@ WriteMakefile(
         'Moo::Role'         => 0,
         'namespace::clean'  => 0,
         'YAML'              => 0, # for config files and tests
+        'Scalar::Util'      => 0,
         'Session::Token'    => 0,
         'Try::Tiny'         => 0,
         'Plack'             => '1.0029', # OO-style Plack::Test
