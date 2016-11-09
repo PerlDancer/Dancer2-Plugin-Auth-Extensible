@@ -896,6 +896,7 @@ sub _default_login_page {
     my $plugin = shift;
     my $request = $plugin->app->request;
 
+    # Simple escape of new_password param.
     # This only works with the default password generator but since we
     # are planning to remove password generation in favour of user-specified
     # password on reset then this will do for now.
