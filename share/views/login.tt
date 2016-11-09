@@ -4,12 +4,14 @@
 <p>Your new password is [% new_password %]</p>
 <a href="[% loginpage %]">Click here to login</a>
 
-[%- ELSIF reset_sent -%]
+[%- ELSE -%]
+[%- IF reset_sent -%]
 
 <h1>Request sent</h1>
 <p>A password reset request has been sent. Please check your email.</p>
 
-[%- ELSIF password_code_valid -%]
+[%- ELSE -%]
+[%- IF password_code_valid -%]
 
 <h1>Reset your password</h1>
 <p>Please click the button below to reset your password</p>
@@ -37,7 +39,7 @@
 <input type="submit" value="Login">
 
   [%- IF return_url -%]
-  <input type="hidden" name="return_url" value="$return_url">
+  <input type="hidden" name="return_url" value="[% return_url %]">
   [%- END -%]
 
   [%- IF reset_password_handler -%]
@@ -50,4 +52,6 @@
 
 </form>
 
+[%- END -%]
+[%- END -%]
 [%- END -%]
