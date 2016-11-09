@@ -1,5 +1,9 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.622 Wed  9 Nov 11:35:15 CET 2016
+
+    * Add back missing $VERSION to Provider::Example
+
 0.621 Tue  8 Nov 16:44:51 CET 2016
 
     [ENHANCEMENTS]
