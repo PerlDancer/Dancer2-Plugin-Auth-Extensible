@@ -763,9 +763,18 @@ sub _login_logout {
     }
     like $res->content, qr/input.+name="password"/,
       "... and we have the login page.";
-    like $res->content,
-      qr/Enter your username to obtain an email to reset your password/,
-      "... which has password reset option (reset_password_handler=>1).";
+
+    # login page has password reset section (or not)
+    if ( grep { $_ eq 'get_user_by_code' } @provider_can ) {
+        like $res->content,
+        qr/Enter your username to obtain an email to reset your password/,
+        "... which has password reset option (reset_password_handler=>1).";
+    }
+    else {
+        unlike $res->content,
+        qr/Enter your username to obtain an email to reset your password/,
+        "... which has *no* password reset option (reset_password_handler=>0).";
+    }
 
     # post empty /login
 

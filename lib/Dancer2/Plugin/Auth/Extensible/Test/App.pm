@@ -26,7 +26,6 @@ set show_errors => 1;
 # nasty shared global makes it easy to pass data between app and test script
 our $data = {};
 
-config->{plugins}->{"Auth::Extensible"}->{reset_password_handler} = 1;
 config->{plugins}->{"Auth::Extensible"}->{welcome_send} =
   __PACKAGE__ . "::welcome_send";
 
@@ -42,6 +41,9 @@ my $provider = $plugin->auth_provider('config1');
 my @provider_can = ();
 
 push @provider_can, 'record_lastlogin' if $plugin->config->{record_lastlogin};
+
+config->{plugins}->{"Auth::Extensible"}->{reset_password_handler} = 1
+  if $provider->can('get_user_by_code');
 
 #
 # IMPORTANT NOTE

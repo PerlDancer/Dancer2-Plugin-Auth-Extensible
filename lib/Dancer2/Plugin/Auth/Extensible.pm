@@ -6,6 +6,9 @@ use strict;
 use warnings;
 use Carp;
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
+use Dancer2::FileUtils qw(path);
+use Dancer2::Template::Tiny;
+use File::Share qw(dist_dir);
 use List::Util qw(first);
 use Module::Runtime qw(use_module);
 use Scalar::Util;
@@ -874,79 +877,24 @@ __EMAIL
 }
 
 sub _default_login_page {
-    my $plugin    = shift;
-    my $app       = $plugin->app;
-    my $loginpage = $plugin->login_page;
+    my $plugin = shift;
+    my $request = $plugin->app->request;
 
-    if ( my $new_password = $app->request->param('new_password') ) {
-        return <<NEWPW;
-<h1>New password</h1>
-<p>
-Your new password is $new_password
-</p>
-<a href="$loginpage">Click here to login</a>
-NEWPW
-    }
+    my $tt = Dancer2::Template::Tiny->new;
 
-    if ( $app->request->param('reset_sent') ) {
-        return <<SENT;
-<h1>Request sent</h1>
-<p>A password reset request has been sent. Please check your email.</p>
-SENT
-    }
+    my $template =
+      path( dist_dir('Dancer2-Plugin-Auth-Extensible'), 'views', 'login.tt' );
 
-    # Valid password reset request. Just need to confirm to
-    # prevent GET requests by email filters
-    if ( $app->request->param('password_code_valid') ) {
-        return <<VALID;
-<h1>Reset your password</h1>
-<p>
-Please click the button below to reset your password
-</p>
-<form method="post">
-<input type="submit" name="confirm_reset" value="Reset password">
-</form>
-VALID
-    }
-
-    my $pwreset_html =
-      !$plugin->reset_password_handler
-      ? ""
-      : <<RESETPW;
-<h2>Password reset</h2>
-<p>Enter your username to obtain an email to reset your password</p>
-<label for="username_reset">Username:</label>
-<input type="text" name="username_reset" id="username_reset">
-<input type="submit" name="submit_reset" value="Submit">
-RESETPW
-    my $return_url = $app->request->params->{return_url} || '';
-
-    my $login_fail_message =
-      $app->request->vars->{login_failed}
-      ? "<p>LOGIN FAILED</p>"
-      : "";
-
-    return <<PAGE;
-<h1>Login Required</h1>
-
-<p>
-You need to log in to continue.
-</p>
-
-$login_fail_message
-
-<form method="post">
-<label for="username">Username:</label>
-<input type="text" name="username" id="username">
-<br />
-<label for="password">Password:</label>
-<input type="password" name="password" id="password">
-<br />
-<input type="hidden" name="return_url" value="$return_url">
-<input type="submit" value="Login">
-$pwreset_html
-</form>
-PAGE
+    my $tokens = {
+        loginpage           => $plugin->login_page,
+        login_failed        => $request->var('login_failed'),
+        new_password        => $request->parameters->get('new_password'),
+        password_code_valid => $request->parameters->get('password_code_valid'),
+        reset_sent          => $request->parameters->get('reset_sent'),
+        reset_password_handler => $plugin->reset_password_handler,
+        return_url             => $request->parameters->get('return_url'),
+    };
+    $tt->render( $template, $tokens );
 }
 
 sub _default_permission_denied_page {
