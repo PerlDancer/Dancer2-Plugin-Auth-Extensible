@@ -40,6 +40,8 @@ lib/Dancer2/Plugin/Auth/Extensible/Role/Provider.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test/App.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
+share/views/login.tt
+share/views/login_denied.tt
 MANIFEST
 MANIFEST.SKIP
 bin/dancer2-generate-crypted-password
