@@ -1284,10 +1284,9 @@ sub _password_reset {
 
     $code = $Dancer2::Plugin::Auth::Extensible::Test::App::data->{code};
 
-    # call /login/$code
+    # get /login/$code
 
     $trap->read;
-
     $res = get("/login/$code");
 
     ok $res->is_success, "GET /login/<code> with good code is_success"
@@ -1295,7 +1294,35 @@ sub _password_reset {
 
     like $res->content,
       qr/Please click the button below to reset your password/,
-      "... and we have the /login page asking us to click to reset password.";
+      "... and we have the /login page with reset password link.";
+
+    # post /login/$code with bad code
+
+    $trap->read;
+    $res = post(
+        "/login/12345678901234567890123456789012",
+        [ confirm_reset => "Reset password" ]
+    );
+    is $res->code, 401, "POST /login/<code> with bad code",
+      or diag explain $res;
+    unlike $res->content, qr/Your new password is \w{8}\</,
+      "... and we are NOT given a new password";
+    like $res->content, qr/LOGIN FAILED/, "... but see LOGIN FAILED.";
+
+    # post /login/$code with good code
+
+    $trap->read;
+    $res = post( "/login/$code", [ confirm_reset => "Reset password" ] );
+    is $res->code, 401, "POST /login/<code> with good code",
+      or diag explain $res;
+    like $res->content, qr/Your new password is \w{8}\</,
+      "... and we are given a new password.";
+
+    # reset dave's password for later tests
+
+    $res =
+      post( '/user_password', [ username => 'dave', new_password => 'beer' ] );
+    is $res->content, "dave", "Reset dave's password to beer";
 
 }
 
