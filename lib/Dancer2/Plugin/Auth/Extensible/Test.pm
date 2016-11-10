@@ -773,7 +773,12 @@ sub _login_logout {
     else {
         unlike $res->content,
         qr/Enter your username to obtain an email to reset your password/,
-        "... which has *no* password reset option (reset_password_handler=>0).";
+        "... which has *no* password reset option (reset_password_handler=>0)";
+
+        # code coverage 'Reset password code submitted?' section of default
+        # get /login route.
+        $res = get('/login/12345678901234567890123456789012');
+        is $res->code, 401, "... and try a get /login/<code> get us a 401.";
     }
 
     # post empty /login
