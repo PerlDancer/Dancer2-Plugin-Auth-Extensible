@@ -1899,79 +1899,196 @@ sub _update_user {
 #------------------------------------------------------------------------------
 
 sub _user_password {
-    {
-        $trap->read;    # clear logs
+    my $res;
 
-        my $res = get('/user_password?username=dave&password=beer');
-        is $res->code, 200,
-          "/user_password?username=dave&password=beer response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
+    # user_password with valid username and password, no realm
 
-        my $res = get('/user_password?username=dave&password=cider');
-        is $res->code, 200,
-          "/user_password?username=dave&password=cider response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
-    {
-        $trap->read;    # clear logs
+    $trap->read;
+    $res = post( '/user_password', [ username => 'dave', password => 'beer' ] );
 
-        my $res =
-          get('/user_password?username=dave&password=beer&realm=config1');
+    ok $res->is_success,
+      "/user_password with valid username and password returns is_success"
+      or diag explain $trap->read;
+    is $res->content, 'dave', "... and it returned the username.";
 
-        is $res->code, 200,
-"/user_password?username=dave&password=beer&realm=config1 response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
+    # user_password with valid username but bad password, no realm
 
-        my $res =
-          get('/user_password?username=dave&password=beer&realm=config2');
+    $trap->read;
+    $res =
+      post( '/user_password', [ username => 'dave', password => 'BadPW' ] );
 
-        is $res->code, 200,
-"/user_password?username=dave&password=beer&realm=config2 response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
+    ok $res->is_success,
+      "/user_password with valid username and password returns is_success"
+      or diag explain $trap->read;
+    ok !$res->content, "... and response is undef/empty.";
+
+    # user_password with valid username and password and realm
+
+    $trap->read;
+    $res = post( '/user_password',
+        [ username => 'dave', password => 'beer', realm => 'config1' ] );
+
+    ok $res->is_success,
+      "/user_password with valid username, password and realm is_success"
+      or diag explain $trap->read;
+    is $res->content, 'dave', "... and it returned the username.";
+
+    # user_password with valid username and password but wrong realm
+
+    $trap->read;
+    $trap->read;
+    $res = post( '/user_password',
+        [ username => 'dave', password => 'beer', realm => 'config2' ] );
+
+    ok $res->is_success,
+      "/user_password with valid username, password but bad realm is_success"
+      or diag explain $trap->read;
+    ok !$res->content, "content shows fail";
 
     # now with logged_in_user
 
-    {
-        $trap->read;    # clear logs
+    $trap->read;
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
 
-        my $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+    is( $res->code, 302, 'Login with real details succeeds' )
+      or diag explain $trap->read;
 
-        is( $res->code, 302, 'Login with real details succeeds' )
-          or diag explain $trap->read;
+    is get('/loggedin')->content, "You are logged in",
+      "... and checking /loggedin route shows we are logged in";
 
-        is get('/loggedin')->content, "You are logged in",
-          "... and checking /loggedin route shows we are logged in";
-    }
-    {
-        $trap->read;    # clear logs
+    # good password as only arg with logged in user
 
-        my $res = get('/user_password?password=beer');
-        is $res->code, 200, "/user_password?password=beer response is 200"
-          or diag explain $trap->read;
-        ok $res->content, "content shows success";
-    }
-    {
-        $trap->read;    # clear logs
+    $trap->read;
+    $res = post( '/user_password', [ password => 'beer' ] );
+    ok $res->is_success, "user_password password=beer is_success"
+      or diag explain $trap->read;
+    is $res->content, 'dave', "... and it returned the username.";
 
-        my $res = get('/user_password?password=cider');
-        is $res->code, 200, "/user_password?password=cider response is 200"
-          or diag explain $trap->read;
-        ok !$res->content, "content shows fail";
-    }
+    # bad password as only arg with logged in user
 
-    # cleanup
-    get('/logout');
+    $trap->read;
+    $res = post( '/user_password', [ password => 'cider' ] );
+    ok $res->is_success, "user_password password=cider is_success"
+      or diag explain $trap->read;
+    ok !$res->content, "content shows fail";
+
+    # logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "logout user dave is_redirect as expected";
+    ok get('/loggedin')->is_redirect, 
+      "... and checking /loggedin route shows dave is logged out.";
+
+    # search for user by code that no user has yet
+
+    my $code = 'UserPasswordResetCode123';
+    $trap->read;
+    $res = post( '/user_password', [ code => $code ] );
+    ok $res->is_success, "user_password with code no user has is_success"
+      or diag explain $trap->read;
+    ok !$res->content, "content shows fail";
+
+    # add code to dave's account details
+
+    $trap->read;
+    $res = post( '/update_user',
+        [ username => 'dave', realm => 'config1', pw_reset_code => $code ] );
+    ok $res->is_success,
+      "Add password reset code to dave's account details is_success.";
+
+    # now search for dave using code
+
+    $trap->read;
+    $res = post( '/user_password', [ code => $code ] );
+    ok $res->is_success, "user_password with code no user has is_success"
+      or diag explain $trap->read;
+    is $res->content, 'dave', "... and user dave was found.";
+
+    # change password
+
+    $trap->read;
+    $res = post( '/user_password',
+        [ username => 'dave', new_password => 'paleale' ] );
+    ok $res->is_success,
+      "Update password without giving old password is_success";
+    is $res->content, 'dave', "... and it returns the username."
+      or diag explain $trap->read;
+     
+    # try login with old password
+
+    $trap->read;
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+
+    is $res->code, 401, 'Login with old password fails'
+      or diag explain $res;
+
+    ok get('/loggedin')->is_redirect,
+      "... and checking /loggedin route shows we are NOT logged in.";
+
+    # now new password
+
+    $trap->read;
+    $res = post( '/login', [ username => 'dave', password => 'paleale' ] );
+
+    is( $res->code, 302, 'Login with real details succeeds' )
+      or diag explain $trap->read;
+
+    is get('/loggedin')->content, "You are logged in",
+      "... and checking /loggedin route shows we are logged in";
+
+    # logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "logout user dave is_redirect as expected";
+    ok get('/loggedin')->is_redirect, 
+      "... and checking /loggedin route shows dave is logged out.";
+
+
+    # try to change password but supply bad old password
+
+    $trap->read;
+    $res = post( '/user_password',
+        [ username => 'dave', password => 'bad', new_password => 'beer' ] );
+    ok $res->is_success, "Update password with bad old password is_success";
+    ok !$res->content, "... and it returns false."
+      or diag explain $trap->read;
+     
+    # try to change password and supply good old password
+
+    $trap->read;
+    $res = post( '/user_password',
+        [ username => 'dave', password => 'paleale', new_password => 'beer' ] );
+    ok $res->is_success, "Update password with good old password is_success";
+    is $res->content, 'dave', "... and user dave was found.";
+     
+    # try login with old password
+
+    $trap->read;
+    $res = post( '/login', [ username => 'dave', password => 'paleale' ] );
+
+    is $res->code, 401, 'Login with old password fails'
+      or diag explain $res;
+
+    ok get('/loggedin')->is_redirect,
+      "... and checking /loggedin route shows we are NOT logged in.";
+
+    # now new password
+
+    $trap->read;
+    $res = post( '/login', [ username => 'dave', password => 'beer' ] );
+
+    is( $res->code, 302, 'Login with real details succeeds' )
+      or diag explain $trap->read;
+
+    is get('/loggedin')->content, "You are logged in",
+      "... and checking /loggedin route shows we are logged in";
+
+    # logout
+
+    $res = get('/logout');
+    ok $res->is_redirect, "logout user dave is_redirect as expected";
+    ok get('/loggedin')->is_redirect, 
+      "... and checking /loggedin route shows dave is logged out.";
 }
 
 1;

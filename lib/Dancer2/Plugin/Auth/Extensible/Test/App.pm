@@ -622,6 +622,9 @@ get '/does_undef_drink_beer' => sub {
 get '/user_password' => sub {
     return user_password params('query');
 };
+post '/user_password' => sub {
+    return user_password %{ body_parameters->as_hashref };
+};
 
 get '/update_current_user' => sub {
     my $user = update_current_user name => "I love cider";
