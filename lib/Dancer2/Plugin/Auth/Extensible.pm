@@ -1018,8 +1018,8 @@ sub _logout_route {
 
     $app->destroy_session;
 
-    if ( $req->params->{return_url} ) {
-        $app->redirect( $req->params->{return_url} );
+    if ( my $url = $req->parameters->get('return_url') ) {
+        $app->redirect( $url );
     }
     elsif ($plugin->exit_page) {
         $app->redirect($plugin->exit_page);
@@ -1035,12 +1035,11 @@ sub _logout_route {
 sub _post_login_route {
     my $app = shift;
     my $plugin = $app->with_plugin('Auth::Extensible');
+    my $params = $app->request->body_parameters->as_hashref;
 
     # First check for password reset request, if applicable
-    if (   $plugin->reset_password_handler
-        && $app->request->param('submit_reset') )
-    {
-        my $username = $app->request->param('username_reset');
+    if (   $plugin->reset_password_handler && $params->{submit_reset} ) {
+        my $username = $params->{username_reset};
         croak "Attempt to pass reference to reset blocked" if ref $username;
         $plugin->password_reset_send( username => $username );
         $app->forward(
@@ -1053,7 +1052,7 @@ sub _post_login_route {
     # Then for a password reset itself (confirmed by POST request)
     my ($code) =
          $plugin->reset_password_handler
-      && $app->request->param('confirm_reset')
+      && $params->{confirm_reset}
       && $app->request->splat;
 
     if ($code) {
@@ -1078,8 +1077,8 @@ sub _post_login_route {
     # with paremeterisation) - but if params->{password} was something
     # different, e.g. { 'like' => '%' }, we might end up with some SQL like
     # WHERE password LIKE '%' instead - which would not be a Good Thing.
-    my ( $username, $password ) =
-      @{ $app->request->params() }{qw(username password)};
+    my $username = $params->{username};
+    my $password = $params->{password};
 
     for ( $username, $password ) {
         if ( ref $_ ) {
@@ -1091,11 +1090,11 @@ sub _post_login_route {
 
     if ( $plugin->logged_in_user ) {
         # uncoverable condition false
-        $app->redirect( $app->request->params->{return_url}
+        $app->redirect( $app->request->parameters->get('return_url')
               || $plugin->user_home_page );
     }
 
-    my $auth_realm = $app->request->param('realm');
+    my $auth_realm = $params->{realm};
     my ( $success, $realm ) =
       $plugin->authenticate_user( $username, $password, $auth_realm );
 
@@ -1110,7 +1109,7 @@ sub _post_login_route {
         $app->log( core => "Realm is $realm" );
         $plugin->execute_plugin_hook( 'after_login_success' );
         # uncoverable condition false
-        $app->redirect( $app->request->params->{return_url}
+        $app->redirect( $app->request->parameters->get('return_url')
               || $plugin->user_home_page );
     }
     else {
