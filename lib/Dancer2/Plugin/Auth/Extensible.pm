@@ -45,10 +45,22 @@ has login_page => (
     from_config => sub { '/login' },
 );
 
+has login_template => (
+    is          => 'ro',
+    isa         => Str,
+    from_config => sub { 'login' },
+);
+
 has login_page_handler => (
     is          => 'ro',
     isa         => Str,
     from_config => sub { '_default_login_page' },
+);
+
+has login_without_redirect => (
+    is          => 'ro',
+    isa         => Bool,
+    from_config => sub { 0 },
 );
 
 has logout_page => (
@@ -601,6 +613,7 @@ sub require_any_role {
     return $plugin->_build_wrapper( @_, 'any' );
 }
 
+
 sub require_login {
     my $plugin  = shift;
     my $coderef = shift;
@@ -611,19 +624,11 @@ sub require_login {
                 warning => "Invalid require_login usage, please see docs" );
         }
 
-        my $user = $plugin->logged_in_user;
-        if ( !$user ) {
-            $plugin->execute_plugin_hook( 'login_required', $coderef );
+        # User already logged in so give them the page.
+        return $coderef->($plugin)
+          if $plugin->logged_in_user;
 
-            # TODO: see if any code executed by that hook set up a response
-            return $plugin->app->redirect(
-                $plugin->app->request->uri_for(
-                    $plugin->login_page,
-                    { return_url => $plugin->app->request->request_uri }
-                )
-            );
-        }
-        return $coderef->($plugin);
+        return $plugin->_check_for_login( $coderef );
     };
 }
 
@@ -809,18 +814,8 @@ sub _build_wrapper {
       : $require_role;
 
     return sub {
-        my $user = $plugin->logged_in_user;
-        if ( !$user ) {
-            $plugin->execute_plugin_hook( 'login_required', $coderef );
-
-            # TODO: see if any code executed by that hook set up a response
-            return $plugin->app->redirect(
-                $plugin->app->request->uri_for(
-                    $plugin->login_page,
-                    { return_url => $plugin->app->request->request_uri }
-                )
-            );
-        }
+        return $plugin->_check_for_login( $coderef )
+          unless $plugin->logged_in_user;
 
         my $role_match;
 
@@ -864,6 +859,81 @@ sub _build_wrapper {
             )
         );
     };
+}
+
+sub _check_for_login {
+    my ( $plugin, $coderef ) = @_;
+    $plugin->execute_plugin_hook( 'login_required', $coderef );
+
+    # TODO: see if any code executed by that hook set up a response
+
+    my $request = $plugin->app->request;
+
+    if ( $plugin->login_without_redirect ) {
+
+        # we have "transparent" no-redirect login available
+        if ( $request->is_post ) {
+
+            # See if this is actually a POST login.
+            my $username =
+              $request->body_parameters->get('__auth_extensible_username');
+            my $password =
+              $request->body_parameters->get('__auth_extensible_password');
+            my $auth_realm =
+              $request->body_parameters->get('__auth_extensible_realm');
+
+            if ( defined $username && defined $password ) {
+
+                my ( $success, $realm ) =
+                  $plugin->authenticate_user( $username, $password,
+                    $auth_realm );
+
+                if ($success) {
+
+                    # change session ID if we have a new enough D2
+                    # version with support
+                    $plugin->app->change_session_id
+                      if $plugin->app->can('change_session_id');
+
+                    $plugin->app->session->write( logged_in_user => $username );
+                    $plugin->app->session->write(
+                        logged_in_user_realm => $realm );
+                    $plugin->app->log( core => "Realm is $realm" );
+                    $plugin->execute_plugin_hook('after_login_success');
+
+                    return $coderef->($plugin);
+                }
+                else {
+                    $request->vars->{login_failed}++;
+                }
+            }
+        }
+
+        my $ua   = HTTP::BrowserDetect->new( $request->env->{HTTP_USER_AGENT} );
+        my $base = $request->base;
+        my $auth_method;
+
+        if ( !$ua->browser_string || $ua->robot ) {
+            $auth_method = $auth_method = qq{Basic realm="$base"};
+        }
+        else {
+            $auth_method = qq{FormBasedLogin realm="$base", }
+              . q{comment="use form to log in"};
+        }
+
+        $plugin->app->response->status(401);
+        $plugin->app->response->push_header(
+            'WWW-Authenticate' => $auth_method );
+
+        return template $plugin->login_template;
+    }
+
+    # old-fashioned redirect to login page with return_url set
+    return $plugin->app->redirect(
+        $request->uri_for(
+            $plugin->login_page, { return_url => $request->request_uri }
+        )
+    );
 }
 
 sub _default_email_password_reset {
