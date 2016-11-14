@@ -3,6 +3,7 @@ t/00-load.t
 t/01-role-provider.t
 t/disable_roles.t
 t/exploding-provider.t
+t/login-without-redirect.t
 t/plugin-provider-config.t
 t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
@@ -43,6 +44,7 @@ lib/Dancer2/Plugin/Auth/Extensible/Test/App.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
 share/views/login.tt
 share/views/login_denied.tt
+share/views/transparent_login.tt
 MANIFEST
 MANIFEST.SKIP
 bin/dancer2-generate-crypted-password

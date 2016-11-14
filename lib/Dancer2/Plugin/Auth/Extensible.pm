@@ -5,6 +5,7 @@ our $VERSION = '0.622';
 use strict;
 use warnings;
 use Carp;
+use Class::Method::Modifiers qw(install_modifier);
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
 use Dancer2::FileUtils qw(path);
 use Dancer2::Template::Tiny;
@@ -870,6 +871,7 @@ sub _check_for_login {
     my $request = $plugin->app->request;
 
     if ( $plugin->login_without_redirect ) {
+        my $tokens;
 
         # we have "transparent" no-redirect login available
         if ( $request->is_post ) {
@@ -904,12 +906,19 @@ sub _check_for_login {
                     return $coderef->($plugin);
                 }
                 else {
-                    $request->vars->{login_failed}++;
+                    $tokens->{login_failed}++;
                 }
             }
         }
 
-        my $ua   = HTTP::BrowserDetect->new( $request->env->{HTTP_USER_AGENT} );
+        # If we got here we going to show a login page and set status to 401
+
+        $tokens->{reset_password_handler} = $plugin->reset_password_handler;
+
+        # The WWW-Authenticate header added varies depending on whether
+        # the client is a robot or not.
+        my $ua = use_module('HTTP::BrowserDetect')
+          ->new( $request->env->{HTTP_USER_AGENT} );
         my $base = $request->base;
         my $auth_method;
 
@@ -925,7 +934,18 @@ sub _check_for_login {
         $plugin->app->response->push_header(
             'WWW-Authenticate' => $auth_method );
 
-        return template $plugin->login_template;
+        # If app has its own login page view then use it
+        # otherwise render our internal one and pass that to 'template'.
+        my ( $view, $options ) = ( $plugin->login_template, {} );
+        my $template_engine = $plugin->app->template_engine;
+        my $path            = $template_engine->view_pathname($view);
+        if ( !-f $path ) {
+            $plugin->app->log( debug => "app has no login template defined" );
+            $options->{content} =
+              $plugin->_render_template( 'transparent_login.tt', $tokens );
+            undef $view;
+        }
+        return $plugin->app->template( $view, $tokens, $options );
     }
 
     # old-fashioned redirect to login page with return_url set
