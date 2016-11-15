@@ -1,3 +1,5 @@
+template: tiny
+layout: main
 plugins:
     Auth::Extensible:
         record_lastlogin: 1
