@@ -322,7 +322,7 @@ sub BUILD {
     if ( $plugin->login_without_redirect ) {
         # Add a post route so we can catch transparent login.
         # This is a little sucky but since no hooks are called before
-        # route dispatch then adding this willdcard routes now does at
+        # route dispatch then adding this wildcard route now does at
         # least make sure is gets added before any routes that use this
         # plugin's route decorators are added.
         $plugin->app->add_route(
