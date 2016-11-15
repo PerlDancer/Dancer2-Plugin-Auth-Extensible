@@ -5,7 +5,6 @@ our $VERSION = '0.622';
 use strict;
 use warnings;
 use Carp;
-use Class::Method::Modifiers qw(install_modifier);
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
 use Dancer2::FileUtils qw(path);
 use Dancer2::Template::Tiny;
@@ -237,6 +236,8 @@ sub BUILD {
     my $plugin = shift;
     my $app    = $plugin->app;
 
+    Scalar::Util::weaken( my $weak_plugin = $plugin );
+
     warn "No Auth::Extensible realms configured with which to authenticate user"
       unless $plugin->realm_count;
 
@@ -251,8 +252,6 @@ sub BUILD {
 
         my $login_page  = $plugin->login_page;
         my $denied_page = $plugin->denied_page;
-
-        Scalar::Util::weaken( my $weak_plugin = $plugin );
 
         # Match optional reset code, but not "denied"
         $app->add_route(
@@ -318,6 +317,69 @@ sub BUILD {
                 code   => \&_logout_route,
             );
         }
+    }
+
+    if ( $plugin->login_without_redirect ) {
+        # Add a post route so we can catch transparent login.
+        # This is a little sucky but since no hooks are called before
+        # route dispatch then adding this willdcard routes now does at
+        # least make sure is gets added before any routes that use this
+        # plugin's route decorators are added.
+        $plugin->app->add_route(
+            method => 'post',
+            regexp => qr/.*/,
+            code   => sub {
+                my $app = shift;
+                my $request = $app->request;
+                if ( $request->is_post ) {
+
+                    # See if this is actually a POST login.
+                    my $username = $request->body_parameters->get(
+                        '__auth_extensible_username');
+
+                    my $password = $request->body_parameters->get(
+                        '__auth_extensible_password');
+
+                    if ( defined $username && defined $password ) {
+
+                        my $auth_realm = $request->body_parameters->get(
+                            '__auth_extensible_realm');
+
+                        my ( $success, $realm ) =
+                          $weak_plugin->authenticate_user( $username,
+                            $password, $auth_realm );
+
+                        if ($success) {
+
+                            # change session ID if we have a new enough D2
+                            # version with support
+                            $app->change_session_id
+                              if $app->can('change_session_id');
+
+                            $app->session->write( logged_in_user => $username );
+                            $app->session->write(
+                                logged_in_user_realm => $realm );
+                            $app->log( core => "Realm is $realm" );
+                            $weak_plugin->execute_plugin_hook(
+                                'after_login_success');
+
+                        }
+                        else {
+                            $app->request->var( login_failed => 1 );
+                        }
+                        $app->forward(
+                            $request->path,
+                            $app->session->delete('__dpae_params') || +{},
+                            {
+                                method => $app->session->delete('__dpae_method')
+                                  || 'get'
+                            }
+                        );
+                    }
+                }
+                $app->pass;
+            },
+        );
     }
 }
 
@@ -871,49 +933,10 @@ sub _check_for_login {
     my $request = $plugin->app->request;
 
     if ( $plugin->login_without_redirect ) {
-        my $tokens;
-
-        # we have "transparent" no-redirect login available
-        if ( $request->is_post ) {
-
-            # See if this is actually a POST login.
-            my $username =
-              $request->body_parameters->get('__auth_extensible_username');
-            my $password =
-              $request->body_parameters->get('__auth_extensible_password');
-            my $auth_realm =
-              $request->body_parameters->get('__auth_extensible_realm');
-
-            if ( defined $username && defined $password ) {
-
-                my ( $success, $realm ) =
-                  $plugin->authenticate_user( $username, $password,
-                    $auth_realm );
-
-                if ($success) {
-
-                    # change session ID if we have a new enough D2
-                    # version with support
-                    $plugin->app->change_session_id
-                      if $plugin->app->can('change_session_id');
-
-                    $plugin->app->session->write( logged_in_user => $username );
-                    $plugin->app->session->write(
-                        logged_in_user_realm => $realm );
-                    $plugin->app->log( core => "Realm is $realm" );
-                    $plugin->execute_plugin_hook('after_login_success');
-
-                    return $coderef->($plugin);
-                }
-                else {
-                    $tokens->{login_failed}++;
-                }
-            }
-        }
-
-        # If we got here we going to show a login page and set status to 401
-
-        $tokens->{reset_password_handler} = $plugin->reset_password_handler;
+        my $tokens = {
+            login_failed           => $request->var('login_failed'),
+            reset_password_handler => $plugin->reset_password_handler
+        };
 
         # The WWW-Authenticate header added varies depending on whether
         # the client is a robot or not.
@@ -933,6 +956,13 @@ sub _check_for_login {
         $plugin->app->response->status(401);
         $plugin->app->response->push_header(
             'WWW-Authenticate' => $auth_method );
+
+        # If this is the first attempt to reach a protected page and *not*
+        # a failed passthrough login the we need to stash method and params.
+        if ( !$request->var('login_failed') ) {
+            $plugin->app->session->write( '__dpae_method' => $request->method );
+            $plugin->app->session->write( '__dpae_params' => $request->params );
+        }
 
         # If app has its own login page view then use it
         # otherwise render our internal one and pass that to 'template'.
