@@ -915,12 +915,18 @@ sub _build_wrapper {
         $plugin->execute_plugin_hook( 'permission_denied', $coderef );
 
         # TODO: see if any code executed by that hook set up a response
-        return $plugin->app->redirect(
-            $plugin->app->request->uri_for(
-                $plugin->denied_page,
-                { return_url => $plugin->app->request->request_uri }
-            )
-        );
+
+        $plugin->app->response->status(403);
+        my $view            = $plugin->denied_page;
+        my $template_engine = $plugin->app->template_engine;
+        my $path            = $template_engine->view_pathname($view);
+        if ( !-f $path ) {
+            $plugin->app->log(
+                debug => "app has no denied_page template defined" );
+            $options->{content} = $plugin->_render_template('login_denied.tt');
+            undef $view;
+        }
+        return $plugin->app->template( $view );
     };
 }
 

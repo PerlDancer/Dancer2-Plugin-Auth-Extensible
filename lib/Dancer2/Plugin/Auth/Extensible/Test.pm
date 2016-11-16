@@ -1547,13 +1547,10 @@ sub _roles {
 
         my $res = get('/not_allroles');
 
-        is( $res->code, 302, "/not_allroles response code 302" )
+        is( $res->code, 403, "/not_allroles response code 403" )
           or diag explain $trap->read;
-        is(
-            $res->headers->header('Location'),
-            'http://localhost/login/denied?return_url=%2Fnot_allroles',
-            '/not_allroles redirected to denied page'
-        );
+        like $res->content, qr/Permission Denied/,
+          "... and we got the Permission Denied page.";
     }
 
     {
@@ -1573,15 +1570,11 @@ sub _roles {
 
         my $res = get('/piss');
 
-        is( $res->code, 302,
-            "Redirect on a route requiring a role we don't have" )
+        is( $res->code, 403,
+            "route requiring a role we don't have gets response code 403" )
           or diag explain $trap->read;
-
-        is(
-            $res->headers->header('Location'),
-            'http://localhost/login/denied?return_url=%2Fpiss',
-            "We cannot request a route requiring a role we don't have"
-        );
+        like $res->content, qr/Permission Denied/,
+          "... and we got the Permission Denied page.";
     }
 
     # 2 arg user_has_role
