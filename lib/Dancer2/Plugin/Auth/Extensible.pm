@@ -334,16 +334,16 @@ sub BUILD {
                 my $request = $app->request;
 
                 # See if this is actually a POST login.
-                my $username =
-                  $request->body_parameters->get('__auth_extensible_username');
+                my $username = $request->body_parameters->delete(
+                    '__auth_extensible_username');
 
-                my $password =
-                  $request->body_parameters->get('__auth_extensible_password');
+                my $password = $request->body_parameters->delete(
+                    '__auth_extensible_password');
 
                 if ( defined $username && defined $password ) {
 
-                    my $auth_realm =
-                      $request->body_parameters->get('__auth_extensible_realm');
+                    my $auth_realm = $request->body_parameters->delete(
+                        '__auth_extensible_realm');
 
                     my ( $success, $realm ) =
                       $weak_plugin->authenticate_user( $username,
@@ -367,9 +367,11 @@ sub BUILD {
                     }
                     $app->forward(
                         $request->path,
-                        $app->session->delete('__dpae_params') || +{},
+                        $app->session->delete('__auth_extensible_params')
+                          || +{},
                         {
-                            method => $app->session->delete('__dpae_method')
+                            method =>
+                              $app->session->delete('__auth_extensible_method')
                               || 'get'
                         }
                     );
@@ -962,10 +964,12 @@ sub _check_for_login {
             'WWW-Authenticate' => $auth_method );
 
         # If this is the first attempt to reach a protected page and *not*
-        # a failed passthrough login the we need to stash method and params.
+        # a failed passthrough login then we need to stash method and params.
         if ( !$request->var('login_failed') ) {
-            $plugin->app->session->write( '__dpae_method' => $request->method );
-            $plugin->app->session->write( '__dpae_params' => $request->params );
+            $plugin->app->session->write(
+                '__auth_extensible_method' => $request->method );
+            $plugin->app->session->write(
+                '__auth_extensible_params' => $request->params );
         }
 
         # If app has its own login page view then use it
