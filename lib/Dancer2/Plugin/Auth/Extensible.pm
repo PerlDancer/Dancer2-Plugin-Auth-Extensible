@@ -320,62 +320,59 @@ sub BUILD {
     }
 
     if ( $plugin->login_without_redirect ) {
+
         # Add a post route so we can catch transparent login.
         # This is a little sucky but since no hooks are called before
         # route dispatch then adding this wildcard route now does at
-        # least make sure is gets added before any routes that use this
+        # least make sure it gets added before any routes that use this
         # plugin's route decorators are added.
         $plugin->app->add_route(
             method => 'post',
             regexp => qr/.*/,
             code   => sub {
-                my $app = shift;
+                my $app     = shift;
                 my $request = $app->request;
-                if ( $request->is_post ) {
 
-                    # See if this is actually a POST login.
-                    my $username = $request->body_parameters->get(
-                        '__auth_extensible_username');
+                # See if this is actually a POST login.
+                my $username =
+                  $request->body_parameters->get('__auth_extensible_username');
 
-                    my $password = $request->body_parameters->get(
-                        '__auth_extensible_password');
+                my $password =
+                  $request->body_parameters->get('__auth_extensible_password');
 
-                    if ( defined $username && defined $password ) {
+                if ( defined $username && defined $password ) {
 
-                        my $auth_realm = $request->body_parameters->get(
-                            '__auth_extensible_realm');
+                    my $auth_realm =
+                      $request->body_parameters->get('__auth_extensible_realm');
 
-                        my ( $success, $realm ) =
-                          $weak_plugin->authenticate_user( $username,
-                            $password, $auth_realm );
+                    my ( $success, $realm ) =
+                      $weak_plugin->authenticate_user( $username,
+                        $password, $auth_realm );
 
-                        if ($success) {
+                    if ($success) {
 
-                            # change session ID if we have a new enough D2
-                            # version with support
-                            $app->change_session_id
-                              if $app->can('change_session_id');
+                        # change session ID if we have a new enough D2
+                        # version with support
+                        $app->change_session_id
+                          if $app->can('change_session_id');
 
-                            $app->session->write( logged_in_user => $username );
-                            $app->session->write(
-                                logged_in_user_realm => $realm );
-                            $app->log( core => "Realm is $realm" );
-                            $weak_plugin->execute_plugin_hook(
-                                'after_login_success');
-
-                        }
-                        else {
-                            $app->request->var( login_failed => 1 );
-                        }
-                        $app->forward(
-                            $request->path,
-                            $app->session->delete('__dpae_params') || +{},
-                            {
-                                method => $app->session->delete('__dpae_method')
-                                  || 'get'
-                            }
-                        );
+                        $app->session->write( logged_in_user => $username );
+                        $app->session->write( logged_in_user_realm => $realm );
+                        $app->log( core => "Realm is $realm" );
+                        $weak_plugin->execute_plugin_hook(
+                            'after_login_success');
                     }
+                    else {
+                        $app->request->var( login_failed => 1 );
+                    }
+                    $app->forward(
+                        $request->path,
+                        $app->session->delete('__dpae_params') || +{},
+                        {
+                            method => $app->session->delete('__dpae_method')
+                              || 'get'
+                        }
+                    );
                 }
                 $app->pass;
             },
@@ -917,6 +914,7 @@ sub _build_wrapper {
         # TODO: see if any code executed by that hook set up a response
 
         $plugin->app->response->status(403);
+        my $options;
         my $view            = $plugin->denied_page;
         my $template_engine = $plugin->app->template_engine;
         my $path            = $template_engine->view_pathname($view);
@@ -926,7 +924,7 @@ sub _build_wrapper {
             $options->{content} = $plugin->_render_template('login_denied.tt');
             undef $view;
         }
-        return $plugin->app->template( $view );
+        return $plugin->app->template( $view, undef, $options );
     };
 }
 
