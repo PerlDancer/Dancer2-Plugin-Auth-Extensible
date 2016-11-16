@@ -165,74 +165,107 @@ my $jar  = HTTP::Cookies->new();
     # logout
     $req = GET '/logout';
     $jar->add_cookie_header($req);
-    $test->request( $req );
+    $res = $test->request( $req );
+    $jar->extract_cookies($res);
 }
-done_testing;
-__END__
 {
-    my $req = GET "$url/beer", %ua;
+    my $req = GET "$url/beer";
     $jar->add_cookie_header($req);
     my $res = $test->request( $req );
     $jar->extract_cookies($res);
 
     is $res->code, 401,
       "Trying a require_role page gets 401 response";
-    like $res->header('www-authenticate'), qr/FormBased.+use form to log in/,
-      "... and we have a WWW-Authenticate header which says use the form";
-    like $res->content, qr/You need to log in to continue/,
-      "... and we can see a login form";
-    like $res->content, qr/input.+name="__auth_extensible_username/,
-      "... and we see __auth_extensible_username field.";
-
-}
     like $res->header('www-authenticate'), qr/Basic realm=/,
       "... and we have a WWW-Authenticate header with Basic realm";
     like $res->content, qr/You need to log in to continue/,
       "... and we can see a login form";
     like $res->content, qr/input.+name="__auth_extensible_username/,
       "... and we see __auth_extensible_username field.";
+
 }
-done_testing;
-__END__
 {
-    my $req = POST "$url/login", [ username => 'dave', password => 'bad' ];
+    # try login to /beer with bad password
+
+    my $req =
+      POST "$url/beer",
+      [
+        __auth_extensible_username => 'dave',
+        __auth_extensible_password => 'cider',
+      ];
     $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_success, "POST /login with bad password response is OK";
-    is $res->content, "Not allowed", "... and we see our custom response.";
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    is $res->code, 401,
+      "Trying POST to require_role with bad password gets 401 response";
+    like $res->header('www-authenticate'), qr/Basic realm=/,
+      "... and we have a WWW-Authenticate header with Basic realm";
+    like $res->content, qr/You need to log in to continue/,
+      "... and we can see a login form";
+    like $res->content, qr/input.+name="__auth_extensible_username/,
+      "... and we see __auth_extensible_username field";
+    like $res->content, qr/This text is in the layout/,
+      "... and the response is wrapped in the layout.";
+}
+{
+    # try login to /beer with good password
+
+    my $req =
+      POST "$url/beer",
+      [
+        __auth_extensible_username => 'dave',
+        __auth_extensible_password => 'beer',
+      ];
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    ok $res->is_success,
+      "Trying POST to require_role beer with good password is_success";
+    is $res->content, "Have some beer",
+      "... and we got \"Have some beer\".";
+}
+{
+    my $req = GET "$url/beer";
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    ok $res->is_success,
+      "Trying GET to require_role beer is_success";
+    is $res->content, "Have some beer",
+      "... and we got \"Have some beer\".";
+}
+{
+    my $req = GET "$url/cider";
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    is $res->code, 403,
+      "Trying GET to require_role cider returns reponse code 403";
+    like $res->content, qr/Permission Denied/,
+      "... and we got the permission denied page";
+    like $res->content, qr/This text is in the layout/,
+      "... wrapped in the layout.";
 }
 {
     my $req = GET "$url/loggedin";
     $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_redirect, "... and we still cannot reach protected page.";
-}
-{
-    my $req = POST "$url/login", [ username => 'dave', password => 'beer' ];
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    ok $res->is_success,
+      "Trying GET to require_login page is_success";
+    is $res->content, "You are logged in",
+      "... and we got \"You are logged in\".";
+
+    # logout
+    $req = GET '/logout';
     $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_success, "POST /login with good password response is OK";
-    is $res->content, "Welcome!", "... and we see our custom response";
-}
-{
-    my $req = GET "$url/loggedin";
-    $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_success, "... and we can reach protected page";
-    is $res->content,    "You are logged in",
-      "... which has the content we expect.";
-}
-{
-    my $req = GET "$url/logout";
-    $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_success, "/logout is successful";
-}
-{
-    my $req = GET "$url/loggedin";
-    $jar->add_cookie_header($req);
-    my $res = $test->request($req);
-    ok $res->is_redirect, "... and we can no longer reach protected page.";
+    $res = $test->request( $req );
+    $jar->extract_cookies($res);
 }
 
 done_testing;
