@@ -334,15 +334,15 @@ sub BUILD {
                 my $request = $app->request;
 
                 # See if this is actually a POST login.
-                my $username = $request->body_parameters->delete(
+                my $username = $request->body_parameters->get(
                     '__auth_extensible_username');
 
-                my $password = $request->body_parameters->delete(
+                my $password = $request->body_parameters->get(
                     '__auth_extensible_password');
 
                 if ( defined $username && defined $password ) {
 
-                    my $auth_realm = $request->body_parameters->delete(
+                    my $auth_realm = $request->body_parameters->get(
                         '__auth_extensible_realm');
 
                     my ( $success, $realm ) =
