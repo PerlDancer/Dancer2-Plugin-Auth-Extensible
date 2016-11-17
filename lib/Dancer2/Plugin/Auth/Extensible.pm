@@ -393,7 +393,7 @@ sub BUILD {
                     # params stashed in the session.
                     $app->forward(
                         $request->path,
-                        $params || +{},
+                        $params,
                         { method => $method }
                     );
                 }
