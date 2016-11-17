@@ -45,10 +45,22 @@ has login_page => (
     from_config => sub { '/login' },
 );
 
+has login_template => (
+    is          => 'ro',
+    isa         => Str,
+    from_config => sub { 'login' },
+);
+
 has login_page_handler => (
     is          => 'ro',
     isa         => Str,
     from_config => sub { '_default_login_page' },
+);
+
+has login_without_redirect => (
+    is          => 'ro',
+    isa         => Bool,
+    from_config => sub { 0 },
 );
 
 has logout_page => (
@@ -224,6 +236,8 @@ sub BUILD {
     my $plugin = shift;
     my $app    = $plugin->app;
 
+    Scalar::Util::weaken( my $weak_plugin = $plugin );
+
     warn "No Auth::Extensible realms configured with which to authenticate user"
       unless $plugin->realm_count;
 
@@ -238,8 +252,6 @@ sub BUILD {
 
         my $login_page  = $plugin->login_page;
         my $denied_page = $plugin->denied_page;
-
-        Scalar::Util::weaken( my $weak_plugin = $plugin );
 
         # Match optional reset code, but not "denied"
         $app->add_route(
@@ -305,6 +317,89 @@ sub BUILD {
                 code   => \&_logout_route,
             );
         }
+    }
+
+    if ( $plugin->login_without_redirect ) {
+
+        # Add a post route so we can catch transparent login.
+        # This is a little sucky but since no hooks are called before
+        # route dispatch then adding this wildcard route now does at
+        # least make sure it gets added before any routes that use this
+        # plugin's route decorators are added.
+
+        $plugin->app->add_route(
+            method => 'post',
+            regexp => qr/.*/,
+            code   => sub {
+                my $app     = shift;
+                my $request = $app->request;
+
+                # See if this is actually a POST login.
+                my $username = $request->body_parameters->get(
+                    '__auth_extensible_username');
+
+                my $password = $request->body_parameters->get(
+                    '__auth_extensible_password');
+
+                if ( defined $username && defined $password ) {
+
+                    my $auth_realm = $request->body_parameters->get(
+                        '__auth_extensible_realm');
+
+                    # Remove the auth params since the forward we call later
+                    # will cause dispatch to retry this route again if
+                    # the original route was a post since dispatch starts
+                    # again from the start of the route list and this
+                    # wildcard route will get hit again causing a loop.
+                    foreach (qw/username password realm/) {
+                        $request->body_parameters->remove(
+                            "__auth_extensible_$_");
+                    }
+
+                    # Stash method and params since we delete these from
+                    # the session if login is successful but we still need
+                    # them for the forward to the original route after
+                    # success.
+                    my $method =
+                      $app->session->read('__auth_extensible_method');
+                    my $params =
+                      $app->session->read('__auth_extensible_params');
+
+                    # Attempt authentication.
+                    my ( $success, $realm ) =
+                      $weak_plugin->authenticate_user( $username,
+                        $password, $auth_realm );
+
+                    if ($success) {
+                        $app->session->delete('__auth_extensible_params');
+                        $app->session->delete('__auth_extensible_method');
+
+                        # Change session ID if we have a new enough D2
+                        # version with support.
+                        $app->change_session_id
+                          if $app->can('change_session_id');
+
+                        $app->session->write( logged_in_user => $username );
+                        $app->session->write( logged_in_user_realm => $realm );
+                        $app->log( core => "Realm is $realm" );
+                        $weak_plugin->execute_plugin_hook(
+                            'after_login_success');
+
+                    }
+                    else {
+                        $app->request->var( login_failed => 1 );
+                    }
+                    # Now forward to the original route using method and
+                    # params stashed in the session.
+                    $app->forward(
+                        $request->path,
+                        $params || +{},
+                        { method => $method }
+                    );
+                }
+                $app->pass;
+            },
+        );
     }
 }
 
@@ -601,6 +696,7 @@ sub require_any_role {
     return $plugin->_build_wrapper( @_, 'any' );
 }
 
+
 sub require_login {
     my $plugin  = shift;
     my $coderef = shift;
@@ -611,19 +707,11 @@ sub require_login {
                 warning => "Invalid require_login usage, please see docs" );
         }
 
-        my $user = $plugin->logged_in_user;
-        if ( !$user ) {
-            $plugin->execute_plugin_hook( 'login_required', $coderef );
+        # User already logged in so give them the page.
+        return $coderef->($plugin)
+          if $plugin->logged_in_user;
 
-            # TODO: see if any code executed by that hook set up a response
-            return $plugin->app->redirect(
-                $plugin->app->request->uri_for(
-                    $plugin->login_page,
-                    { return_url => $plugin->app->request->request_uri }
-                )
-            );
-        }
-        return $coderef->($plugin);
+        return $plugin->_check_for_login( $coderef );
     };
 }
 
@@ -809,18 +897,8 @@ sub _build_wrapper {
       : $require_role;
 
     return sub {
-        my $user = $plugin->logged_in_user;
-        if ( !$user ) {
-            $plugin->execute_plugin_hook( 'login_required', $coderef );
-
-            # TODO: see if any code executed by that hook set up a response
-            return $plugin->app->redirect(
-                $plugin->app->request->uri_for(
-                    $plugin->login_page,
-                    { return_url => $plugin->app->request->request_uri }
-                )
-            );
-        }
+        return $plugin->_check_for_login( $coderef )
+          unless $plugin->logged_in_user;
 
         my $role_match;
 
@@ -857,13 +935,84 @@ sub _build_wrapper {
         $plugin->execute_plugin_hook( 'permission_denied', $coderef );
 
         # TODO: see if any code executed by that hook set up a response
-        return $plugin->app->redirect(
-            $plugin->app->request->uri_for(
-                $plugin->denied_page,
-                { return_url => $plugin->app->request->request_uri }
-            )
-        );
+
+        $plugin->app->response->status(403);
+        my $options;
+        my $view            = $plugin->denied_page;
+        my $template_engine = $plugin->app->template_engine;
+        my $path            = $template_engine->view_pathname($view);
+        if ( !-f $path ) {
+            $plugin->app->log(
+                debug => "app has no denied_page template defined" );
+            $options->{content} = $plugin->_render_template('login_denied.tt');
+            undef $view;
+        }
+        return $plugin->app->template( $view, undef, $options );
     };
+}
+
+sub _check_for_login {
+    my ( $plugin, $coderef ) = @_;
+    $plugin->execute_plugin_hook( 'login_required', $coderef );
+
+    # TODO: see if any code executed by that hook set up a response
+
+    my $request = $plugin->app->request;
+
+    if ( $plugin->login_without_redirect ) {
+        my $tokens = {
+            login_failed           => $request->var('login_failed'),
+            reset_password_handler => $plugin->reset_password_handler
+        };
+
+        # The WWW-Authenticate header added varies depending on whether
+        # the client is a robot or not.
+        my $ua = use_module('HTTP::BrowserDetect')
+          ->new( $request->env->{HTTP_USER_AGENT} );
+        my $base = $request->base;
+        my $auth_method;
+
+        if ( !$ua->browser_string || $ua->robot ) {
+            $auth_method = $auth_method = qq{Basic realm="$base"};
+        }
+        else {
+            $auth_method = qq{FormBasedLogin realm="$base", }
+              . q{comment="use form to log in"};
+        }
+
+        $plugin->app->response->status(401);
+        $plugin->app->response->push_header(
+            'WWW-Authenticate' => $auth_method );
+
+        # If this is the first attempt to reach a protected page and *not*
+        # a failed passthrough login then we need to stash method and params.
+        if ( !$request->var('login_failed') ) {
+            $plugin->app->session->write(
+                '__auth_extensible_method' => lc($request->method) );
+            $plugin->app->session->write(
+                '__auth_extensible_params' => \%{ $request->params } );
+        }
+
+        # If app has its own login page view then use it
+        # otherwise render our internal one and pass that to 'template'.
+        my ( $view, $options ) = ( $plugin->login_template, {} );
+        my $template_engine = $plugin->app->template_engine;
+        my $path            = $template_engine->view_pathname($view);
+        if ( !-f $path ) {
+            $plugin->app->log( debug => "app has no login template defined" );
+            $options->{content} =
+              $plugin->_render_template( 'transparent_login.tt', $tokens );
+            undef $view;
+        }
+        return $plugin->app->template( $view, $tokens, $options );
+    }
+
+    # old-fashioned redirect to login page with return_url set
+    return $plugin->app->redirect(
+        $request->uri_for(
+            $plugin->login_page, { return_url => $request->request_uri }
+        )
+    );
 }
 
 sub _default_email_password_reset {
@@ -1261,9 +1410,7 @@ required methods, and you're good to go!
 
 Keywords are provided to check if a user is logged in / has appropriate roles.
 
-=over
-
-=item require_login - require the user to be logged in
+=head2 require_login - require the user to be logged in
 
     get '/dashboard' => require_login sub { .... };
 
@@ -1271,7 +1418,7 @@ If the user is not logged in, they will be redirected to the login page URL to
 log in.  The default URL is C</login> - this may be changed with the
 C<login_page> option.
 
-=item require_role - require the user to have a specified role
+=head2 require_role - require the user to have a specified role
 
     get '/beer' => require_role BeerDrinker => sub { ... };
 
@@ -1283,7 +1430,7 @@ to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_role> will cause the application to croak on load.
 
-=item require_any_roles - require the user to have one of a list of roles
+=head2 require_any_roles - require the user to have one of a list of roles
 
     get '/drink' => require_any_role [qw(BeerDrinker VodaDrinker)] => sub {
         ...
@@ -1297,7 +1444,7 @@ roles, they will be redirected to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_any_roles> will cause the application to croak on load.
 
-=item require_all_roles - require the user to have all roles listed
+=head2 require_all_roles - require the user to have all roles listed
 
     get '/foo' => require_all_roles [qw(Foo Bar)] => sub { ... };
 
@@ -1309,9 +1456,104 @@ redirected to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_all_roles> will cause the application to croak on load.
 
-=back
+=head1 NO-REDIRECT LOGIN
 
-=head2 Replacing the Default C< /login > and C< /login/denied > Routes
+By default when a page is requested that requires login and the user is not
+logged in then the plugin redirects the user to the L</login_page> and sets
+C<return_url> to the page originally requested. After successful login the
+user is redirected to the originally-requested page.
+
+As an alternative if L</login_without_redirect> is true then the login
+process happens with no redirects. Instead a C<401> C<Unauthorized> code
+is returned and a login page is displayed. This login page is posted to the
+original URI and on successful login an internal L<Dancer2::Manual/forward>
+is performed so that the originally requested page is displayed. Any
+L<Dancer2::Manual/params> from the original request are added to the
+forward so that they are available to the page's route handler either using
+L<Dancer2::Manual/params> or L<Dancer2::Manual/query_parameters>.
+
+This relies on the login form having no C<action> set and also it must use
+C<__auth_extensible_username> and C<__auth_extensible_password> input names.
+Optionally  C<__auth_extensible_realm> can also be used in a custom login
+page.
+
+See L<http://shadow.cat/blog/matt-s-trout/humane-login-screens/> for the
+original idea for this functionality.
+
+=head1 CUSTOMISING C</login> AND C</login/denied>
+
+=head2 login_template
+
+The L</login_template> setting determines the name of the view you use
+for your custom login page. If this view exists in your application then it
+will be used instead of the default login template.
+
+If you are using L</login_without_redirect> and assuming you are using
+L<Template::Toolkit> then your custom login page should be something like this:
+
+    <h1>Login Required</h1>
+
+    <p>You need to log in to continue.</p>
+
+    [%- IF login_failed -%]
+        <p>LOGIN FAILED</p>
+    [%- END -%]
+
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="text" name="__auth_extensible_username" id="username">
+        <br />
+        <label for="password">Password:</label>
+        <input type="password" name="__auth_extensible_password" id="password">
+        <br />
+        <input type="submit" value="Login">
+    </form>
+
+    [%- IF reset_password_handler -%]
+    <form method="post" action="[% login_page %]">
+        <h2>Password reset</h2>
+        <p>Enter your username to obtain an email to reset your password</p>
+        <label for="username_reset">Username:</label>
+        <input type="text" name="username_reset" id="username_reset">
+        <input type="submit" name="submit_reset" value="Submit">
+    </form>
+    [%- END -%]
+
+If you are B<not> using L</login_without_redirect> and assuming you are using
+L<Template::Toolkit> then your custom login page should be something like this:
+
+    <h1>Login Required</h1>
+
+    <p>You need to log in to continue.</p>
+
+    [%- IF login_failed -%]
+        <p>LOGIN FAILED</p>
+    [%- END -%]
+
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="text" name="username" id="username">
+        <br />
+        <label for="password">Password:</label>
+        <input type="password" name="password" id="password">
+        <br />
+        <input type="submit" value="Login">
+
+        [%- IF return_url -%]
+            <input type="hidden" name="return_url" value="[% return_url %]">
+        [%- END -%]
+
+        [%- IF reset_password_handler -%]
+            <h2>Password reset</h2>
+            <p>Enter your username to obtain an email to reset your password</p>
+            <label for="username_reset">Username:</label>
+            <input type="text" name="username_reset" id="username_reset">
+            <input type="submit" name="submit_reset" value="Submit">
+        [%- END -%]
+
+    </form>
+
+=head2 Replacing the default C< /login > and C< /login/denied > routes
 
 By default, the plugin adds a route to present a simple login form at that URL.
 If you would rather add your own, set the C<no_default_pages> setting to a true
@@ -1373,51 +1615,19 @@ you can configure them. See below.
 The default routes also contain functionality for a user to perform password
 resets. See the L<PASSWORD RESETS> documentation for more details.
 
-=head2 Keywords
+=head1 KEYWORDS
 
-=over
+The following keywords are provided in additional to the route decorators
+specified in L</CONTROLLING ACCESS TO ROUTES>:
 
-=item require_login
+=head2 logged_in_user
 
-Used to wrap a route which requires a user to be logged in order to access
-it.
-
-    get '/secret' => require_login sub { .... };
-
-=item require_role
-
-Used to wrap a route which requires a user to be logged in as a user with the
-specified role in order to access it.
-
-    get '/beer' => require_role BeerDrinker => sub { ... };
-
-You can also provide a regular expression, if you need to match the role using a
-regex - for example:
-
-    get '/beer' => require_role qr/Drinker$/ => sub { ... };
-
-=item require_any_role
-
-Used to wrap a route which requires a user to be logged in as a user with any
-one (or more) of the specified roles in order to access it.
-
-    get '/foo' => require_any_role [qw(Foo Bar)] => sub { ... };
-
-=item require_all_roles
-
-Used to wrap a route which requires a user to be logged in as a user with all
-of the roles listed in order to access it.
-
-    get '/foo' => require_all_roles [qw(Foo Bar)] => sub { ... };
-
-
-=item logged_in_user
-
-Returns a hashref of details of the currently logged-in user, if there is one.
+Returns a hashref of details of the currently logged-in user or some kind of
+user object, if there is one.
 
 The details you get back will depend upon the authentication provider in use.
 
-=item get_user_details
+=head2 get_user_details
 
 Returns a hashref of details of the specified user. The realm can optionally
 be specified as the second parameter. If the realm is not specified, each
@@ -1425,7 +1635,7 @@ realm will be checked, and the first matching user will be returned.
 
 The details you get back will depend upon the authentication provider in use.
 
-=item user_has_role
+=head2 user_has_role
 
 Check if a user has the role named.
 
@@ -1441,7 +1651,7 @@ You can also provide the username to check;
 If C<disable_roles> configuration option is set to a true value then using
 L</user_has_role> will cause the application to croak at runtime.
 
-=item user_roles
+=head2 user_roles
 
 Returns a list of the roles of a user.
 
@@ -1453,7 +1663,7 @@ Returns a list or arrayref depending on context.
 If C<disable_roles> configuration option is set to a true value then using
 L</user_roles> will cause the application to croak at runtime.
 
-=item authenticate_user
+=head2 authenticate_user
 
 Usually you'll want to let the built-in login handling code deal with
 authenticating users, but in case you need to do it yourself, this keyword
@@ -1474,7 +1684,7 @@ you can supply the realm as an optional third parameter.
 In boolean context, returns simply true or false; in list context, returns
 C<($success, $realm)>.
 
-=item logged_in_user_lastlogin
+=head2 logged_in_user_lastlogin
 
 Returns (as a DateTime object) the time of the last successful login of the
 current logged in user.
@@ -1483,7 +1693,7 @@ To enable this functionality, set the configuration key C<record_lastlogin> to
 a true value. The backend provider must support write access for a user and
 have lastlogin functionality implemented.
 
-=item update_user
+=head2 update_user
 
 Updates a user's details. If the authentication provider supports it, this
 keyword allows a user's details to be updated within the backend data store.
@@ -1505,7 +1715,7 @@ Otherwise, the realm must be specified with the realm key.
 
 The updated user's details are returned, as per L<logged_in_user>.
 
-=item update_current_user
+=head2 update_current_user
 
 The same as L<update_user>, but does not take a username as the first parameter,
 instead updating the currently logged-in user.
@@ -1515,7 +1725,7 @@ instead updating the currently logged-in user.
 
 The updated user's details are returned, as per L<logged_in_user>.
 
-=item create_user
+=head2 create_user
 
 Creates a new user, if the authentication provider supports it. Optionally
 sends a welcome message with a password reset request, in which case an
@@ -1569,7 +1779,7 @@ L<password_reset_send_email>.
 
 =back
 
-=item password_reset_send
+=head2 password_reset_send
 
 L</password_reset_send> sends a user an email with a password reset link. Along
 with L</user_password>, it allows a user to reset their password.
@@ -1669,7 +1879,7 @@ Here is an example subroutine:
 
 =back
 
-=item user_password
+=head2 user_password
 
 This provides various functions to check or reset a user's password, either
 from a reset code that was previously send by L<password_reset_send> or
@@ -1713,7 +1923,7 @@ Force set a specific user's password, without checking existing password:
 
     user_password username => 'jbloggs', new_password => 'secret'
 
-=item logged_in_user_password_expired
+=head2 logged_in_user_password_expired
 
 Returns true if the password of the currently logged in user has expired.  To
 use this functionality, the provider must support the C<password_expired>
@@ -1734,8 +1944,6 @@ that a check is done in the C<before> hook:
             redirect '/password_update' unless request->uri eq '/password_update';
         }
     }
-
-=back
 
 =head2 PASSWORD RESETS
 
@@ -1801,6 +2009,10 @@ In your application's configuation file:
             # will cause app to croak on load. Use of 'user_roles' and
             # 'user_has_role' will croak at runtime.
             disable_roles: 0
+            # Set to 1 to use the no-redirect login functionality
+            login_without_redirect: 0
+            # Set the view name for a custom login page, defaults to 'login'
+            login_template: login
             # After /login: If no return_url is given: land here ('/' is default)
             user_home_page: '/user'
             # After /logout: If no return_url is given: land here (no default)
@@ -1846,7 +2058,7 @@ the currently logged in user.
 Please see L<Dancer2::Core::Session> for information on how to configure session 
 management within your application.
 
-=head1 FUNCTIONS
+=head1 METHODS
 
 =head2 auth_provider($dsl, $realm)
 
@@ -1946,6 +2158,8 @@ Gabor Szabo (GH #11, #16, #18).
 Evan Brown (GH #20, #32).
 
 Jason Lewis (Unix provider problem).
+
+Matt S. Trout (mst) for L<Zero redirect login the easy and friendly way|http://shadow.cat/blog/matt-s-trout/humane-login-screens/>.
 
 =head1 LICENSE AND COPYRIGHT
 
