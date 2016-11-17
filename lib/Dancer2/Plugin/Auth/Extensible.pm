@@ -1430,7 +1430,7 @@ to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_role> will cause the application to croak on load.
 
-=head2 require_any_roles - require the user to have one of a list of roles
+=head2 require_any_role - require the user to have one of a list of roles
 
     get '/drink' => require_any_role [qw(BeerDrinker VodaDrinker)] => sub {
         ...
