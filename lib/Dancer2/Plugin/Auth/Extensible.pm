@@ -326,6 +326,7 @@ sub BUILD {
         # route dispatch then adding this wildcard route now does at
         # least make sure it gets added before any routes that use this
         # plugin's route decorators are added.
+
         $plugin->app->add_route(
             method => 'post',
             regexp => qr/.*/,
@@ -345,14 +346,36 @@ sub BUILD {
                     my $auth_realm = $request->body_parameters->get(
                         '__auth_extensible_realm');
 
+                    # Remove the auth params since the forward we call later
+                    # will cause dispatch to retry this route again if
+                    # the original route was a post since dispatch starts
+                    # again from the start of the route list and this
+                    # wildcard route will get hit again causing a loop.
+                    foreach (qw/username password realm/) {
+                        $request->body_parameters->remove(
+                            "__auth_extensible_$_");
+                    }
+
+                    # Stash method and params since we delete these from
+                    # the session if login is successful but we still need
+                    # them for the forward to the original route after
+                    # success.
+                    my $method =
+                      $app->session->read('__auth_extensible_method');
+                    my $params =
+                      $app->session->read('__auth_extensible_params');
+
+                    # Attempt authentication.
                     my ( $success, $realm ) =
                       $weak_plugin->authenticate_user( $username,
                         $password, $auth_realm );
 
                     if ($success) {
+                        $app->session->delete('__auth_extensible_params');
+                        $app->session->delete('__auth_extensible_method');
 
-                        # change session ID if we have a new enough D2
-                        # version with support
+                        # Change session ID if we have a new enough D2
+                        # version with support.
                         $app->change_session_id
                           if $app->can('change_session_id');
 
@@ -361,19 +384,17 @@ sub BUILD {
                         $app->log( core => "Realm is $realm" );
                         $weak_plugin->execute_plugin_hook(
                             'after_login_success');
+
                     }
                     else {
                         $app->request->var( login_failed => 1 );
                     }
+                    # Now forward to the original route using method and
+                    # params stashed in the session.
                     $app->forward(
                         $request->path,
-                        $app->session->delete('__auth_extensible_params')
-                          || +{},
-                        {
-                            method =>
-                              $app->session->delete('__auth_extensible_method')
-                              || 'get'
-                        }
+                        $params || +{},
+                        { method => $method }
                     );
                 }
                 $app->pass;
@@ -967,9 +988,9 @@ sub _check_for_login {
         # a failed passthrough login then we need to stash method and params.
         if ( !$request->var('login_failed') ) {
             $plugin->app->session->write(
-                '__auth_extensible_method' => $request->method );
+                '__auth_extensible_method' => lc($request->method) );
             $plugin->app->session->write(
-                '__auth_extensible_params' => $request->params );
+                '__auth_extensible_params' => \%{ $request->params } );
         }
 
         # If app has its own login page view then use it

@@ -2,9 +2,11 @@ use strict;
 use warnings;
 
 use Test::More;
+use Test::Deep;
 use Plack::Test;
 use HTTP::Request::Common;
 use HTTP::Cookies;
+use YAML;
 
 BEGIN {
     $ENV{DANCER_CONFDIR}     = 't/lib';
@@ -266,6 +268,83 @@ my $jar  = HTTP::Cookies->new();
     $jar->add_cookie_header($req);
     $res = $test->request( $req );
     $jar->extract_cookies($res);
+}
+{
+    # post route with params
+
+    my $req = POST "$url/protected_post",
+      [ one => 'two', three => ['four','five'] ];
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    is $res->code, 401,
+      "Trying a require_login POST route gets 401";
+    like $res->header('www-authenticate'), qr/Basic realm=/,
+      "... and we have a WWW-Authenticate header with Basic realm";
+    like $res->content, qr/You need to log in to continue/,
+      "... and we can see a login form";
+    like $res->content, qr/input.+name="__auth_extensible_username/,
+      "... and we see __auth_extensible_username field";
+    like $res->content, qr/This text is in the layout/,
+      "... and the response is wrapped in the layout.";
+}
+{
+    # bad password
+
+    $trap->read;
+    my $req =
+      POST "$url/protected_post",
+      [
+        __auth_extensible_username => 'dave',
+        __auth_extensible_password => 'cider',
+      ];
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    is $res->code, 401,
+      "Now we post a bad password to the transparent login route and get 401";
+    like $res->header('www-authenticate'), qr/Basic realm=/,
+      "... and we have a WWW-Authenticate header with Basic realm";
+    like $res->content, qr/You need to log in to continue/,
+      "... and we can see a login form";
+    like $res->content, qr/input.+name="__auth_extensible_username/,
+      "... and we see __auth_extensible_username field";
+    like $res->content, qr/This text is in the layout/,
+      "... and the response is wrapped in the layout.";
+}
+{
+    # good password and we should get stashed params back
+
+    $trap->read;
+    my $req =
+      POST "$url/protected_post",
+      [
+        __auth_extensible_username => 'dave',
+        __auth_extensible_password => 'beer',
+      ];
+    $jar->add_cookie_header($req);
+    my $res = $test->request( $req );
+    $jar->extract_cookies($res);
+
+    ok $res->is_success,
+      "Trying POST to require_role beer with good password is_success"
+      or diag explain $trap->read;
+
+    my $data = YAML::Load( $res->content ) or diag $res->content;
+    cmp_deeply $data,
+      [
+        'You are logged in',
+        {
+            __auth_extensible_password => 'beer',
+            __auth_extensible_username => 'dave',
+            one                        => 'two',
+            three                      => [ 'four', 'five' ]
+        }
+      ],
+      "... and stashed params look good."
+      or diag explain $data;
 }
 
 done_testing;
