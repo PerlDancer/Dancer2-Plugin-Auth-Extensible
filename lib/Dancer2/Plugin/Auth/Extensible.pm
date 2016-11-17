@@ -1410,9 +1410,7 @@ required methods, and you're good to go!
 
 Keywords are provided to check if a user is logged in / has appropriate roles.
 
-=over
-
-=item require_login - require the user to be logged in
+=head2 require_login - require the user to be logged in
 
     get '/dashboard' => require_login sub { .... };
 
@@ -1420,7 +1418,7 @@ If the user is not logged in, they will be redirected to the login page URL to
 log in.  The default URL is C</login> - this may be changed with the
 C<login_page> option.
 
-=item require_role - require the user to have a specified role
+=head2 require_role - require the user to have a specified role
 
     get '/beer' => require_role BeerDrinker => sub { ... };
 
@@ -1432,7 +1430,7 @@ to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_role> will cause the application to croak on load.
 
-=item require_any_roles - require the user to have one of a list of roles
+=head2 require_any_roles - require the user to have one of a list of roles
 
     get '/drink' => require_any_role [qw(BeerDrinker VodaDrinker)] => sub {
         ...
@@ -1446,7 +1444,7 @@ roles, they will be redirected to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_any_roles> will cause the application to croak on load.
 
-=item require_all_roles - require the user to have all roles listed
+=head2 require_all_roles - require the user to have all roles listed
 
     get '/foo' => require_all_roles [qw(Foo Bar)] => sub { ... };
 
@@ -1458,9 +1456,46 @@ redirected to the access denied URL.
 If C<disable_roles> configuration option is set to a true value then using
 L</require_all_roles> will cause the application to croak on load.
 
-=back
+=head1 CUSTOMISING C</login> AND C</login/denied>
 
-=head2 Replacing the Default C< /login > and C< /login/denied > Routes
+=head2 login_template
+
+The L</login_template> setting determines the name of the view you use
+for your custom login page. If this view exists in your application then it
+will be used instead of the default login template.
+
+If you are using L</login_without_redirect> and assuming you are using
+L<Template::Toolkit> then your custom page should be something like this:
+
+    <h1>Login Required</h1>
+
+    <p>You need to log in to continue.</p>
+
+    [%- IF login_failed -%]
+        <p>LOGIN FAILED</p>
+    [%- END -%]
+
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="text" name="__auth_extensible_username" id="username">
+        <br />
+        <label for="password">Password:</label>
+        <input type="password" name="__auth_extensible_password" id="password">
+        <br />
+        <input type="submit" value="Login">
+    </form>
+
+    [%- IF reset_password_handler -%]
+    <form method="post" action="[% login_page %]">
+        <h2>Password reset</h2>
+        <p>Enter your username to obtain an email to reset your password</p>
+        <label for="username_reset">Username:</label>
+        <input type="text" name="username_reset" id="username_reset">
+        <input type="submit" name="submit_reset" value="Submit">
+    </form>
+    [%- END -%]
+
+=head2 Replacing the default C< /login > and C< /login/denied > routes
 
 By default, the plugin adds a route to present a simple login form at that URL.
 If you would rather add your own, set the C<no_default_pages> setting to a true
