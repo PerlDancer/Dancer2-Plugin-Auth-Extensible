@@ -39,6 +39,7 @@ WriteMakefile(
         'Dancer2::Core::Types' => 0,
         'Dancer2::FileUtils' => 0,
         'Dancer2::Plugin'   => 0,
+        'Dancer2::Plugin::Email' => '0.0200',
         'Dancer2::Template::Tiny' => 0,
         'File::Share'       => 0,
         'Module::Runtime'   => 0,
