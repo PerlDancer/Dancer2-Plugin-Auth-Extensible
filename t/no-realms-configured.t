@@ -13,7 +13,7 @@ BEGIN {
 {
     package TestApp;
     use Test::More;
-    use Test::Warnings qw/warning/;
+    use Test::Warnings qw/warning :no_end_test/;
     use Dancer2 qw(!warning);
     like warning {
         require Dancer2::Plugin::Auth::Extensible;
