@@ -757,10 +757,7 @@ sub _login_logout {
     # get /login
 
     $res = get('/login');
-    TODO: {
-        local $TODO = "GET /login returns 401";
-        ok $res->is_success, "GET /login is_success";
-    }
+    ok $res->is_success, "GET /login is_success";
     like $res->content, qr/input.+name="password"/,
       "... and we have the login page.";
 
@@ -778,16 +775,13 @@ sub _login_logout {
         # code coverage 'Reset password code submitted?' section of default
         # get /login route.
         $res = get('/login/12345678901234567890123456789012');
-        is $res->code, 401, "... and try a get /login/<code> get us a 401.";
+        ok $res->is_success, "... and try a get /login/<code> is_success";
     }
 
     # post empty /login
 
     $res = post('/login');
-    TODO: {
-        local $TODO = "POST /login returns 401 for failed login";
-        ok $res->is_success, "POST /login is_success";
-    }
+    ok $res->is_success, "POST /login is_success";
     like $res->content, qr/input.+name="password"/,
       "... and we have the login page";
     like $res->content, qr/LOGIN FAILED/,
@@ -1019,10 +1013,7 @@ sub _logged_in_user {
     # post empty /login
 
     $res = post('/login');
-    TODO: {
-        local $TODO = "POST /login returns 401 for failed login";
-        ok $res->is_success, "POST /login is_success";
-    }
+    ok $res->is_success, "POST /login is_success";
     like $res->content, qr/input.+name="password"/,
       "... and we have the login page";
     like $res->content, qr/LOGIN FAILED/,
@@ -1246,7 +1237,7 @@ sub _password_reset {
     $res = post( '/login',
         [ username_reset => 'NoSuchUser', submit_reset => 'truthy value' ] );
 
-    is $res->code, 401, "POST /login with password reset request gets code 401"
+    ok $res->is_success, "POST /login with password reset request is_success"
       or diag explain $res;
 
     like $res->content, qr/A password reset request has been sent/,
@@ -1260,7 +1251,7 @@ sub _password_reset {
 
     $res = get("/login/12345678901234567890123456789012");
 
-    is $res->code, 401, "GET /login/<code> with bad code gets response 401"
+    ok $res->is_success, "GET /login/<code> with bad code is_success"
       or diag explain $res;
 
     like $res->content, qr/You need to log in to continue/,
@@ -1273,7 +1264,7 @@ sub _password_reset {
     $res = post( '/login',
         [ username_reset => 'dave', submit_reset => 'truthy value' ] );
 
-    is $res->code, 401, "POST /login with password reset request gets code 401"
+    ok $res->is_success, "POST /login with password reset request is_success"
       or diag explain $res;
 
     like $res->content, qr/A password reset request has been sent/,
@@ -1308,7 +1299,7 @@ sub _password_reset {
         "/login/12345678901234567890123456789012",
         [ confirm_reset => "Reset password" ]
     );
-    is $res->code, 401, "POST /login/<code> with bad code",
+    ok $res->is_success, "POST /login/<code> with bad code is_success",
       or diag explain $res;
     unlike $res->content, qr/Your new password is \w{8}\</,
       "... and we are NOT given a new password";
@@ -1318,7 +1309,7 @@ sub _password_reset {
 
     $trap->read;
     $res = post( "/login/$code", [ confirm_reset => "Reset password" ] );
-    is $res->code, 401, "POST /login/<code> with good code",
+    ok $res->is_success, "POST /login/<code> with good code is_success",
       or diag explain $res;
     like $res->content, qr/Your new password is \w{8}\</,
       "... and we are given a new password.";
@@ -2044,7 +2035,7 @@ sub _user_password {
     $trap->read;
     $res = post( '/login', [ username => 'dave', password => 'beer' ] );
 
-    is $res->code, 401, 'Login with old password fails'
+    ok $res->is_success, 'Login with old password fails with 200 OK code'
       or diag explain $res;
 
     ok get('/loggedin')->is_redirect,
@@ -2091,7 +2082,7 @@ sub _user_password {
     $trap->read;
     $res = post( '/login', [ username => 'dave', password => 'paleale' ] );
 
-    is $res->code, 401, 'Login with old password fails'
+    ok $res->is_success, 'Login with old password fails with 200 OK code'
       or diag explain $res;
 
     ok get('/loggedin')->is_redirect,

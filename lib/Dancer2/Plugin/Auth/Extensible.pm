@@ -277,9 +277,6 @@ sub BUILD {
                 {
                     $app->request->parameters->set('password_code_valid' => 1),
                 }
-                else {
-                    $app->response->status(401);
-                }
 
                 no strict 'refs';
                 return &{ $weak_plugin->login_page_handler }($weak_plugin);
