@@ -10,7 +10,7 @@ Revision history for Dancer2-Plugin-Auth-Extensible
 
     [BUG FIXES]
 
-    * Escape all params used as input to default login page to pervent
+    * Escape all params used as input to default login page to prevent
       potential injection attacks (Peter Mottram).
     * Bump dep on Test::Deep for noneof (Peter Mottram GH#65).
 
