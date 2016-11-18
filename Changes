@@ -1,9 +1,22 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.700 Fri 18 Nov 13:13:36 CET 2016
+
+    [ENHANCEMENTS]
+
+    * Add new "no-redirect" login handler (Peter Mottram).
     * Break out /login and /login/denied html into external files
       (Peter Mottram).
+
+    [BUG FIXES]
+
     * Escape all params used as input to default login page to pervent
-      possible injection attacks (Peter Mottram).
+      potential injection attacks (Peter Mottram).
+    * Bump dep on Test::Deep for noneof (Peter Mottram GH#65).
+
+    [TESTS]
+
+    * Lots more tests added resulting in much better coverage (Peter Mottram).
 
 0.622 Wed  9 Nov 11:35:15 CET 2016
 

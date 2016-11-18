@@ -6,7 +6,7 @@ Dancer2::Plugin::Auth::Extensible::Test::App - Dancer2 app for testing providers
 
 =cut
 
-our $VERSION = '0.622';
+our $VERSION = '0.700';
 
 use strict;
 use warnings;
