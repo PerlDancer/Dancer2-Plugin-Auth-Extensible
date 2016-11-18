@@ -23,7 +23,7 @@ WriteMakefile(
         'HTTP::Request::Common' => 0,
         'Path::Tiny' => '0.016',
         'Plack::Test' => 0,
-        'Test::Deep' => 0,
+        'Test::Deep' => '0.114', # noneof
         'Test::Exception' => 0,
         'Test::MockDateTime' => 0,
         'Test::More' => 0,
