@@ -1238,8 +1238,8 @@ sub _post_login_route {
     # with paremeterisation) - but if params->{password} was something
     # different, e.g. { 'like' => '%' }, we might end up with some SQL like
     # WHERE password LIKE '%' instead - which would not be a Good Thing.
-    my $username = $params->{username};
-    my $password = $params->{password};
+    my $username = $params->{username} || $params->{__auth_extensible_username};
+    my $password = $params->{password} || $params->{__auth_extensible_password};
 
     for ( $username, $password ) {
         if ( ref $_ ) {
@@ -1255,7 +1255,7 @@ sub _post_login_route {
               || $plugin->user_home_page );
     }
 
-    my $auth_realm = $params->{realm};
+    my $auth_realm = $params->{realm} || $params->{__auth_extensible_realm};
     my ( $success, $realm ) =
       $plugin->authenticate_user( $username, $password, $auth_realm );
 
