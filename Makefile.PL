@@ -16,6 +16,10 @@ WriteMakefile(
       ? ('LICENSE'=> 'perl')
       : ()),
     PL_FILES            => {},
+    CONFIGURE_REQUIRES => {
+        "ExtUtils::MakeMaker" => 0,
+        "File::ShareDir::Install" => "0.06",
+    },
     BUILD_REQUIRES => {
         'DateTime' => 0,
         'File::ShareDir::Install' => '0.06',
@@ -64,5 +68,8 @@ WriteMakefile(
     },
 
 );
-package MY;
+{
+package
+MY;
 use File::ShareDir::Install 'postamble';
+}
