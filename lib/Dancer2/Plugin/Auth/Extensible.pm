@@ -8,6 +8,7 @@ use Carp;
 use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
 use Dancer2::FileUtils qw(path);
 use Dancer2::Template::Tiny;
+use Encode;
 use File::Share qw(dist_dir);
 use List::Util qw(first);
 use Module::Runtime qw(use_module);
@@ -16,6 +17,7 @@ use Session::Token;
 use Try::Tiny;
 use URI::Escape;
 use Dancer2::Plugin;
+use Dancer2::Plugin::Email;
 
 #
 # config attributes
@@ -79,7 +81,7 @@ has no_login_handler => (
 has mailer => (
     is          => 'ro',
     isa         => HashRef,
-    from_config => sub { '' },
+    from_config => sub { +{} },
 );
 
 has mail_from => (
@@ -1024,7 +1026,6 @@ sub _default_email_password_reset {
         my $site = $plugin->app->request->uri_base;
         my $appname = $plugin->app->config->{appname} || '[unknown]';
         $message{subject} = "Password reset request";
-        $message{from}    = $plugin->mail_from;
         $message{plain}   = <<__EMAIL;
 A request has been received to reset your password for $appname. If
 you would like to do so, please follow the link below:
@@ -1102,7 +1103,6 @@ sub _default_welcome_send {
         my $appname    = $plugin->app->config->{appname} || '[unknown]';
         my $reset_link = $site . "login/$options{code}";
         $message{subject} = "Welcome to $host";
-        $message{from}    = $plugin->mail_from;
         $message{plain}   = <<__EMAIL;
 An account has been created for you at $host. If you would like
 to accept this, please follow the link below to set a password:
@@ -1114,57 +1114,54 @@ __EMAIL
     $plugin->_send_email( to => $options{email}, %message );
 }
 
-sub _email_mail_message {
+sub _send_email {
     my ( $plugin, %params ) = @_;
 
-    my $mailer_options = $plugin->mailer->{options} || {};
+    my $plain = Encode::encode( 'UTF-8', delete $params{plain} )
+      if $params{plain};
+    my $html = Encode::encode( 'UTF-8', delete $params{html} )
+      if $params{html};
+    croak "No plain or HTML email text supplied"
+      if !$plain && !$html;
 
-    my @parts;
+    $params{from} = $plugin->mail_from if $plugin->mail_from;
 
-    push @parts,
-      Mail::Message::Body::String->new(
-        mime_type   => 'text/plain',
-        disposition => 'inline',
-        data        => $params{plain},
-      ) if ( $params{plain} );
-
-    push @parts,
-      Mail::Message::Body::String->new(
-        mime_type   => 'text/html',
-        disposition => 'inline',
-        data        => $params{html},
-      ) if ( $params{html} );
-
-    @parts or croak "No plain or HTML email text supplied";
-
-    my $content_type = @parts > 1 ? 'multipart/alternative' : $parts[0]->type;
-
-    Mail::Message->build(
-        To             => $params{to},
-        Subject        => $params{subject},
-        From           => $params{from},
-        'Content-Type' => $content_type,
-        attach         => \@parts,
-    )->send(%$mailer_options);
-}
-
-sub _send_email {
-    my $plugin = shift;
-
-    my $mailer = $plugin->mailer or croak "No mailer configured";
-
-    my $module = $mailer->{module}
-      or croak "No email module specified for mailer";
-
-    if ( $module eq 'Mail::Message' ) {
-
-        # require Mail::Message;
-        require Mail::Message::Body::String;
-        return $plugin->_email_mail_message(@_);
+    my %content;
+    if ( $plain && $html ) {
+        %content = (
+            body   => $plain,
+            type   => 'text',
+            attach => {
+                Charset  => 'utf-8',
+                Data     => $html,
+                Encoding => "quoted-printable",
+                Type     => "text/html"
+            },
+            multipart => 'alternative',
+        );
+    }
+    elsif ($plain) {
+        %content = (
+            body => $plain,
+            type => 'text',
+        );
     }
     else {
-        croak "No support for $module. Please submit a PR!";
+        %content = (
+            body     => $html,
+            Charset  => 'utf-8',
+            Encoding => "quoted-printable",
+            Type     => "text/html"
+        );
     }
+
+    eval {
+        email { %params, %content, };
+        1;
+    } or do {
+        my $err = $@ || "Unknown error";
+        $plugin->app->log( error => "Unable to send email: $err" );
+    };
 }
 
 #
