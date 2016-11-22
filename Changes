@@ -1,5 +1,18 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.701 Tue 22 Nov 10:32:27 CET 2016
+
+    [BUG FIXES]
+
+    * Try to make File::ShareDir::Install more reliable (Peter Mottram).
+
+    [TESTS]
+
+    * Stop tests failing due to 'Name "YAML::XS::NonStrict" used only once'
+      warning (Peter Mottram).
+    * Remove debug log from output in no-reset-password-handle test
+      (Peter Mottram).
+
 0.700 Fri 18 Nov 13:13:36 CET 2016
 
     [ENHANCEMENTS]
