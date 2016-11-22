@@ -15,6 +15,7 @@ BEGIN {
     package TestApp;
     use Dancer2;
     use Dancer2::Plugin::Auth::Extensible;
+    set logger => 'null';
 }
 
 my $app = Dancer2->runner->psgi_app;
