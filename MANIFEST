@@ -4,6 +4,7 @@ t/01-role-provider.t
 t/disable_roles.t
 t/exploding-provider.t
 t/login-without-redirect.t
+t/mailer-config-attr-removed.t
 t/plugin-provider-config.t
 t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
@@ -11,6 +12,7 @@ t/lib/environments/exploding.yml
 t/lib/environments/login-without-redirect.yml
 t/lib/environments/mail-from-plugin-email.yml
 t/lib/environments/mail-from.yml
+t/lib/environments/mailer-config-attr-removed.yml
 t/lib/environments/no-default-pages.yml
 t/lib/environments/no-get-user-details.yml
 t/lib/environments/no-login-handler.yml

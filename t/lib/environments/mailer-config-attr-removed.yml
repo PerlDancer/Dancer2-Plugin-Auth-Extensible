@@ -1,0 +1,16 @@
+plugins:
+    Auth::Extensible:
+        mailer:
+            module: Mail::Message
+            options:
+                via: sendmail
+        realms:
+            config1:
+                provider: Config
+                users:
+                    - user: dave
+                      pass: beer
+                      name: "David Precious"
+                      roles:
+                          - BeerDrinker
+                          - Motorcyclist
