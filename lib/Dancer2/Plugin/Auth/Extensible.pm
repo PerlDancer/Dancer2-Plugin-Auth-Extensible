@@ -78,10 +78,10 @@ has no_login_handler => (
     default     => sub { 0 },
 );
 
+# mailer deprecated but kept so that setting it can be caught in BUILD
 has mailer => (
     is          => 'ro',
-    isa         => HashRef,
-    from_config => sub { +{} },
+    from_config => 1,
 );
 
 has mail_from => (
@@ -242,6 +242,10 @@ sub BUILD {
 
     warn "No Auth::Extensible realms configured with which to authenticate user"
       unless $plugin->realm_count;
+
+    warn
+      "mailer configuration setting for Auth::Extensible is no longer supported"
+      if $plugin->mailer;
 
     # Force all providers to load whilst we have access to the full dsl.
     # If we try and load later, then if the provider is using other
@@ -1874,13 +1878,10 @@ Here is an example subroutine:
 
 # Example configuration
 
-    Auth::Extensible:
-        mailer:
-            module: Mail::Message # Module to send email with
-            options:              # Module options
-                via: sendmail
-        mail_from: '"My app" <myapp@example.com>'
-        password_reset_text: MyApp::reset_send
+    plugins:
+        Auth::Extensible:
+            mail_from: '"My app" <myapp@example.com>'
+            password_reset_text: MyApp::reset_send
 
 =back
 
@@ -2024,10 +2025,6 @@ In your application's configuation file:
             exit_page: '/'
 
             # Mailer options for reset password and welcome emails
-            mailer:
-                module: Mail::Message # Email module to use
-                options:              # Options for module
-                    via: sendmail     # Options passed to $msg->send
             mail_from: '"App name" <myapp@example.com>' # From email address
 
             # Set to true to enable password reset code in the default handlers
