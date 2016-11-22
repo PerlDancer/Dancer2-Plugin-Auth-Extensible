@@ -22,7 +22,7 @@ WriteMakefile(
     },
     BUILD_REQUIRES => {
         'DateTime' => 0,
-        'Email::Sender::Transport::Test' => 0,
+        'Email::Sender::Transport::Test' => '0.120002', # shift_deliveries
         'File::ShareDir::Install' => '0.06',
         'HTTP::Cookies' => 0,
         'HTTP::Request::Common' => 0,
