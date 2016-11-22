@@ -9,6 +9,8 @@ t/plugin-provider-config-extended.t
 t/lib/environments/disable-roles.yml
 t/lib/environments/exploding.yml
 t/lib/environments/login-without-redirect.yml
+t/lib/environments/mail-from-plugin-email.yml
+t/lib/environments/mail-from.yml
 t/lib/environments/no-default-pages.yml
 t/lib/environments/no-get-user-details.yml
 t/lib/environments/no-login-handler.yml
@@ -36,6 +38,8 @@ t/no-reset-password-handler.t
 t/one-realm.t
 t/pod.t
 t/pod-coverage.t
+t/send_email_with_plugin_email_config.t
+t/send_email_with_mail_from.t
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Example.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Config.pm
 lib/Dancer2/Plugin/Auth/Extensible/Provider/Unix.pm

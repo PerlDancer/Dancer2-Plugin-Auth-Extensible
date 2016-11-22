@@ -1,0 +1,16 @@
+plugins:
+    Auth::Extensible:
+        realms:
+            config1:
+                provider: Config
+                users:
+                    - user: dave
+                      pass: beer
+                      name: "David Precious"
+                      roles:
+                          - BeerDrinker
+                          - Motorcyclist
+    Email:
+        headers:
+            from: plugin@example.com
+            X-Mailer: MyTestMailer

@@ -11,8 +11,9 @@ our $VERSION = '0.703';
 use strict;
 use warnings;
 use Test::More;
-use Test::Deep qw(bag cmp_deeply);
+use Test::Deep qw(bag cmp_deeply ignore re superbagof);
 use Test::Fatal;
+BEGIN { $ENV{EMAIL_SENDER_TRANSPORT} = 'Test' }
 use Dancer2 appname => 'TestApp';
 use Dancer2::Plugin::Auth::Extensible;
 use Scalar::Util qw(blessed);
@@ -423,6 +424,141 @@ SKIP: {
 
     };
 }
+
+subtest "Plugin _send_email method tests" => sub {
+    my ( $email, $logs );
+    my $transport = Email::Sender::Simple->default_transport;
+    my $trap      = app->logger_engine->trapper;
+
+    # no args
+
+    like exception { $plugin->_send_email },
+      qr/No plain or HTML email text supplied/,
+      "Calling _send_email with no args dies";
+
+    is $transport->delivery_count, 0, "... and no emails sent.";
+
+    # no recipients
+
+    $trap->read;
+    is exception {
+        $plugin->_send_email( plain => "the body", from => 'peter@sysnix.com' )
+    },
+      undef,
+      "Calling _send_email with plain text but no recipients lives";
+
+    is $transport->delivery_count, 0, "... but no emails sent";
+
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => "error",
+            message   => re(qr/Unable to send email: no recipients/)
+        }
+      ),
+      "... and we have error logged regarding no recipients."
+      or diag explain $logs;
+
+    # no sender
+
+    $trap->read;
+    is exception {
+        $plugin->_send_email( plain => "the body", to => 'james@example.com' )
+    },
+      undef,
+      "Calling _send_email with plain text but no sender lives";
+
+    is $transport->delivery_count, 0, "... but no emails sent";
+
+    $logs = $trap->read;
+    cmp_deeply $logs,
+      superbagof(
+        {
+            formatted => ignore(),
+            level     => "error",
+            message   => re(qr/Unable to send email: no sender/)
+        }
+      ),
+      "... and we have error logged regarding no recipients."
+      or diag explain $logs;
+
+    # good email plain only
+
+    is exception {
+        $plugin->_send_email(
+            plain => "the body",
+            from  => 'peter@example.com',
+            to    => 'james@example.com'
+          )
+    },
+      undef,
+      "Calling _send_email with plain text, sender and recipient lives";
+
+    is $transport->delivery_count, 1, "... and we see 1 email sent";
+
+    $email = $transport->shift_deliveries->{email};
+
+    is $email->get_body, "the body", "... and we see the expected email body";
+    like $email->get_header('Content-Type'), qr{text/plain},
+      "... and content type is text/plain";
+    like $email->get_header('Content-Type'), qr{charset="utf-8"},
+      "... and charset is utf-8.";
+
+    # good email html only
+
+    is exception {
+        $plugin->_send_email(
+            html => "<p>html body</p>",
+            from  => 'peter@example.com',
+            to    => 'james@example.com'
+          )
+    },
+      undef,
+      "Calling _send_email with plain text, sender and recipient lives";
+
+    is $transport->delivery_count, 1, "... and we see 1 email sent";
+
+    $email = $transport->shift_deliveries->{email};
+
+    is $email->get_body, "<p>html body</p>",
+      "... and we see the expected html email body";
+    like $email->get_header('Content-Type'), qr{text/html},
+      "... and content type is text/plain";
+    like $email->get_header('Content-Type'), qr{charset="utf-8"},
+      "... and charset is utf-8";
+    like $email->get_header('Content-Transfer-Encoding'), qr{quoted-printable},
+      "... and content transfer encoding is quoted-printable.";
+
+    # good email plain + html
+
+    is exception {
+        $plugin->_send_email(
+            plain => "plain body",
+            html => "<p>html body</p>",
+            from  => 'peter@example.com',
+            to    => 'james@example.com'
+          )
+    },
+      undef,
+      "Calling _send_email with plain text, sender and recipient lives";
+
+    is $transport->delivery_count, 1, "... and we see 1 email sent";
+
+    $email = $transport->shift_deliveries->{email};
+
+    like $email->get_body, qr{plain body},
+      "... and we see plain text in the body";
+    like $email->get_body, qr{<p>html body</p>},
+      "... and we see html in the body";
+    like $email->get_header('Content-Type'), qr{multipart/alternative},
+      "... and content type is multipart/alternative";
+
+    my $mime_entity = $email->cast('MIME::Entity');
+    my @parts = $mime_entity->parts;
+    is scalar @parts, 2, "... and has 2 MIME parts.";
+};
 
 subtest "Plugin coverage testing" => sub {
     # DO NOT use this for testing things that can be tested elsewhere since

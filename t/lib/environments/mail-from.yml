@@ -1,0 +1,13 @@
+plugins:
+    Auth::Extensible:
+        mail_from: testing@example.com
+        realms:
+            config1:
+                provider: Config
+                users:
+                    - user: dave
+                      pass: beer
+                      name: "David Precious"
+                      roles:
+                          - BeerDrinker
+                          - Motorcyclist
