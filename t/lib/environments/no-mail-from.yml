@@ -1,6 +1,5 @@
 plugins:
     Auth::Extensible:
-        mail_from: testing@example.com
         realms:
             config1:
                 provider: Config

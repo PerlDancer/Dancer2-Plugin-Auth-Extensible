@@ -24,19 +24,6 @@ set logger => 'capture';
 set log => 'debug';
 set show_errors => 1;
 
-# nasty shared global makes it easy to pass data between app and test script
-our $data = {};
-
-config->{plugins}->{"Auth::Extensible"}->{password_reset_send_email} =
-  __PACKAGE__ . "::email_send";
-config->{plugins}->{"Auth::Extensible"}->{welcome_send} =
-  __PACKAGE__ . "::email_send";
-
-sub email_send {
-    my ( $plugin, %args ) = @_;
-    $data = { %args, called => 1 };
-}
-
 # we need the plugin object and a provider for provider tests
 my $plugin = app->with_plugin('Auth::Extensible');
 my $provider = $plugin->auth_provider('config1');
@@ -47,6 +34,9 @@ push @provider_can, 'record_lastlogin' if $plugin->config->{record_lastlogin};
 
 config->{plugins}->{"Auth::Extensible"}->{reset_password_handler} = 1
   if $provider->can('get_user_by_code');
+config->{plugins}->{"Auth::Extensible"}->{mail_from} = 'app@example.com';
+
+our $transport = Email::Sender::Simple->default_transport;
 
 #
 # IMPORTANT NOTE
@@ -427,8 +417,8 @@ SKIP: {
 
 subtest "Plugin _send_email method tests" => sub {
     my ( $email, $logs );
-    my $transport = Email::Sender::Simple->default_transport;
-    my $trap      = app->logger_engine->trapper;
+    my $trap = app->logger_engine->trapper;
+    $transport->clear_deliveries;
 
     # no args
 
@@ -436,7 +426,8 @@ subtest "Plugin _send_email method tests" => sub {
       qr/No plain or HTML email text supplied/,
       "Calling _send_email with no args dies";
 
-    is $transport->delivery_count, 0, "... and no emails sent.";
+    is $transport->delivery_count, 0, "... and no emails sent."
+      or diag explain $transport->deliveries;
 
     # no recipients
 
@@ -470,19 +461,8 @@ subtest "Plugin _send_email method tests" => sub {
       undef,
       "Calling _send_email with plain text but no sender lives";
 
-    is $transport->delivery_count, 0, "... but no emails sent";
-
-    $logs = $trap->read;
-    cmp_deeply $logs,
-      superbagof(
-        {
-            formatted => ignore(),
-            level     => "error",
-            message   => re(qr/Unable to send email: no sender/)
-        }
-      ),
-      "... and we have error logged regarding no recipients."
-      or diag explain $logs;
+    is $transport->delivery_count, 1, "... and 1 emails sent";
+    $transport->clear_deliveries;
 
     # good email plain only
 

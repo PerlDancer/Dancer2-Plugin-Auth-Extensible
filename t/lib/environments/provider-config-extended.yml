@@ -9,6 +9,7 @@ plugins:
                     - user: dave
                       pass: beer
                       name: "David Precious"
+                      email: dave@example.com
                       roles:
                           - BeerDrinker
                           - Motorcyclist

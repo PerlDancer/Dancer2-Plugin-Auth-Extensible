@@ -6,7 +6,7 @@ use Test::Fatal;
 
 BEGIN {
     $ENV{DANCER_CONFDIR}         = 't/lib';
-    $ENV{DANCER_ENVIRONMENT}     = 'mail-from';
+    $ENV{DANCER_ENVIRONMENT}     = 'no-mail-from';
     $ENV{EMAIL_SENDER_TRANSPORT} = 'Test';
 }
 
@@ -48,19 +48,6 @@ is exception {
       )
 }, undef, "Calling _send_email with plain text and recipient lives";
 
-is $transport->delivery_count, 1, "... and we see 1 email sent";
-
-my $delivery = $transport->shift_deliveries;
-my $email    = $delivery->{email};
-
-is $email->get_body, "the body", "... and we see the expected email body";
-like $email->get_header('Content-Type'), qr{text/plain},
-  "... and content type is text/plain";
-like $email->get_header('Content-Type'), qr{charset="utf-8"},
-  "... and charset is utf-8";
-
-cmp_deeply $delivery->{envelope},
-  { from => 'testing@example.com', to => ['james@example.com'] },
-  "... and we see from address as per mail_from config attribute.";
+is $transport->delivery_count, 0, "... and we see 0 email sent";
 
 done_testing;

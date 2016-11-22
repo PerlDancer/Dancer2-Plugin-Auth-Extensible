@@ -126,7 +126,8 @@ sub runtests {
 
 sub get {
     my $uri = shift;
-    my $req = GET "http://localhost$uri";
+    $uri = "http://localhost$uri" unless $uri =~ /^http:/;
+    my $req = GET $uri;
     $jar->add_cookie_header($req);
     my $res = $test->request($req);
     $jar->extract_cookies($res);
@@ -135,8 +136,9 @@ sub get {
 
 sub post {
     my $uri    = shift;
+    $uri = "http://localhost$uri" unless $uri =~ /^http:/;
     my $params = shift || [];
-    my $req    = POST "http://localhost$uri", $params;
+    my $req    = POST $uri, $params;
     $jar->add_cookie_header($req);
     my $res = $test->request($req);
     $jar->extract_cookies($res);
@@ -570,7 +572,8 @@ sub _create_user {
 
     # create user with `email_welcome` so we can test reset code
 
-    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
+    my $transport = $Dancer2::Plugin::Auth::Extensible::Test::App::transport;
+    $transport->clear_deliveries;
 
     $res = post(
         "/create_user",
@@ -578,16 +581,36 @@ sub _create_user {
             username      => 'newuserwithcode',
             realm         => 'config1',
             email_welcome => 1,
+            email         => 'user@example.com',
         ]
     );
 
     is $res->code, 200, "/create_user with welcome_send=>1 response is 200"
       or diag explain $trap->read;
 
-    # the args passed to 'welcome_send' sub
-    my $args = $Dancer2::Plugin::Auth::Extensible::Test::App::data;
-    like $args->{code}, qr/^\w{32}$/,
-      "... and we have a reset code in the email";
+    is $transport->delivery_count, 1, "... and we got 1 email"
+      or diag explain $trap->read;
+
+    my $email = $transport->shift_deliveries->{email};
+    my $body = $email->get_body;
+    like $body, qr/An account has been created for you at/,
+      "... and email says that account has been created";
+    like $body, qr{http://localhost/login/\w+},
+      "... and email contains a reset link.";
+
+    # now GET the reset link page
+
+    $body =~ m{(http://localhost/login/\w+)$};
+    my $link = $1;
+
+    $trap->read;
+    $res = get( $link );
+    ok $res->is_success, "GET $link is_success"
+      or diag explain $res;
+
+    like $res->content,
+      qr/Please click the button below to reset your password/,
+      "... and we have 'click the button below to reset your passwor'.";
 }
 
 #------------------------------------------------------------------------------
@@ -1261,8 +1284,13 @@ sub _password_reset {
 
     # request password reset with valid user
 
+<<<<<<< HEAD
     $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
     $trap->read;
+=======
+    my $transport = $Dancer2::Plugin::Auth::Extensible::Test::App::transport;
+    $transport->clear_deliveries;
+>>>>>>> Update all email tests for Email::Sender::Transport::Test
 
     $res = post( '/login',
         [ username_reset => 'dave', submit_reset => 'truthy value' ] );
@@ -1274,20 +1302,21 @@ sub _password_reset {
       "... and we see \"A password reset request has been sent\" in page"
       or diag explain $trap->read;
 
-    cmp_deeply $Dancer2::Plugin::Auth::Extensible::Test::App::data,
-      {
-        called => 1,
-        code   => re(qr/\w+/),
-        email  => ignore(),
-      },
-      "... and password_reset_send_email received code and email.";
+    is $transport->delivery_count, 1, "... and we got an email";
 
-    $code = $Dancer2::Plugin::Auth::Extensible::Test::App::data->{code};
+    my $email = $transport->shift_deliveries->{email};
+
+    like $email->get_body,
+      qr{A request has been received to reset your password},
+      "... and the email looks good";
+
+    $email->get_body =~ m{(http://.+)$};
+    my $url = $1;
 
     # get /login/$code
 
     $trap->read;
-    $res = get("/login/$code");
+    $res = get($url);
 
     ok $res->is_success, "GET /login/<code> with good code is_success"
       or diag explain $res;
@@ -1312,7 +1341,7 @@ sub _password_reset {
     # post /login/$code with good code
 
     $trap->read;
-    $res = post( "/login/$code", [ confirm_reset => "Reset password" ] );
+    $res = post( $url, [ confirm_reset => "Reset password" ] );
     ok $res->is_success, "POST /login/<code> with good code is_success",
       or diag explain $res;
     like $res->content, qr/Your new password is \w{8}\</,
