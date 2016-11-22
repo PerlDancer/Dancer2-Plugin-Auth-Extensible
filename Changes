@@ -1,5 +1,19 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+    WARNING: the 'mailer' configuration option is no longer supported.
+    The plugin now uses Dancer2::Plugin::Email for sending email.
+    If you were using 'mailer' then your code will almost certainly work
+    without changes but you should read the docs and test your code.
+
+    [MISC]
+
+    * As per the warning the old Mail::Message code has been removed and the
+      plugin now uses Dancer2::Plugin::Email for email handling (Peter Mottram).
+
+    [TESTS]
+
+    * Add tests for email sending (Peter Mottram).
+
 0.703 Tue 29 Nov 10:25:10 CET 2016
 
     [BUG FIXES]
