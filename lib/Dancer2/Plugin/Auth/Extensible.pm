@@ -1378,7 +1378,8 @@ This framework supplies the following providers out-of-the-box:
 
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::Unix>
 
-Authenticates users using system accounts on Linux/Unix type boxes
+Authenticates users using system accounts on Linux/Unix type boxes. We no
+longer recommend the use of this provider due to security concerns.
 
 =item L<Dancer2::Plugin::Auth::Extensible::Provider::Config>
 
@@ -1498,8 +1499,7 @@ The L</login_template> setting determines the name of the view you use
 for your custom login page. If this view exists in your application then it
 will be used instead of the default login template.
 
-If you are using L</login_without_redirect> and assuming you are using
-L<Template::Toolkit> then your custom login page should be something like this:
+Your custom login page should be something like this:
 
     <h1>Login Required</h1>
 
@@ -1528,40 +1528,6 @@ L<Template::Toolkit> then your custom login page should be something like this:
         <input type="submit" name="submit_reset" value="Submit">
     </form>
     [%- END -%]
-
-If you are B<not> using L</login_without_redirect> and assuming you are using
-L<Template::Toolkit> then your custom login page should be something like this:
-
-    <h1>Login Required</h1>
-
-    <p>You need to log in to continue.</p>
-
-    [%- IF login_failed -%]
-        <p>LOGIN FAILED</p>
-    [%- END -%]
-
-    <form method="post">
-        <label for="username">Username:</label>
-        <input type="text" name="username" id="username">
-        <br />
-        <label for="password">Password:</label>
-        <input type="password" name="password" id="password">
-        <br />
-        <input type="submit" value="Login">
-
-        [%- IF return_url -%]
-            <input type="hidden" name="return_url" value="[% return_url %]">
-        [%- END -%]
-
-        [%- IF reset_password_handler -%]
-            <h2>Password reset</h2>
-            <p>Enter your username to obtain an email to reset your password</p>
-            <label for="username_reset">Username:</label>
-            <input type="text" name="username_reset" id="username_reset">
-            <input type="submit" name="submit_reset" value="Submit">
-        [%- END -%]
-
-    </form>
 
 =head2 Replacing the default C< /login > and C< /login/denied > routes
 
@@ -2033,7 +1999,7 @@ The URI for the login page. Defaults to C</login>.
 
 =item * login_template
 
-The name of the template (view) for a custom login page. Defaults to C<login>.
+The name of the template (view) for a custom login page.
 
 =item * login_page_handler
 
