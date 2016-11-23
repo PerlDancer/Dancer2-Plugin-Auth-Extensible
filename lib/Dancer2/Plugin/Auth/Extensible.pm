@@ -1164,7 +1164,9 @@ sub _send_email {
     } or do {
         my $err = $@ || "Unknown error";
         $plugin->app->log( error => "Unable to send email: $err" );
+        return 0;
     };
+    return 1;
 }
 
 #
