@@ -50,7 +50,7 @@ has login_page => (
 has login_template => (
     is          => 'ro',
     isa         => Str,
-    from_config => sub { 'login' },
+    from_config => sub { '' },
 );
 
 has login_page_handler => (
@@ -992,10 +992,12 @@ sub _check_for_login {
 
         # If app has its own login page view then use it
         # otherwise render our internal one and pass that to 'template'.
-        my ( $view, $options ) = ( $plugin->login_template, {} );
-        my $template_engine = $plugin->app->template_engine;
-        my $path            = $template_engine->view_pathname($view);
-        if ( !-f $path ) {
+        my ( $options, $path, $view );
+        if ( $view = $plugin->login_template ) {
+            my $template_engine = $plugin->app->template_engine;
+            $path = $template_engine->view_pathname($view);
+        }
+        if ( !$path || !-f $path ) {
             $plugin->app->log( debug => "app has no login template defined" );
             $options->{content} =
               $plugin->_render_template( 'transparent_login.tt', $tokens );
@@ -1072,12 +1074,15 @@ sub _default_login_page {
 
     # If app has its own login page view then use it
     # otherwise render our internal one and pass that to 'template'.
-    my ( $view, $options ) = ( $plugin->login_template, {} );
-    my $template_engine = $plugin->app->template_engine;
-    my $path            = $template_engine->view_pathname($view);
-    if ( !-f $path ) {
+    my ( $options, $path, $view );
+    if ( $view = $plugin->login_template ) {
+        my $template_engine = $plugin->app->template_engine;
+        $path = $template_engine->view_pathname($view);
+    }
+    if ( !$path || !-f $path ) {
         $plugin->app->log( debug => "app has no login template defined" );
-        $options->{content} = $plugin->_render_template( 'login.tt', $tokens );
+        $options->{content} =
+          $plugin->_render_template( 'login.tt', $tokens );
         undef $view;
     }
     return $plugin->app->template( $view, $tokens, $options );

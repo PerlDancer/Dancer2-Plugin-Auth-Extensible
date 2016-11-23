@@ -63,7 +63,8 @@ my $jar  = HTTP::Cookies->new();
     $jar->extract_cookies($res);
 
     is $res->code, 401,
-      "Trying a require_login page with *no* User-Agent header gets 401";
+      "Trying a require_login page with *no* User-Agent header gets 401"
+      or diag explain $trap->read;
     like $res->header('www-authenticate'), qr/Basic realm=/,
       "... and we have a WWW-Authenticate header with Basic realm";
     like $res->content, qr/You need to log in to continue/,
