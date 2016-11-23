@@ -114,12 +114,6 @@ has password_reset_text => (
     from_config => sub { '' },
 );
 
-has permission_denied_handler => (
-    is          => 'ro',
-    isa         => Str,
-    from_config => sub { '_default_permission_denied_handler' },
-);
-
 has permission_denied_page_handler => (
     is          => 'ro',
     isa         => Str,
