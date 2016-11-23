@@ -1968,7 +1968,7 @@ a reset password link.
 
 By default, the default handlers will generate a random 8 character password using
 L<Session::Token>. To use your own function, set C<password_generator> in your
-configuration. See the L<SAMPLE CONFIGURATION> for an example.
+configuration. See the L<CONFIGURATION> for an example.
 
 If using C<login_page_handler> to replace the default login page, you can still
 use the default password reset handlers. Add 2 controls to your form for
@@ -1997,6 +1997,121 @@ For a full example, see the default handler in this module's code.
 
 =back
 
+=head2 CONFIGURATION
+
+=over
+
+=item * denied_page
+
+The URI for the login denied page that is displayed when a logged in user
+tries to access a page requiring a role they do not have.
+
+Defaults to C</login/denied'>.
+
+=item * disable_roles
+
+Set to C<1> if you want to disable the use of roles.
+
+If roles are disabled then any use of role-based route decorators
+will cause app to croak on load. Use of L</user_roles> and
+L</user_has_role> will croak at runtime.
+
+=item * exit_page
+
+The default URI that a user is redirected to on logout.
+
+=item * login_page
+
+The URI for the login page. Defaults to C</login>.
+
+=item * login_template
+
+The name of the template (view) for a custom login page. Defaults to C<login>.
+
+=item * login_page_handler
+
+If you wish to use your own login page handler then set this to the fully
+qualified name of the subroutine, e.g.: C<My::App::login_page_handler>.
+
+=item * login_without_redirect
+
+To use the no-redirect login functionality set this to C<1>.
+
+=item * logout_page
+
+The URI of the logout route. Defaults to C</logout>.
+
+=item * no_login_handler
+
+Set this to C<1> to disable the POST login and GET/POST logout routes supplied
+by this plugin. You must then create your own routes.
+
+=item * mail_from
+
+The default email 'from' line for emails sent by the plugin. If this is not
+defined then the from header setting for L<Dancer2::Plugin::Email> will be
+used instead. One of those two must be configured if you plan to use email
+sending functionality (welcome emails and password resets).
+
+=item * no_default_pages
+
+Set this to C<1> and then supply your own GET login and login denied routes.
+
+=item * password_generator
+
+Set this to a fully-qualified subroutine name if you wish to supply your
+own password generator method, e.g.: C<My::App::random_pw>.
+
+=item * password_reset_send_email
+
+Set this to a fully-qualified subroutine name if you wish to supply your
+own method to generate password reset emails, e.g.: C<My::App::reset_send>.
+
+=item * password_reset_text
+
+Used to supply custom text for the default password reset emails.
+Set this to a fully-qualified subroutine name if you wish to supply your
+own password reset text for the default password_reset_send_email handler,
+e.g.: C<My::App::password_reset_text>.
+
+
+=item * permission_denied_page_handler
+
+Set this to a fully-qualified subroutine name if you wish to supply your
+own permission denied page handler, e.g.: C<My::App::denied>.
+
+=item * realms
+
+A hash reference of auth provider realms. List each authentication realm,
+with the provider to use and the provider-specific settings (see the
+documentation for the provider you wish to use).
+
+=item * record_lastlogin
+
+Set this to C<1> to enable record lastlogin functionality. This is not
+provided by all auth providers so check the provider's documentation.
+
+=item * reset_password_handler
+
+Set this to C<1> to enable password reset functionality.
+
+=item * user_home_page
+
+After login if no return_url is given redirect here. Default is C</>.
+
+=item * welcome_send
+
+Set this to a fully-qualified subroutine name if you wish to supply your
+own welcome email sending method, e.g.: C<My::App::welcome_send>.
+
+=item * welcome_text
+
+Set this to a fully-qualified subroutine name if you wish to supply your
+own welcome text for the default welcome_send handler, e.g.:
+C<My::App::welcome_text>.
+
+=back
+
 =head2 SAMPLE CONFIGURATION
 
 In your application's configuation file:
@@ -2004,41 +2119,12 @@ In your application's configuation file:
     session: simple
     plugins:
         Auth::Extensible:
-            # Set to 1 if you want to disable the use of roles (0 is default)
-            # If roles are disabled then any use of role-based route decorators
-            # will cause app to croak on load. Use of 'user_roles' and
-            # 'user_has_role' will croak at runtime.
-            disable_roles: 0
-            # Set to 1 to use the no-redirect login functionality
-            login_without_redirect: 0
-            # Set the view name for a custom login page, defaults to 'login'
-            login_template: login
-            # After /login: If no return_url is given: land here ('/' is default)
-            user_home_page: '/user'
-            # After /logout: If no return_url is given: land here (no default)
             exit_page: '/'
-
-            # Mailer options for reset password and welcome emails
-            mail_from: '"App name" <myapp@example.com>' # From email address
-
-            # Set to true to enable password reset code in the default handlers
+            mail_from: '"App name" <myapp@example.com>'
+            login_template: login
+            login_without_redirect: 1
             reset_password_handler: 1
-            password_generator: My::App::random_pw # Optional random password generator
-
-            # Set to a true value to enable recording of successful last login times
-            record_lastlogin: 1
-
-            # Password reset functionality
-            password_reset_send_email: My::App::reset_send # Customise sending sub
-            password_reset_text: My::App::reset_text # Customise reset text
-
-            # create_user options
-            welcome_send: My::App::welcome_send # Customise welcome email sub
-            welcome_text: My::App::welcome_text # Customise welcome email text
-
-            # List each authentication realm, with the provider to use and the
-            # provider-specific settings (see the documentation for the provider
-            # you wish to use)
+            user_home_page: '/user'
             realms:
                 realm_one:
                     priority: 3 # Defaults to 0. Realms are checked in descending order
@@ -2048,10 +2134,11 @@ In your application's configuation file:
                     priority: 0 # Will be checked after realm_one
                     provider: Config
 
-B<Please note> that you B<must> have a session provider configured.  The 
-authentication framework requires sessions in order to track information about 
-the currently logged in user.
-Please see L<Dancer2::Core::Session> for information on how to configure session 
+B<NOTE:> you B<MUST> have a session provider configured.  The authentication
+framework requires sessions in order to track information about the currently
+logged in user.
+
+See L<Dancer2::Core::Session> for information on how to configure session 
 management within your application.
 
 =head1 METHODS
@@ -2121,8 +2208,6 @@ Conversion to Dancer2's new plugin system plus much cleanup & reorg:
 Peter Mottram (SysPete), C<< <peter at sysnix.com> >>
 
 =head1 BUGS / FEATURE REQUESTS
-
-This is an early version; there may still be bugs present or features missing.
 
 This is developed on GitHub - please feel free to raise issues or pull requests
 against the repo at:
