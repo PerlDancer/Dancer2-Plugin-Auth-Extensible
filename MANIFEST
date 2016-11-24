@@ -50,6 +50,7 @@ lib/Dancer2/Plugin/Auth/Extensible/Role/Provider.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test.pm
 lib/Dancer2/Plugin/Auth/Extensible/Test/App.pm
 lib/Dancer2/Plugin/Auth/Extensible.pm
+share/views/change_password.tt
 share/views/login.tt
 share/views/login_denied.tt
 share/views/transparent_login.tt
