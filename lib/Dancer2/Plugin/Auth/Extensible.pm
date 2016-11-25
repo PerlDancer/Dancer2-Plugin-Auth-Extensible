@@ -23,6 +23,12 @@ use Dancer2::Plugin::Email;
 # config attributes
 #
 
+has change_password_template => (
+    is          => 'ro',
+    isa         => Str,
+    from_config => sub { '' },
+);
+
 has denied_page => (
     is          => 'ro',
     isa         => Str,
@@ -102,10 +108,22 @@ has password_generator => (
     from_config => sub { '_default_password_generator' },
 );
 
+has password_reset_random_password => (
+    is          => 'ro',
+    isa         => Bool,
+    from_config => sub { 0 },
+);
+
 has password_reset_send_email => (
     is          => 'ro',
     isa         => Str,
     from_config => sub { '_default_email_password_reset' },
+);
+
+has password_reset_template => (
+    is          => 'ro',
+    isa         => Str,
+    from_config => sub { '' },
 );
 
 has password_reset_text => (
@@ -1974,6 +1992,10 @@ For a full example, see the default handler in this module's code.
 
 =over
 
+=item * change_password_template
+
+The name of the template (view) for a custom change password page.
+
 =item * denied_page
 
 The URI for the login denied page that is displayed when a logged in user
@@ -2035,10 +2057,23 @@ Set this to C<1> and then supply your own GET login and login denied routes.
 Set this to a fully-qualified subroutine name if you wish to supply your
 own password generator method, e.g.: C<My::App::random_pw>.
 
+=item * password_reset_random_password
+
+Defaults to false. In the default case when a user requests a password reset
+the URL sent to them in an email is for a page which allows the user to
+create a password of their own choosing.
+
+If set to C<1> then password reset functionality instead forces a new
+server-generated random password for the user.
+
 =item * password_reset_send_email
 
 Set this to a fully-qualified subroutine name if you wish to supply your
 own method to generate password reset emails, e.g.: C<My::App::reset_send>.
+
+=item * password_reset_template
+
+The name of the template (view) for a custom password reset page.
 
 =item * password_reset_text
 
