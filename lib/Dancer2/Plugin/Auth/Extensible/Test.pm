@@ -1233,6 +1233,7 @@ sub _password_reset {
     # request password reset with non-existant user
 
     $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
+    $trap->read;
 
     $res = post( '/login',
         [ username_reset => 'NoSuchUser', submit_reset => 'truthy value' ] );
@@ -1241,7 +1242,8 @@ sub _password_reset {
       or diag explain $res;
 
     like $res->content, qr/A password reset request has been sent/,
-      "... and we see \"A password reset request has been sent\" in page";
+      "... and we see \"A password reset request has been sent\" in page"
+      or diag explain $trap->read;
 
     ok !defined $Dancer2::Plugin::Auth::Extensible::Test::App::data,
       "... and password_reset_send_email was not called."
@@ -1260,6 +1262,7 @@ sub _password_reset {
     # request password reset with valid user
 
     $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
+    $trap->read;
 
     $res = post( '/login',
         [ username_reset => 'dave', submit_reset => 'truthy value' ] );
@@ -1268,7 +1271,8 @@ sub _password_reset {
       or diag explain $res;
 
     like $res->content, qr/A password reset request has been sent/,
-      "... and we see \"A password reset request has been sent\" in page";
+      "... and we see \"A password reset request has been sent\" in page"
+      or diag explain $trap->read;
 
     cmp_deeply $Dancer2::Plugin::Auth::Extensible::Test::App::data,
       {
@@ -1312,7 +1316,8 @@ sub _password_reset {
     ok $res->is_success, "POST /login/<code> with good code is_success",
       or diag explain $res;
     like $res->content, qr/Your new password is \w{8}\</,
-      "... and we are given a new password.";
+      "... and we are given a new password."
+      or diag explain $trap->read;
 
     # reset dave's password for later tests
 

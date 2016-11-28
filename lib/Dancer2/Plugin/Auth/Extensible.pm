@@ -1203,7 +1203,7 @@ sub _post_login_route {
         my $username = $params->{username_reset};
         croak "Attempt to pass reference to reset blocked" if ref $username;
         $plugin->password_reset_send( username => $username );
-        $app->forward(
+        return $app->forward(
             $plugin->login_page,
             { reset_sent => 1 },
             { method     => 'GET' }
@@ -1220,7 +1220,7 @@ sub _post_login_route {
         no strict 'refs';
         my $randompw = &{ $plugin->password_generator };
         if ( $plugin->user_password( code => $code, new_password => $randompw ) ) {
-            $app->forward(
+            return $app->forward(
                 $plugin->login_page,
                 { new_password => $randompw },
                 { method       => 'GET' }
