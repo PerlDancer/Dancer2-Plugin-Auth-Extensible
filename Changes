@@ -1,5 +1,12 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.702 Mon 28 Nov 12:34:53 CET 2016
+
+    [TESTS]
+
+    * Chasing down GH#66 and (hopefully) cut down on unexpected warnings
+      causing no-realms-configured test to fail.
+
 0.701 Tue 22 Nov 10:32:27 CET 2016
 
     [BUG FIXES]
