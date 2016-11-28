@@ -13,13 +13,18 @@ BEGIN {
 {
     package TestApp;
     use Test::More;
-    use Test::Warnings qw/warning :no_end_test/;
-    use Dancer2 qw(!warning);
-    like warning {
-        require Dancer2::Plugin::Auth::Extensible;
-        Dancer2::Plugin::Auth::Extensible->import;
-    },
-      qr/No Auth::Extensible realms configured with which to authenticate user/,
+    use Test::Deep qw/cmp_deeply re superbagof/;
+    use Test::Warnings qw/warnings :no_end_test/;
+    use Dancer2;
+    cmp_deeply [
+        warnings {
+            require Dancer2::Plugin::Auth::Extensible;
+            Dancer2::Plugin::Auth::Extensible->import;
+        }
+      ],
+      superbagof(
+        re(qr/No Auth::Extensible realms configured with which to authenticate user/)
+      ),
       "got warning: No Auth::Extensible realms configured with which to authenticate user";
 }
 
