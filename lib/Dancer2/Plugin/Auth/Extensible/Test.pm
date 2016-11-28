@@ -1253,9 +1253,11 @@ sub _logged_in_user_password_expired {
 sub _password_reset {
     my ( $res, $code );
 
+    my $transport = $Dancer2::Plugin::Auth::Extensible::Test::App::transport;
+    $transport->clear_deliveries;
+
     # request password reset with non-existant user
 
-    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
     $trap->read;
 
     $res = post( '/login',
@@ -1268,9 +1270,7 @@ sub _password_reset {
       "... and we see \"A password reset request has been sent\" in page"
       or diag explain $trap->read;
 
-    ok !defined $Dancer2::Plugin::Auth::Extensible::Test::App::data,
-      "... and password_reset_send_email was not called."
-      or diag explain $Dancer2::Plugin::Auth::Extensible::Test::App::data;
+    is $transport->delivery_count, 0, "... and no email was sent.";
 
     # call /login/$code with bad code
 
@@ -1283,14 +1283,6 @@ sub _password_reset {
       "... and we have the /login page.";
 
     # request password reset with valid user
-
-<<<<<<< HEAD
-    $Dancer2::Plugin::Auth::Extensible::Test::App::data = undef;
-    $trap->read;
-=======
-    my $transport = $Dancer2::Plugin::Auth::Extensible::Test::App::transport;
-    $transport->clear_deliveries;
->>>>>>> Update all email tests for Email::Sender::Transport::Test
 
     $res = post( '/login',
         [ username_reset => 'dave', submit_reset => 'truthy value' ] );
