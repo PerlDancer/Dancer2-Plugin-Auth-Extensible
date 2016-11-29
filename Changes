@@ -1,5 +1,13 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.703 Tue 29 Nov 10:25:10 CET 2016
+
+    [BUG FIXES]
+
+    * Bump dep on Dancer2 to 0.204000. Prior to that release after `forward`
+      `params` were still available but were not cloned into `parameters`.
+      This should fix GH #66.
+
 0.702 Mon 28 Nov 12:34:53 CET 2016
 
     [TESTS]
