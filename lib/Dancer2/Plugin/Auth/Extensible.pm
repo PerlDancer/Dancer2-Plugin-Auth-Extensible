@@ -212,7 +212,8 @@ has _template_tiny => (
 
 plugin_hooks 'before_authenticate_user', 'after_authenticate_user',
   'before_create_user', 'after_create_user',
-  'login_required', 'permission_denied', 'after_login_success';
+  'login_required', 'permission_denied', 'after_login_success',
+  'before_logout';
 
 #
 # keywords
@@ -1173,6 +1174,8 @@ sub _logout_route {
     my $app = shift;
     my $req = $app->request;
     my $plugin = $app->with_plugin('Auth::Extensible');
+
+    $plugin->execute_plugin_hook( 'before_logout' );
 
     $app->destroy_session;
 
@@ -2150,6 +2153,10 @@ reference of any errors from the main method or from the provider.
 =head2 after_login_success
 
 Called after successful login just before redirect is called.
+
+=head2 before_logout
+
+Called just before the session gets destroyed on logout.
 
 =head1 AUTHOR
 
