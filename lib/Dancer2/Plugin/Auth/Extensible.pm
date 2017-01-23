@@ -990,18 +990,7 @@ sub _check_for_login {
                 '__auth_extensible_params' => \%{ $request->params } );
         }
 
-        # If app has its own login page view then use it
-        # otherwise render our internal one and pass that to 'template'.
-        my ( $view, $options ) = ( $plugin->login_template, {} );
-        my $template_engine = $plugin->app->template_engine;
-        my $path            = $template_engine->view_pathname($view);
-        if ( !-f $path ) {
-            $plugin->app->log( debug => "app has no login template defined" );
-            $options->{content} =
-              $plugin->_render_template( 'transparent_login.tt', $tokens );
-            undef $view;
-        }
-        return $plugin->app->template( $view, $tokens, $options );
+        return $plugin->_render_login_page( 'transparent_login.tt', $tokens );
     }
 
     # old-fashioned redirect to login page with return_url set
@@ -1010,6 +999,23 @@ sub _check_for_login {
             $plugin->login_page, { return_url => $request->request_uri }
         )
     );
+}
+
+sub _render_login_page {
+    my ( $plugin, $default_template, $tokens ) = @_;
+
+    # If app has its own login page view then use it
+    # otherwise render our internal one and pass that to 'template'.
+    my ( $view, $options ) = ( $plugin->login_template, {} );
+    my $template_engine = $plugin->app->template_engine;
+    my $path            = $template_engine->view_pathname($view);
+    if ( !-f $path ) {
+        $plugin->app->log( debug => "app has no login template defined" );
+        $options->{content} =
+          $plugin->_render_template( $default_template, $tokens );
+        undef $view;
+    }
+    return $plugin->app->template( $view, $tokens, $options );
 }
 
 sub _default_email_password_reset {
@@ -1071,17 +1077,7 @@ sub _default_login_page {
         return_url => uri_escape( $request->parameters->get('return_url') ),
     };
 
-    # If app has its own login page view then use it
-    # otherwise render our internal one and pass that to 'template'.
-    my ( $view, $options ) = ( $plugin->login_template, {} );
-    my $template_engine = $plugin->app->template_engine;
-    my $path            = $template_engine->view_pathname($view);
-    if ( !-f $path ) {
-        $plugin->app->log( debug => "app has no login template defined" );
-        $options->{content} = $plugin->_render_template( 'login.tt', $tokens );
-        undef $view;
-    }
-    return $plugin->app->template( $view, $tokens, $options );
+    return $plugin->_render_login_page( 'login.tt', $tokens );
 }
 
 sub _default_permission_denied_page {
