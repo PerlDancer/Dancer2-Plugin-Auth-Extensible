@@ -938,7 +938,7 @@ sub _build_wrapper {
         my $view            = $plugin->denied_page;
         my $template_engine = $plugin->app->template_engine;
         my $path            = $template_engine->view_pathname($view);
-        if ( !-f $path ) {
+        if ( !$template_engine->pathname_exists($path) ) {
             $plugin->app->log(
                 debug => "app has no denied_page template defined" );
             $options->{content} = $plugin->_render_template('login_denied.tt');
@@ -1009,7 +1009,7 @@ sub _render_login_page {
     my ( $view, $options ) = ( $plugin->login_template, {} );
     my $template_engine = $plugin->app->template_engine;
     my $path            = $template_engine->view_pathname($view);
-    if ( !-f $path ) {
+    if ( !$template_engine->pathname_exists($path) ) {
         $plugin->app->log( debug => "app has no login template defined" );
         $options->{content} =
           $plugin->_render_template( $default_template, $tokens );
