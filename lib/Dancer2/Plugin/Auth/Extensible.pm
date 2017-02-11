@@ -11,7 +11,7 @@ use Dancer2::Template::Tiny;
 use File::Share qw(dist_dir);
 use List::Util qw(first);
 use Module::Runtime qw(use_module);
-use Scalar::Util;
+use Scalar::Util qw(blessed);
 use Session::Token;
 use Try::Tiny;
 use URI::Escape;
@@ -669,7 +669,8 @@ sub password_reset_send {
             # separate provider function to get an email address, which seems
             # an overkill. Providers can make the email key configurable if
             # need be
-            my %options = ( code => $code, email => $user->{email} );
+            my $email = blessed $user ? $user->email : $user->{email};
+            my %options = ( code => $code, email => $email );
 
             no strict 'refs';
             $result++
