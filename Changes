@@ -1,5 +1,17 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.704 Wed 12 Apr 15:04:46 CEST 2017
+
+    [BUG FIXES]
+
+    * Fix password reset when user is object (Andy Beverley GH#73)
+    * Fix custom login template (Tadeusz “tadzik” Sośnierz GH#72)
+
+    [MISC]
+
+    * Deduplicate code related to login page rendering (Tadeusz “tadzik”
+      Sośnierz GH#71)
+
 0.703 Tue 29 Nov 10:25:10 CET 2016
 
     [BUG FIXES]
