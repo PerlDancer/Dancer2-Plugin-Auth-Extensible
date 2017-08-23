@@ -1267,8 +1267,10 @@ sub _post_login_route {
         $app->log( core => "Realm is $realm" );
         $plugin->execute_plugin_hook( 'after_login_success' );
         # uncoverable condition false
-        $app->redirect( $app->request->parameters->get('return_url')
-              || $plugin->user_home_page );
+        my $return_url_escaped = uri_unescape(
+            $app->request->parameters->get('return_url')
+        );
+        $app->redirect( $return_url_escaped || $plugin->user_home_page );
     }
     else {
         $app->request->vars->{login_failed}++;
