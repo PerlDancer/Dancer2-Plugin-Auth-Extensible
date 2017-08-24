@@ -1246,10 +1246,13 @@ sub _post_login_route {
         }
     }
 
+    my $return_url_escaped = uri_unescape(
+        $app->request->parameters->get('return_url')
+    );
+
     if ( $plugin->logged_in_user ) {
         # uncoverable condition false
-        $app->redirect( $app->request->parameters->get('return_url')
-              || $plugin->user_home_page );
+        $app->redirect( $return_url_escaped || $plugin->user_home_page );
     }
 
     my $auth_realm = $params->{realm} || $params->{__auth_extensible_realm};
@@ -1267,9 +1270,6 @@ sub _post_login_route {
         $app->log( core => "Realm is $realm" );
         $plugin->execute_plugin_hook( 'after_login_success' );
         # uncoverable condition false
-        my $return_url_escaped = uri_unescape(
-            $app->request->parameters->get('return_url')
-        );
         $app->redirect( $return_url_escaped || $plugin->user_home_page );
     }
     else {
