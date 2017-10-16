@@ -1575,9 +1575,43 @@ handle the route. Note that it must be a fully qualified sub. E.g.
 
 Then in your code you might simply use a template:
 
+    sub login_page_handler {
+        my $return_url = query_parameters->get('return_url');
+        template
+            'account/login',
+            { title => 'Sign in',
+              return_url => $return_url,
+            },
+            { layout => 'login.tt',
+            };
+    }
+
     sub permission_denied_page_handler {
         template 'account/login';
     }
+
+and your account/login.tt template might look like:
+
+    [% IF vars.login_failed %]
+    <div class="alert alert-danger">
+        <strong>Login Failed</strong> Try again
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+    [% END %]
+
+    <form method = "post" lpformnum="1" class="form-signin">
+        <h2 class="form-signin-heading">Please sign in</h2>
+        <label for="username" class="sr-only">Username</label>
+        <input type="text" name="username" id="username" class="form-control" placeholder="User name" required autofocus>
+        <label for="password" class="sr-only">Password</label>
+        <input type="password" name="password" id="password" class="form-control" placeholder="Password" required>
+        <button class="btn btn-lg btn-primary btn-block" type="submit">Sign in</button>
+        <br>
+        <input type="hidden" name="return_url" value="[% return_url %]">
+    </form>
+
 
 If the user is logged in, but tries to access a route which requires a specific
 role they don't have, they will be redirected to the "permission denied" page
