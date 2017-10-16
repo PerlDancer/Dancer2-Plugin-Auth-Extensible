@@ -757,6 +757,9 @@ HOOKS
   permission_denied
   after_login_success
     Called after successful login just before redirect is called.
+  
+  before_logout
+    Called just before the session gets destroyed on logout.
 
 AUTHOR
     David Precious, "<davidp at preshweb.co.uk>"
