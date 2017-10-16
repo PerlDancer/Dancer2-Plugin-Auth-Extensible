@@ -2205,9 +2205,13 @@ Gabor Szabo (GH #11, #16, #18).
 
 Evan Brown (GH #20, #32).
 
-Jason Lewis (Unix provider problem).
+Jason Lewis (Unix provider problem, GH#62).
 
 Matt S. Trout (mst) for L<Zero redirect login the easy and friendly way|http://shadow.cat/blog/matt-s-trout/humane-login-screens/>.
+
+Ben Kaufman "whosgonna" (GH#79)
+
+Dominic Sonntag (GH#70)
 
 =head1 LICENSE AND COPYRIGHT
 
