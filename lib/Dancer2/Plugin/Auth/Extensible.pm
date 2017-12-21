@@ -998,7 +998,7 @@ sub _check_for_login {
     # old-fashioned redirect to login page with return_url set
     return $plugin->app->redirect(
         $request->uri_for(
-            $plugin->login_page, { return_url => $request->request_uri }
+            $plugin->login_page, { return_url => $request->path }
         )
     );
 }
