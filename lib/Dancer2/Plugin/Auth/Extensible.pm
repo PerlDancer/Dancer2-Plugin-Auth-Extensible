@@ -997,15 +997,16 @@ sub _check_for_login {
     }
 
     # old-fashioned redirect to login page with return_url set
+    my $forward = $request->path;
+    $forward .= "?".$request->query_string
+        if $request->query_string;
     return $plugin->app->redirect(
         $request->uri_for(
             # Do not use request_uri, as it is the raw string sent by the
             # browser, not taking into account the application mount point.
             # This means that when it is then concatenated with the base URL,
             # the application mount point is specified twice. See GH PR #81
-            $plugin->login_page, { return_url => uri_escape(
-                $request->path."?".$request->query_string
-            ) }
+            $plugin->login_page, { return_url => $forward }
         )
     );
 }
