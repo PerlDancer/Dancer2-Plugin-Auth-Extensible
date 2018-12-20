@@ -1241,7 +1241,8 @@ sub _post_login_route {
         no strict 'refs';
         my $randompw = &{ $plugin->password_generator };
         if (my $username = $plugin->user_password( code => $code, new_password => $randompw ) ) {
-            # Support a custom 'Change password' page or other app-based intervention after a successful reset code has been applied
+            # Support a custom 'Change password' page or other app-based
+            # intervention after a successful reset code has been applied
             foreach my $realm_check (@{ $plugin->realm_names }) { # $params->{realm} isn't defined at this point...
                 my $provider = $plugin->auth_provider($realm_check);
                 $params->{realm} = $realm_check if $provider->get_user_details($username);
@@ -2180,7 +2181,9 @@ reference of any errors from the main method or from the provider.
 
 =head2 after_reset_code_success
 
-Called after successful reset code has been provided. Supports a custom 'Change password' page or other app-based intervention after a successful reset code has been applied.
+Called after successful reset code has been provided. Supports a custom 'Change
+password' page or other app-based intervention after a successful reset code
+has been applied.
 
 =head2 after_login_success
 
