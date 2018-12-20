@@ -9,6 +9,7 @@ use Dancer2::Core::Types qw(ArrayRef Bool HashRef Int Str);
 use Dancer2::FileUtils qw(path);
 use Dancer2::Template::Tiny;
 use File::Share qw(dist_dir);
+use HTTP::BrowserDetect;
 use List::Util qw(first);
 use Module::Runtime qw(use_module);
 use Scalar::Util qw(blessed);
@@ -967,8 +968,7 @@ sub _check_for_login {
 
         # The WWW-Authenticate header added varies depending on whether
         # the client is a robot or not.
-        my $ua = use_module('HTTP::BrowserDetect')
-          ->new( $request->env->{HTTP_USER_AGENT} );
+        my $ua = HTTP::BrowserDetect->new( $request->env->{HTTP_USER_AGENT} );
         my $base = $request->base;
         my $auth_method;
 
