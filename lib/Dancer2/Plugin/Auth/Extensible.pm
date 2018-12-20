@@ -213,7 +213,7 @@ has _template_tiny => (
 #
 
 plugin_hooks 'before_authenticate_user', 'after_authenticate_user',
-  'before_create_user', 'after_create_user',
+  'before_create_user', 'after_create_user', 'after_reset_code_success',
   'login_required', 'permission_denied', 'after_login_success',
   'before_logout';
 
@@ -1240,7 +1240,16 @@ sub _post_login_route {
     if ($code) {
         no strict 'refs';
         my $randompw = &{ $plugin->password_generator };
-        if ( $plugin->user_password( code => $code, new_password => $randompw ) ) {
+        if (my $username = $plugin->user_password( code => $code, new_password => $randompw ) ) {
+            # Support a custom 'Change password' page or other app-based intervention after a successful reset code has been applied
+            foreach my $realm_check (@{ $plugin->realm_names }) { # $params->{realm} isn't defined at this point...
+                my $provider = $plugin->auth_provider($realm_check);
+                $params->{realm} = $realm_check if $provider->get_user_details($username);
+            }
+
+            $plugin->execute_plugin_hook( 'after_reset_code_success',
+                { username => $username, password => $randompw, realm => $params->{realm} } );
+
             return $app->forward(
                 $plugin->login_page,
                 { new_password => $randompw },
@@ -2168,6 +2177,10 @@ reference of any errors from the main method or from the provider.
 =head2 login_required
 
 =head2 permission_denied
+
+=head2 after_reset_code_success
+
+Called after successful reset code has been provided. Supports a custom 'Change password' page or other app-based intervention after a successful reset code has been applied.
 
 =head2 after_login_success
 
