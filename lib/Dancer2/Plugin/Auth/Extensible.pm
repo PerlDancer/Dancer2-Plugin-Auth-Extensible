@@ -2178,6 +2178,10 @@ reference of any errors from the main method or from the provider.
 
 =head2 permission_denied
 
+=head2 after_reset_code_success
+
+Called after successful reset code has been provided. Supports a custom 'Change password' page or other app-based intervention after a successful reset code has been applied.
+
 =head2 after_login_success
 
 Called after successful login just before redirect is called.
