@@ -104,7 +104,7 @@ sub runtests {
 
     @provider_can = @$ret;
 
-    my @to_test = ($ENV{D2PAE_TEST_ONLY}) || keys %dispatch;
+    my @to_test = ($ENV{D2PAE_TEST_ONLY}) || sort keys %dispatch;
 
     foreach my $test ( @to_test ) {
         my @missing;
