@@ -1479,7 +1479,7 @@ login page URL.  If they are logged in, but do not have any of the specified
 roles, they will be redirected to the access denied URL.
 
 If C<disable_roles> configuration option is set to a true value then using
-L</require_any_roles> will cause the application to croak on load.
+L</require_any_role> will cause the application to croak on load.
 
 =head2 require_all_roles - require the user to have all roles listed
 
