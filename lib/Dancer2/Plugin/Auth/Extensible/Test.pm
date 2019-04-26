@@ -1,6 +1,6 @@
 package Dancer2::Plugin::Auth::Extensible::Test;
 
-our $VERSION = '0.707';
+our $VERSION = '0.708';
 
 =head1 NAME
 
