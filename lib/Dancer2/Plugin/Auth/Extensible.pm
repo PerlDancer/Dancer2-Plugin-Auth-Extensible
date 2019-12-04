@@ -606,7 +606,7 @@ sub logged_in_user {
         return $user;
     }
     else {
-        return;
+        return undef; # Ensure function doesn't cause problems in list context (GH92)
     }
 }
 
