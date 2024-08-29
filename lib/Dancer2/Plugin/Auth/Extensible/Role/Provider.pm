@@ -69,6 +69,16 @@ Matches C<$given> password with the C<$correct> one.
 sub match_password {
     my ( $self, $given, $correct ) = @_;
 
+    # If $correct is undefined, then do not attempt a match, otherwise an
+    # uninnitialized warning will be thrown. If stack trace warnings are
+    # enabled and if the user is using a password that is correct for another
+    # system, then the user's attempted password may be written in logs. This
+    # is certainly an edge-case, but it has happened :)
+    # Also as a safety check, do not allow blank passwords, in case a user has
+    # not set a password yet and a blank password is submitted for
+    # authentication.
+    $correct or return;
+
     # TODO: perhaps we should accept a configuration option to state whether
     # passwords are crypted or not, rather than guessing by looking for the
     # {...} tag at the start.
