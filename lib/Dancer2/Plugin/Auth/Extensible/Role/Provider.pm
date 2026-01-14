@@ -1,10 +1,12 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
 use Crypt::SaltedHash;
+use Crypt::Passphrase;
+use Crypt::Passphrase::Argon2;
 use Moo::Role;
 requires qw(authenticate_user);
 
-our $VERSION = '0.710';
+our $VERSION = '0.712';
 
 =head1 NAME
 
@@ -49,13 +51,15 @@ has disable_roles => (
 
 The encryption_algorithm used by L</encrypt_password>.
 
-Defaults to 'SHA-512';
+Defaults to 'Argon2';
 
 =cut
 
 has encryption_algorithm => (
     is      => 'ro',
-    default => 'SHA-512',
+    default => sub {
+        Crypt::Passphrase::Argon2->new;
+    },    
 );
 
 =head1 METHODS
@@ -71,35 +75,34 @@ sub match_password {
 
     # If $correct is undefined, then do not attempt a match, otherwise an
     # uninnitialized warning will be thrown. If stack trace warnings are
-    # enabled and if the user is using a password that is correct for another
-    # system, then the user's attempted password may be written in logs. This
-    # is certainly an edge-case, but it has happened :)
-    # Also as a safety check, do not allow blank passwords, in case a user has
-    # not set a password yet and a blank password is submitted for
-    # authentication.
+    # enabled, the user's attempted password may be written in logs.
+    # Also as a safety check, do not allow blank passwords.
     $correct or return;
-
-    # TODO: perhaps we should accept a configuration option to state whether
-    # passwords are crypted or not, rather than guessing by looking for the
-    # {...} tag at the start.
-    # I wanted to let it try straightforward comparison first, then try
-    # Crypt::SaltedHash->validate, but that has a weakness: if a list of hashed
-    # passwords got leaked, you could use the hashed password *as it is* to log
-    # in, rather than cracking it first.  That's obviously Not Fucking Good.
-    # TODO: think about this more.  This shit is important.  I'm thinking a
-    # config option to indicate whether passwords are crypted - yes, no, auto
+    
+    # TODO: A config option to indicate whether passwords are crypted - yes, no, auto
     # (where auto would do the current guesswork, and yes/no would just do as
     # told.)
+    
     if ( $correct =~ /^{.+}/ ) {
+        # Looks like a legacy crypted password starting with the scheme, so try to
+        # validate it with Crypt::SaltedHash.
+        return {
+            valid  => Crypt::SaltedHash->validate( $correct, $given ),
+            legacy => 1,
+        };
+    }
+    
+    # Not validated by legacy validator, so now check with Crypt::Passphrase.
+    # If unsuccessful, valid will return false.
+    
+    my $passphrase = Crypt::Passphrase->new(
+        encoder => $self->encryption_algorithm,
+    );
 
-        # Looks like a crypted password starting with the scheme, so try to
-        # validate it with Crypt::SaltedHash:
-        return Crypt::SaltedHash->validate( $correct, $given );
-    }
-    else {
-        # Straightforward comparison, then:
-        return $given eq $correct;
-    }
+    return {
+        valid  => $passphrase->verify_password( $given, $correct ),
+        legacy => 0,
+    };
 }
 
 =head2 encrypt_password $password
@@ -111,10 +114,10 @@ and returns the encrypted password.
 
 sub encrypt_password {
     my ( $self, $password ) = @_;
-    my $crypt =
-      Crypt::SaltedHash->new( algorithm => $self->encryption_algorithm );
-    $crypt->add($password);
-    $crypt->generate;
+    my $passphrase = Crypt::Passphrase->new(
+        encoder => $self->encryption_algorithm,
+    );
+    return $passphrase->hash_password($password);
 }
 
 =head1 METHODS IMPLEMENTED BY PROVIDER
