@@ -77,13 +77,15 @@ sub match_password {
     # uninnitialized warning will be thrown. If stack trace warnings are
     # enabled, the user's attempted password may be written in logs.
     # Also as a safety check, do not allow blank passwords.
-    $correct or return;
+    return { valid => 0, legacy => undef }
+        unless defined $correct && length $correct;
     
     # TODO: A config option to indicate whether passwords are crypted - yes, no, auto
     # (where auto would do the current guesswork, and yes/no would just do as
     # told.)
     
-    if ( $correct =~ /^{.+}/ ) {
+    if ( $correct =~ /^\{\w+\}/ )
+    {
         # Looks like a legacy crypted password starting with the scheme, so try to
         # validate it with Crypt::SaltedHash.
         return {
