@@ -58,7 +58,7 @@ Defaults to 'Argon2';
 has encryption_algorithm => (
     is      => 'ro',
     default => sub {
-        Crypt::Passphrase::Argon2->new;
+        'Argon2';
     },    
 );
 
@@ -71,40 +71,27 @@ Matches C<$given> password with the C<$correct> one.
 =cut
 
 sub match_password {
-    my ( $self, $given, $correct ) = @_;
+    my ( $self, $given, $correct, $rehash_callback ) = @_;
 
     # If $correct is undefined, then do not attempt a match, otherwise an
     # uninnitialized warning will be thrown. If stack trace warnings are
     # enabled, the user's attempted password may be written in logs.
     # Also as a safety check, do not allow blank passwords.
-    return { valid => 0, legacy => undef }
-        unless defined $correct && length $correct;
-    
-    # TODO: A config option to indicate whether passwords are crypted - yes, no, auto
-    # (where auto would do the current guesswork, and yes/no would just do as
-    # told.)
-    
-    if ( $correct =~ /^\{\w+\}/ )
-    {
-        # Looks like a legacy crypted password starting with the scheme, so try to
-        # validate it with Crypt::SaltedHash.
-        return {
-            valid  => Crypt::SaltedHash->validate( $correct, $given ),
-            legacy => 1,
-        };
-    }
-    
-    # Not validated by legacy validator, so now check with Crypt::Passphrase.
-    # If unsuccessful, valid will return false.
+    return unless $correct;
     
     my $passphrase = Crypt::Passphrase->new(
-        encoder => $self->encryption_algorithm,
+        encoder    => $self->encryption_algorithm,
+        validators => ['SaltedHash'], # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
     );
 
-    return {
-        valid  => $passphrase->verify_password( $given, $correct ),
-        legacy => 0,
-    };
+    return 0 if (!$passphrase->verify_password($given, $correct));
+    
+    if ($passphrase->needs_rehash($correct) && $rehash_callback) {
+        my $new_hash = $self->encrypt_password($given);
+        $rehash_callback->($new_hash);
+    }
+
+    return 1;
 }
 
 =head2 encrypt_password $password
