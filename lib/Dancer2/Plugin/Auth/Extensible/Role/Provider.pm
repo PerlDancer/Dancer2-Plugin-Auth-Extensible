@@ -6,7 +6,7 @@ use Crypt::Passphrase::Argon2;
 use Moo::Role;
 requires qw(authenticate_user);
 
-our $VERSION = '0.712';
+our $VERSION = '0.710';
 
 =head1 NAME
 
