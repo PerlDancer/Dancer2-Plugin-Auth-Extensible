@@ -84,6 +84,18 @@ sub match_password {
         validators => ['SaltedHash'], # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
     );
 
+    if ( $correct !~ /^[\${]/ ) {
+        if ( $given eq $correct ) {
+            if ($rehash_callback) {
+                my $new_hash = $self->encrypt_password($given);
+                $rehash_callback->($new_hash);
+            }
+            return 1;
+        }
+        
+        return 0;
+    }
+
     return 0 if (!$passphrase->verify_password($given, $correct));
     
     if ($passphrase->needs_rehash($correct) && $rehash_callback) {
