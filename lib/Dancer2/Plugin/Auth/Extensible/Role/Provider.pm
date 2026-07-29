@@ -58,7 +58,10 @@ Defaults to 'Argon2';
 has encryption_algorithm => (
     is      => 'ro',
     default => sub {
-        'Argon2';
+        { 
+            module => 'Argon2', 
+            type   => undef 
+        };
     },    
 );
 
@@ -79,9 +82,12 @@ sub match_password {
     # Also as a safety check, do not allow blank passwords.
     return unless $correct;
     
+    my $validator  = 'SaltedHash' # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+        unless $self->encryption_algorithm->{module} eq 'Linux';
+    
     my $passphrase = Crypt::Passphrase->new(
         encoder    => $self->encryption_algorithm,
-        validators => ['SaltedHash'], # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+        validators => [$validator],
     );
 
     if ( $correct !~ /^[\${]/ ) {
