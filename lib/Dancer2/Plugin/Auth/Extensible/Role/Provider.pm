@@ -1,6 +1,5 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
-use Crypt::SaltedHash;
 use Crypt::Passphrase;
 use Crypt::Passphrase::Argon2;
 use Moo::Role;
