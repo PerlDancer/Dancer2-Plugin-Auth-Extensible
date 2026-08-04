@@ -1,7 +1,9 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
 use Crypt::Passphrase;
+use Crypt::Passphrase::SaltedHash;
 use Crypt::Passphrase::Argon2;
+use Crypt::Passphrase::Linux;
 use Moo::Role;
 requires qw(authenticate_user);
 
@@ -48,27 +50,60 @@ has disable_roles => (
 
 =head2 encryption_algorithm
 
-The encryption_algorithm used by L</encrypt_password>.
+The encryption_algorithm used by L</encrypt_password>. (Required)
 
-Defaults to 'Argon2';
+Defaults to 'Argon2'.
 
 =cut
 
 has encryption_algorithm => (
     is      => 'ro',
-    default => sub {
-        { 
-            module => 'Argon2', 
-            type   => undef 
-        };
-    },    
+    default => sub { 
+        { module => 'Argon2' }; 
+    },
+    coerce => sub { _parse_algorithm(shift); }
 );
+
+=head2 validator
+
+The validator used by L</match_password>. (Optional)
+
+Defaults to 'SaltedHash'.
+
+=cut
+
+has validator => (
+    is      => 'ro',
+    default => sub { 
+        [ { module => 'SaltedHash' } ]; # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+    },
+    coerce  => sub { 
+        my ($val) = @_;
+        if (ref $val eq 'ARRAY') {
+            return [ map { _parse_algorithm($_) } @$val ];
+        }
+        return [ _parse_algorithm($val) ];
+    },
+);
+
+# { module => $x, type => $y // undef }
+sub _parse_algorithm {
+    my ($algorithm) = shift;
+    return $algorithm if ref $algorithm;
+
+    $algorithm =~ s/-//g;
+    return {
+        module => 'Linux',  
+        type   => lc $algorithm, # sha512 / sha256 / md5 / apache_md5
+    };
+}
 
 =head1 METHODS
 
-=head2 match_password $given, $correct
+=head2 match_password $given, $correct, $rehash_callback
 
-Matches C<$given> password with the C<$correct> one.
+Matches C<$given> password with the C<$correct> one and uses C<$rehash_callback> (Optional) to rehash & save
+the password if different from the set encoder.
 
 =cut
 
@@ -80,13 +115,10 @@ sub match_password {
     # enabled, the user's attempted password may be written in logs.
     # Also as a safety check, do not allow blank passwords.
     return unless $correct;
-    
-    my $validator  = 'SaltedHash' # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
-        unless $self->encryption_algorithm->{module} eq 'Linux';
-    
+
     my $passphrase = Crypt::Passphrase->new(
         encoder    => $self->encryption_algorithm,
-        validators => [$validator],
+        validators => $self->validator,
     );
 
     if ( $correct !~ /^[\${]/ ) {
