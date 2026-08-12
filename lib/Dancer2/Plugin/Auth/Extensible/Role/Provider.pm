@@ -1,6 +1,9 @@
 package Dancer2::Plugin::Auth::Extensible::Role::Provider;
 
-use Crypt::SaltedHash;
+use Crypt::Passphrase;
+use Crypt::Passphrase::SaltedHash;
+use Crypt::Passphrase::Argon2;
+use Crypt::Passphrase::Linux;
 use Moo::Role;
 requires qw(authenticate_user);
 
@@ -47,59 +50,97 @@ has disable_roles => (
 
 =head2 encryption_algorithm
 
-The encryption_algorithm used by L</encrypt_password>.
+The encryption_algorithm used by L</encrypt_password>. (Required)
 
-Defaults to 'SHA-512';
+Defaults to 'Argon2'.
 
 =cut
 
 has encryption_algorithm => (
     is      => 'ro',
-    default => 'SHA-512',
+    default => sub { 
+        { module => 'Argon2' }; 
+    },
+    coerce => sub { _parse_algorithm(shift); }
 );
+
+=head2 validator
+
+The validator used by L</match_password>. (Optional)
+
+Defaults to 'SaltedHash'.
+
+=cut
+
+has validator => (
+    is      => 'ro',
+    default => sub { 
+        [ { module => 'SaltedHash' } ]; # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+    },
+    coerce  => sub { 
+        my ($val) = @_;
+        if (ref $val eq 'ARRAY') {
+            return [ map { _parse_algorithm($_) } @$val ];
+        }
+        return [ _parse_algorithm($val) ];
+    },
+);
+
+# { module => $x, type => $y // undef }
+sub _parse_algorithm {
+    my ($algorithm) = shift;
+    return $algorithm if ref $algorithm;
+
+    $algorithm =~ s/-//g;
+    return {
+        module => 'Linux',  
+        type   => lc $algorithm, # sha512 / sha256 / md5 / apache_md5
+    };
+}
 
 =head1 METHODS
 
-=head2 match_password $given, $correct
+=head2 match_password $given, $correct, $rehash_callback
 
-Matches C<$given> password with the C<$correct> one.
+Matches C<$given> password with the C<$correct> one and uses C<$rehash_callback> (Optional) to rehash & save
+the password if different from the set encoder.
 
 =cut
 
 sub match_password {
-    my ( $self, $given, $correct ) = @_;
+    my ( $self, $given, $correct, $rehash_callback ) = @_;
 
     # If $correct is undefined, then do not attempt a match, otherwise an
     # uninnitialized warning will be thrown. If stack trace warnings are
-    # enabled and if the user is using a password that is correct for another
-    # system, then the user's attempted password may be written in logs. This
-    # is certainly an edge-case, but it has happened :)
-    # Also as a safety check, do not allow blank passwords, in case a user has
-    # not set a password yet and a blank password is submitted for
-    # authentication.
-    $correct or return;
+    # enabled, the user's attempted password may be written in logs.
+    # Also as a safety check, do not allow blank passwords.
+    return unless $correct;
 
-    # TODO: perhaps we should accept a configuration option to state whether
-    # passwords are crypted or not, rather than guessing by looking for the
-    # {...} tag at the start.
-    # I wanted to let it try straightforward comparison first, then try
-    # Crypt::SaltedHash->validate, but that has a weakness: if a list of hashed
-    # passwords got leaked, you could use the hashed password *as it is* to log
-    # in, rather than cracking it first.  That's obviously Not Fucking Good.
-    # TODO: think about this more.  This shit is important.  I'm thinking a
-    # config option to indicate whether passwords are crypted - yes, no, auto
-    # (where auto would do the current guesswork, and yes/no would just do as
-    # told.)
-    if ( $correct =~ /^{.+}/ ) {
+    my $passphrase = Crypt::Passphrase->new(
+        encoder    => $self->encryption_algorithm,
+        validators => $self->validator,
+    );
 
-        # Looks like a crypted password starting with the scheme, so try to
-        # validate it with Crypt::SaltedHash:
-        return Crypt::SaltedHash->validate( $correct, $given );
+    if ( $correct !~ /^[\${]/ ) {
+        if ( $given eq $correct ) {
+            if ($rehash_callback) {
+                my $new_hash = $self->encrypt_password($given);
+                $rehash_callback->($new_hash);
+            }
+            return 1;
+        }
+        
+        return 0;
     }
-    else {
-        # Straightforward comparison, then:
-        return $given eq $correct;
+
+    return 0 if (!$passphrase->verify_password($given, $correct));
+    
+    if ($passphrase->needs_rehash($correct) && $rehash_callback) {
+        my $new_hash = $self->encrypt_password($given);
+        $rehash_callback->($new_hash);
     }
+
+    return 1;
 }
 
 =head2 encrypt_password $password
@@ -111,10 +152,10 @@ and returns the encrypted password.
 
 sub encrypt_password {
     my ( $self, $password ) = @_;
-    my $crypt =
-      Crypt::SaltedHash->new( algorithm => $self->encryption_algorithm );
-    $crypt->add($password);
-    $crypt->generate;
+    my $passphrase = Crypt::Passphrase->new(
+        encoder => $self->encryption_algorithm,
+    );
+    return $passphrase->hash_password($password);
 }
 
 =head1 METHODS IMPLEMENTED BY PROVIDER
