@@ -7,7 +7,7 @@ use Crypt::Passphrase::Linux;
 use Moo::Role;
 requires qw(authenticate_user);
 
-our $VERSION = '0.710';
+our $VERSION = '0.711';
 
 =head1 NAME
 
