@@ -2226,6 +2226,12 @@ Called after successful login just before redirect is called.
 
 Called just before the session gets destroyed on logout.
 
+=head1 SECURITY CONSIDERATIONS
+
+If not used correctly, this module can potentially be abused to insert
+malicious URIs in the emails that it generates. See the documentation for
+uri_base, create_user and password_reset_send.
+
 =head1 AUTHOR
 
 David Precious, C<< <davidp at preshweb.co.uk> >>
