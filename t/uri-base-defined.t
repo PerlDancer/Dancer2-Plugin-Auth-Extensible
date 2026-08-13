@@ -10,6 +10,10 @@ use HTTP::Request::Common;
 # different config is used.
 
 BEGIN {
+    eval "require Mail::Message";
+    plan skip_all => 'Mail::Message is not installed'
+        if $@;
+
     eval "require Mail::Transport::Sendmail";
     plan skip_all => 'Mail::Transport is not installed'
         if $@;

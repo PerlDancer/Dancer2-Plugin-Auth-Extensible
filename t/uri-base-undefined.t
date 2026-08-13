@@ -9,6 +9,10 @@ use HTTP::Request::Common;
 # emails, when uri_base is not defined.
 
 BEGIN {
+    eval "require Mail::Message";
+    plan skip_all => 'Mail::Message is not installed'
+        if $@;
+
     eval "require Mail::Transport::Sendmail";
     plan skip_all => 'Mail::Transport is not installed'
         if $@;
