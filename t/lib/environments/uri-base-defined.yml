@@ -1,3 +1,4 @@
+logger: capture
 plugins:
     Auth::Extensible:
         uri_base: "https://genuine.example.com"
