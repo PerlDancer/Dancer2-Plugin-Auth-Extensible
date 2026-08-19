@@ -18,7 +18,7 @@ Dancer2::Plugin::Auth::Extensible::Role::Provider - base role for authentication
 Base L<Moo::Role> for authentication providers.
 
 Also provides secure password matching which automatically handles crypted
-passwords via Crypt::SaltedHash.
+passwords via primarily Crypt::Passphrase while supporting legacy hashes using Crypt::SaltedHash and Crypt::Passphrase::Linux.
 
 =head1 ATTRIBUTES
 
