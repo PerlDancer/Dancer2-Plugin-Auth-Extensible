@@ -13,7 +13,7 @@ BEGIN {
     plan skip_all => 'Mail::Message is not installed'
         if $@;
 
-    eval "require Mail::Transport::Sendmail";
+    eval "require Mail::Transport::SMTP";
     plan skip_all => 'Mail::Transport is not installed'
         if $@;
 
@@ -29,7 +29,7 @@ my $message_sent;
 {
     # Function to catch the content of emails sent
     no warnings 'redefine';
-    *Mail::Transport::Sendmail::trySend = sub ($@) {
+    *Mail::Transport::SMTP::trySend = sub ($@) {
         my ($mailer, $msg, %options) = @_;
         $message_sent = $msg;
         return (1, undef, undef, undef, undef, "queued");

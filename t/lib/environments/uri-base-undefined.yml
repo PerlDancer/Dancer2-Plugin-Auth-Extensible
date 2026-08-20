@@ -11,4 +11,4 @@ plugins:
         mailer:
             module: Mail::Message
             options:
-                via: sendmail
+                via: smtp
