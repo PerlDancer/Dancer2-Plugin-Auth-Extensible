@@ -1,5 +1,11 @@
 Revision history for Dancer2-Plugin-Auth-Extensible
 
+0.714 Mon 24 Aug 08:00:00 BST 2026
+
+    [BUG FIXES]
+
+    * Fix failing tests when sendmail binary not present on system.
+
 0.713 Thu 13 Aug 12:00:00 BST 2026
 
     [BUG FIXES]
