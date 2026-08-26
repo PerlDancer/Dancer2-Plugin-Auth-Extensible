@@ -76,7 +76,10 @@ Defaults to 'SaltedHash'.
 has validator => (
     is      => 'ro',
     default => sub { 
-        [ { module => 'SaltedHash' } ]; # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+        [
+            { module => 'Linux', type => 'sha256', },
+            { module => 'SaltedHash', }, # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+        ];
     },
     coerce  => sub { 
         my ($val) = @_;
