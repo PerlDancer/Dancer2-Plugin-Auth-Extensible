@@ -77,8 +77,8 @@ has validator => (
     is      => 'ro',
     default => sub { 
         [
-            { module => 'Linux', type => 'sha256', },
-            { module => 'SaltedHash', }, # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
+            { module => 'Linux' }, # Default type is sha512
+            { module => 'SaltedHash' }, # GOST / HMAC-MD5 / HMAC-SHA-1 / MD2 / MD4 / MD5 / MD6 / SHA / SHA224 / SHA256 / SHA384 / SHA512
         ];
     },
     coerce  => sub { 
