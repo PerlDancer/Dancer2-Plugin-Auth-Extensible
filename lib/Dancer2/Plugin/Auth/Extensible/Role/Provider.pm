@@ -18,7 +18,8 @@ Dancer2::Plugin::Auth::Extensible::Role::Provider - base role for authentication
 Base L<Moo::Role> for authentication providers.
 
 Also provides secure password matching which automatically handles crypted
-passwords via primarily Crypt::Passphrase while supporting legacy hashes using Crypt::SaltedHash and Crypt::Passphrase::Linux.
+passwords via primarily Crypt::Passphrase while supporting legacy hashes 
+using Crypt::SaltedHash and Crypt::Passphrase::Linux.
 
 =head1 ATTRIBUTES
 
@@ -50,7 +51,7 @@ has disable_roles => (
 
 =head2 encryption_algorithm
 
-The encryption_algorithm used by L</encrypt_password>. (Required)
+The encryption_algorithm used by L</encrypt_password>.
 
 Defaults to 'Argon2'.
 
@@ -91,6 +92,7 @@ sub _parse_algorithm {
     my ($algorithm) = shift;
     return $algorithm if ref $algorithm;
 
+    # Removes '-' for Crypt::Passphrase::Linux type compatability
     $algorithm =~ s/-//g;
     return {
         module => 'Linux',  
@@ -121,6 +123,9 @@ sub match_password {
         validators => $self->validator,
     );
 
+    # If the $correct value (password hash) does not start with a '$'
+    # or a '{' symbol. This is to check for non-hashed passwords and handle
+    # them accordingly.
     if ( $correct !~ /^[\${]/ ) {
         if ( $given eq $correct ) {
             if ($rehash_callback) {
