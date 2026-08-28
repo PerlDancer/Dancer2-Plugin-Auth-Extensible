@@ -65,15 +65,18 @@ has encryption_algorithm => (
     coerce => sub { _parse_algorithm(shift); }
 );
 
-=head2 validator
+=head2 validators
 
-The validator used by L</match_password>. (Optional)
+The validators used by L</match_password>. (Optional)
+
+These are passed directly to L<Crypt::Passphrase> and are used as additional
+methods of validating passwords, in addition to the encryption_algorithm.
 
 Defaults to 'SaltedHash'.
 
 =cut
 
-has validator => (
+has validators => (
     is      => 'ro',
     default => sub { 
         [
@@ -123,7 +126,7 @@ sub match_password {
 
     my $passphrase = Crypt::Passphrase->new(
         encoder    => $self->encryption_algorithm,
-        validators => $self->validator,
+        validators => $self->validators,
     );
 
     # If the $correct value (password hash) does not start with a '$'
